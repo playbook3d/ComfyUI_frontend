@@ -219,6 +219,12 @@ export class ComfyApp {
 
     this.menu = new ComfyAppMenu(this)
     this.bypassBgColor = '#FF00FF'
+    
+    /*
+    *  enables functionality 
+    */ 
+    console.log("LOADING APP IN WINDOW", this);
+    window.__WORKSPACEAPP=this;
 
     /**
      * Stores the execution output data for each node
