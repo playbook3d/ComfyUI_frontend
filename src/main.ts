@@ -28,6 +28,23 @@ declare global {
   }
 }
 
+/*
+ *  listener used for communication between iframe and playbook app
+ */
+
+window.addEventListener('message', event => {
+  //console.log("CALLS RECIEVED", event);
+  const origin = import.meta.env.VITE_CONNECT_TO;
+  if (event.origin === origin) {
+      console.log("HELLO FROM THE PLAYBOOK", event.data, event);
+
+      const dataToSend = "data recieved"
+      window.top.postMessage(dataToSend, origin);
+  } else {
+      return;
+  }
+});
+
 const ComfyUIPreset = definePreset(Aura, {
   semantic: {
     // @ts-expect-error fixme ts strict error
