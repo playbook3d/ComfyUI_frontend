@@ -11,30 +11,50 @@ import ConfirmationService from 'primevue/confirmationservice'
 import ToastService from 'primevue/toastservice'
 import Tooltip from 'primevue/tooltip'
 
+import { mapSlimComfyNodes, mapSlimExtensions } from './helper/comfyuiNodes'
+
 import '@comfyorg/litegraph/style.css'
 import '@/assets/css/style.css'
 import 'primeicons/primeicons.css'
 
 declare global {
-  interface Window { __WORKSPACEAPP: any; }
+  interface Window {
+    __WORKSPACEAPP: any
+  }
 }
 
 /*
  *  listener used for communication between iframe and playbook app
  */
 
-window.addEventListener('message', event => {
-  //console.log("CALLS RECIEVED", event);
-  const origin = import.meta.env.VITE_CONNECT_TO;
+window.addEventListener('message', (event) => {
+  const origin = import.meta.env.VITE_CONNECT_TO
   if (event.origin === origin) {
-      console.log("HELLO FROM THE PLAYBOOK", event.data, event);
+    console.log('HELLO FROM THE PLAYBOOK', event.data, event)
 
-      const dataToSend = "data recieved"
-      window.top.postMessage(dataToSend, origin);
+    const { graph, extensions } = window.__WORKSPACEAPP
+
+    const {
+      _nodes_by_id: nodes_by_id,
+      _nodes: nodes,
+      _nodes_in_order: nodes_ordered
+    } = graph
+
+    const dataToSend = {
+      workflow: {
+        //nodes_ordered,
+        nodes: mapSlimComfyNodes(nodes)
+        //nodes_by_id,
+      },
+      extensions: mapSlimExtensions(extensions)
+    }
+    console.log('DATA TO SEND:', dataToSend)
+
+    window.top.postMessage(JSON.parse(JSON.stringify(dataToSend)), origin)
   } else {
-      return;
+    return
   }
-});
+})
 
 const ComfyUIPreset = definePreset(Aura, {
   semantic: {
