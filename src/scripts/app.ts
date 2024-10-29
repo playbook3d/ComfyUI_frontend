@@ -177,12 +177,12 @@ export class ComfyApp {
     })
     this.menu = new ComfyAppMenu(this)
     this.bypassBgColor = '#FF00FF'
-    
+
     /*
-    *  enables functionality 
-    */ 
-    console.log("LOADING APP IN WINDOW", this);
-    window.__WORKSPACEAPP=this;
+     *  enables functionality
+     */
+    console.log('LOADING APP IN WINDOW', this)
+    window.__COMFYAPP = this
 
     /**
      * List of extensions that are registered with the app

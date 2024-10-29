@@ -19,7 +19,7 @@ import 'primeicons/primeicons.css'
 
 declare global {
   interface Window {
-    __WORKSPACEAPP: any
+    __COMFYAPP: any
   }
 }
 
@@ -32,7 +32,7 @@ window.addEventListener('message', (event) => {
   if (event.origin === origin) {
     console.log('HELLO FROM THE PLAYBOOK', event.data, event)
 
-    const { graph, extensions } = window.__WORKSPACEAPP
+    const { graph, extensions } = window.__COMFYAPP
 
     const {
       _nodes_by_id: nodes_by_id,
