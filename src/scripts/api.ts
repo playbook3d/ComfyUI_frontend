@@ -30,7 +30,6 @@ import {
 import { WorkflowTemplates } from '@/types/workflowTemplateTypes'
 
 import axios from 'axios'
-import defaultWorkflow from './default_workflow.json'
 import nodes_definition from './nodes_definition.json'
 import config from '@/config'
 
@@ -189,12 +188,7 @@ export class ComfyApi extends EventTarget {
    * The current client id from websocket status updates.
    */
   clientId?: string
-  /**
-   * The current user id.
-   */
-  user: string
-  socket: WebSocket | null = null
-  is_offline: boolean = true
+  is_offline: boolean = false
   reportedUnknownMessageTypes = new Set<string>()
 
   constructor() {
@@ -827,7 +821,8 @@ export class ComfyApi extends EventTarget {
     }
   ): Promise<Response> {
     const resp = await this.fetchApi(
-      `/userdata/${encodeURIComponent(file)}?overwrite=${options.overwrite}&full_info=${options.full_info}`,
+      `/userdata/${encodeURIComponent(file)}?overwrite=${options.overwrite}`,
+      {},
       {
         method: 'POST',
         body: options?.stringify ? JSON.stringify(data) : data,
