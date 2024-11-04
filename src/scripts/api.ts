@@ -16,6 +16,8 @@ import {
   UserDataFullInfo
 } from '@/types/apiTypes'
 import axios from 'axios'
+import defaultWorkflow from './default_workflow.json'
+import config from '@/config'
 
 interface QueuePromptRequestBody {
   client_id: string
@@ -39,7 +41,7 @@ class ComfyApi extends EventTarget {
   user: string
   socket?: WebSocket
   clientId?: string
-
+  is_offline: boolean = false
   reportedUnknownMessageTypes = new Set<string>()
 
   constructor() {
@@ -48,6 +50,7 @@ class ComfyApi extends EventTarget {
     this.api_base = location.pathname.split('/').slice(0, -1).join('/')
     console.log('Running on', this.api_host)
     this.initialClientId = sessionStorage.getItem('clientId')
+    this.is_offline = config.offline
   }
 
   internalURL(route: string): string {
@@ -62,7 +65,12 @@ class ComfyApi extends EventTarget {
     return this.api_base + route
   }
 
-  fetchApi(route: string, options?: RequestInit) {
+  fetchApi(route: string, dataToReturn?: any, options?: RequestInit) {
+    if (this.is_offline) {
+      return new Promise<Response>((resolve) =>
+        resolve(new Response(JSON.stringify(dataToReturn, null)))
+      )
+    }
     if (!options) {
       options = {}
     }
@@ -91,7 +99,7 @@ class ComfyApi extends EventTarget {
   #pollQueue() {
     setInterval(async () => {
       try {
-        const resp = await this.fetchApi('/prompt')
+        const resp = await this.fetchApi('/prompt', null)
         const status = await resp.json()
         this.dispatchEvent(new CustomEvent('status', { detail: status }))
       } catch (error) {
@@ -114,8 +122,12 @@ class ComfyApi extends EventTarget {
     if (existingSession) {
       existingSession = '?clientId=' + existingSession
     }
+    console.log('Creating websocket')
+    const ws = import.meta.env.VITE_DEV_SERVER_COMFYUI_URL
+    const socketHost = ws.replace('https://', '').replace('http://', '')
+    const protocol = ws.startsWith('https://') ? 'wss' : 'ws'
     this.socket = new WebSocket(
-      `ws${window.location.protocol === 'https:' ? 's' : ''}://${this.api_host}${this.api_base}/ws${existingSession}`
+      `${protocol}://${socketHost}/ws${existingSession}`
     )
     this.socket.binaryType = 'arraybuffer'
 
@@ -136,7 +148,7 @@ class ComfyApi extends EventTarget {
     this.socket.addEventListener('close', () => {
       setTimeout(() => {
         this.socket = null
-        this.#createSocket(true)
+        // this.#createSocket(true)
       }, 300)
       if (opened) {
         this.dispatchEvent(new CustomEvent('status', { detail: null }))
@@ -258,7 +270,7 @@ class ComfyApi extends EventTarget {
    * Gets a list of extension urls
    */
   async getExtensions(): Promise<ExtensionsResponse> {
-    const resp = await this.fetchApi('/extensions', { cache: 'no-store' })
+    const resp = await this.fetchApi('/extensions', [], { cache: 'no-store' })
     return await resp.json()
   }
 
@@ -266,7 +278,7 @@ class ComfyApi extends EventTarget {
    * Gets a list of embedding names
    */
   async getEmbeddings(): Promise<EmbeddingsResponse> {
-    const resp = await this.fetchApi('/embeddings', { cache: 'no-store' })
+    const resp = await this.fetchApi('/embeddings', [], { cache: 'no-store' })
     return await resp.json()
   }
 
@@ -277,8 +289,9 @@ class ComfyApi extends EventTarget {
   async getNodeDefs({ validate = false }: { validate?: boolean } = {}): Promise<
     Record<string, ComfyNodeDef>
   > {
-    const resp = await this.fetchApi('/object_info', { cache: 'no-store' })
-    const objectInfoUnsafe = await resp.json()
+    // const resp = await this.fetchApi('/object_info', { cache: 'no-store' })
+    const objectInfoUnsafe = defaultWorkflow
+    // const objectInfoUnsafe = await resp.json()
     if (!validate) {
       return objectInfoUnsafe
     }
@@ -322,13 +335,17 @@ class ComfyApi extends EventTarget {
       body.number = number
     }
 
-    const res = await this.fetchApi('/prompt', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    })
+    const res = await this.fetchApi(
+      '/prompt',
+      {},
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      }
+    )
 
     if (res.status !== 200) {
       throw {
@@ -501,13 +518,17 @@ class ComfyApi extends EventTarget {
    */
   async #postItem(type: string, body: any) {
     try {
-      await this.fetchApi('/' + type, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: body ? JSON.stringify(body) : undefined
-      })
+      await this.fetchApi(
+        '/' + type,
+        {},
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: body ? JSON.stringify(body) : undefined
+        }
+      )
     } catch (error) {
       console.error(error)
     }
@@ -541,7 +562,12 @@ class ComfyApi extends EventTarget {
    * Gets user configuration data and where data should be stored
    */
   async getUserConfig(): Promise<User> {
-    return (await this.fetchApi('/users')).json()
+    const response = await this.fetchApi('/users', {
+      storage: 'server',
+      migrated: true
+    })
+    const json = await response.json()
+    return json
   }
 
   /**
@@ -550,13 +576,17 @@ class ComfyApi extends EventTarget {
    * @returns The fetch response
    */
   createUser(username: string) {
-    return this.fetchApi('/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ username })
-    })
+    return this.fetchApi(
+      '/users',
+      {},
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username })
+      }
+    )
   }
 
   /**
@@ -564,7 +594,9 @@ class ComfyApi extends EventTarget {
    * @returns { Promise<string, unknown> } A dictionary of id -> value
    */
   async getSettings(): Promise<Settings> {
-    return (await this.fetchApi('/settings')).json()
+    return (
+      await this.fetchApi('/settings', { 'Comfy.NodeLibrary.Bookmarks': [] })
+    ).json()
   }
 
   /**
@@ -600,7 +632,7 @@ class ComfyApi extends EventTarget {
    * Gets a user data file for the current user
    */
   async getUserData(file: string, options?: RequestInit) {
-    return this.fetchApi(`/userdata/${encodeURIComponent(file)}`, options)
+    return this.fetchApi(`/userdata/${encodeURIComponent(file)}`, [], options)
   }
 
   /**
@@ -621,6 +653,7 @@ class ComfyApi extends EventTarget {
   ): Promise<Response> {
     const resp = await this.fetchApi(
       `/userdata/${encodeURIComponent(file)}?overwrite=${options.overwrite}`,
+      {},
       {
         method: 'POST',
         body: options?.stringify ? JSON.stringify(data) : data,
@@ -641,9 +674,13 @@ class ComfyApi extends EventTarget {
    * @param { string } file The name of the userdata file to delete
    */
   async deleteUserData(file: string) {
-    const resp = await this.fetchApi(`/userdata/${encodeURIComponent(file)}`, {
-      method: 'DELETE'
-    })
+    const resp = await this.fetchApi(
+      `/userdata/${encodeURIComponent(file)}`,
+      {},
+      {
+        method: 'DELETE'
+      }
+    )
     return resp
   }
 
@@ -659,6 +696,7 @@ class ComfyApi extends EventTarget {
   ) {
     const resp = await this.fetchApi(
       `/userdata/${encodeURIComponent(source)}/move/${encodeURIComponent(dest)}?overwrite=${options?.overwrite}`,
+      {},
       {
         method: 'POST'
       }
