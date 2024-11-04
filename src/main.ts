@@ -30,39 +30,6 @@ declare global {
   }
 }
 
-/*
- *  listener used for communication between iframe and playbook app
- */
-
-window.addEventListener('message', (event) => {
-  const origin = import.meta.env.VITE_CONNECT_TO
-  if (event.origin === origin) {
-    console.log('HELLO FROM THE PLAYBOOK', event.data, event)
-
-    const { graph, extensions } = window.__COMFYAPP
-
-    const {
-      _nodes_by_id: nodes_by_id,
-      _nodes: nodes,
-      _nodes_in_order: nodes_ordered
-    } = graph
-
-    const dataToSend = {
-      workflow: {
-        //nodes_ordered,
-        nodes: mapSlimComfyNodes(nodes)
-        //nodes_by_id,
-      },
-      extensions: mapSlimExtensions(extensions)
-    }
-    console.log('DATA TO SEND:', dataToSend)
-
-    window.top.postMessage(JSON.parse(JSON.stringify(dataToSend)), origin)
-  } else {
-    return
-  }
-})
-
 const ComfyUIPreset = definePreset(Aura, {
   semantic: {
     // @ts-expect-error fixme ts strict error

@@ -42,6 +42,10 @@ import {
 
 import { WorkflowTemplates } from '@/types/workflowTemplateTypes'
 
+import axios from 'axios'
+import defaultWorkflow from './default_workflow.json'
+import config from '@/config'
+
 interface QueuePromptRequestBody {
   client_id: string
   prompt: ComfyApiWorkflow
@@ -240,6 +244,7 @@ export class ComfyApi extends EventTarget {
   user: string
   socket: WebSocket | null = null
 
+  is_offline: boolean = false
   reportedUnknownMessageTypes = new Set<string>()
 
   /**
@@ -561,6 +566,8 @@ export class ComfyApi extends EventTarget {
       window.__COMFYAPP.serializedNodesDefinition
     )
 
+    // const resp = await this.fetchApi('/object_info', { cache: 'no-store' })
+    // const objectInfoUnsafe = await resp.json()
     if (!validate) {
       return objectInfoUnsafe
     }
@@ -913,7 +920,8 @@ export class ComfyApi extends EventTarget {
     }
   ): Promise<Response> {
     const resp = await this.fetchApi(
-      `/userdata/${encodeURIComponent(file)}?overwrite=${options.overwrite}&full_info=${options.full_info}`,
+      `/userdata/${encodeURIComponent(file)}?overwrite=${options.overwrite}`,
+      {},
       {
         method: 'POST',
         body: options?.stringify ? JSON.stringify(data) : data,
