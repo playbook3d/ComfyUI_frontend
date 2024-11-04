@@ -221,6 +221,48 @@ export class ComfyApp {
     this.bypassBgColor = '#FF00FF'
 
     /*
+     *  listener used for communication between iframe and playbook app
+     */
+
+    window.addEventListener('message', async (event) => {
+      const origin = import.meta.env.VITE_CONNECT_TO
+      console.log('external event', {
+        eo: event.origin,
+        origin,
+        s: event.origin === origin
+      })
+      if (event.origin === origin) {
+        console.log('HELLO FROM THE PLAYBOOK', event.data, event)
+
+        const { graph, extensions } = window.__COMFYAPP
+
+        const {
+          _nodes_by_id: nodes_by_id,
+          _nodes: nodes,
+          _nodes_in_order: nodes_ordered
+        } = graph
+
+        const p = await this.graphToPrompt()
+        const json = JSON.stringify(p['workflow'], null, 2)
+
+        const dataToSend = {
+          ...p
+          // workflow: {
+          //   //nodes_ordered,
+          //   nodes: mapSlimComfyNodes(nodes)
+          //   //nodes_by_id,
+          // },
+          // extensions: mapSlimExtensions(extensions)
+        }
+        console.log('DATA TO SEND:', dataToSend)
+
+        window.top.postMessage(JSON.parse(JSON.stringify(dataToSend)), origin)
+      } else {
+        return
+      }
+    })
+
+    /*
      *  enables functionality
      */
     console.log('LOADING APP IN WINDOW', this)
@@ -1229,6 +1271,7 @@ export class ComfyApp {
   }
 
   async queuePrompt(number: number, batchCount: number = 1): Promise<boolean> {
+    console.log('clicki')
     this.#queueItems.push({ number, batchCount })
 
     // Only have one action process the items so each one gets a unique seed correctly
