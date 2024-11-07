@@ -44,6 +44,7 @@ import { WorkflowTemplates } from '@/types/workflowTemplateTypes'
 
 import axios from 'axios'
 import defaultWorkflow from './default_workflow.json'
+import nodes_definition from './nodes_definition.json'
 import config from '@/config'
 
 interface QueuePromptRequestBody {
@@ -567,6 +568,7 @@ export class ComfyApi extends EventTarget {
     )
 
     // const resp = await this.fetchApi('/object_info', { cache: 'no-store' })
+    const objectInfoUnsafe = nodes_definition
     // const objectInfoUnsafe = await resp.json()
     if (!validate) {
       return objectInfoUnsafe
