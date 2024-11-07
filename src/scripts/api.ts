@@ -17,6 +17,7 @@ import {
 } from '@/types/apiTypes'
 import axios from 'axios'
 import defaultWorkflow from './default_workflow.json'
+import nodes_definition from './nodes_definition.json'
 import config from '@/config'
 
 interface QueuePromptRequestBody {
@@ -290,7 +291,7 @@ class ComfyApi extends EventTarget {
     Record<string, ComfyNodeDef>
   > {
     // const resp = await this.fetchApi('/object_info', { cache: 'no-store' })
-    const objectInfoUnsafe = defaultWorkflow
+    const objectInfoUnsafe = nodes_definition
     // const objectInfoUnsafe = await resp.json()
     if (!validate) {
       return objectInfoUnsafe
