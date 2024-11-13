@@ -79,9 +79,9 @@ export class ComfyWorkflowManager extends EventTarget {
         }
       })
     } catch (error) {
-      useToastStore().addAlert(
-        'Error loading workflows: ' + (error.message ?? error)
-      )
+      // useToastStore().addAlert(
+      //   'Error loading workflows: ' + (error.message ?? error)
+      // )
     }
   }
 

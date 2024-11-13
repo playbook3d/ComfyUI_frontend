@@ -11,9 +11,17 @@ import ConfirmationService from 'primevue/confirmationservice'
 import ToastService from 'primevue/toastservice'
 import Tooltip from 'primevue/tooltip'
 
+// import { mapSlimComfyNodes, mapSlimExtensions } from './helper/comfyuiNodes'
+
 import '@comfyorg/litegraph/style.css'
 import '@/assets/css/style.css'
 import 'primeicons/primeicons.css'
+
+declare global {
+  interface Window {
+    __COMFYAPP: any
+  }
+}
 
 const ComfyUIPreset = definePreset(Aura, {
   semantic: {
