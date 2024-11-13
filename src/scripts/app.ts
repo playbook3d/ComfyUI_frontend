@@ -57,6 +57,7 @@ import { useExtensionStore } from '@/stores/extensionStore'
 import { KeyComboImpl, useKeybindingStore } from '@/stores/keybindingStore'
 import { useCommandStore } from '@/stores/commandStore'
 import { shallowReactive } from 'vue'
+import { WorkflowWindowMessageData } from './playbookTypes'
 
 export const ANIM_PREVIEW_WIDGET = '$$comfy_animation_preview'
 
@@ -179,49 +180,33 @@ export class ComfyApp {
     this.bypassBgColor = '#FF00FF'
 
     /*
-     *  listener used for communication between iframe and playbook app
+     *  Subscribe listener to receive messaging from iFrame wrapper layer.
      */
-
     window.addEventListener('message', async (event) => {
-      const origin = import.meta.env.VITE_CONNECT_TO
+      const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+
       console.log('external event', {
-        eo: event.origin,
-        origin,
-        s: event.origin === origin
+        eventOrigin: event.origin,
+        expectedOrigin: wrapperOrigin,
+        originsMatch: event.origin === wrapperOrigin
       })
-      if (event.origin === origin) {
-        console.log('HELLO FROM THE PLAYBOOK', event.data, event)
 
-        const { graph, extensions } = window.__COMFYAPP
+      // Verify this message came from iFrame layer.
+      if (event.origin !== wrapperOrigin) return
 
-        const {
-          _nodes_by_id: nodes_by_id,
-          _nodes: nodes,
-          _nodes_in_order: nodes_ordered
-        } = graph
+      const eventMessageData: WorkflowWindowMessageData = event.data
 
-        const p = await this.graphToPrompt()
-        const json = JSON.stringify(p['workflow'], null, 2)
-
-        const dataToSend = {
-          ...p
-          // workflow: {
-          //   //nodes_ordered,
-          //   nodes: mapSlimComfyNodes(nodes)
-          //   //nodes_by_id,
-          // },
-          // extensions: mapSlimExtensions(extensions)
-        }
-        console.log('DATA TO SEND:', dataToSend)
-
-        window.top.postMessage(JSON.parse(JSON.stringify(dataToSend)), origin)
-      } else {
-        return
+      if (eventMessageData.message === 'SendWorkflowDataToComfyWindow') {
+        console.log(
+          'Comfy Window Received: SendWorkflowDataToComfyWindow',
+          eventMessageData
+        )
+        this.loadGraphData(eventMessageData.data)
       }
     })
 
     /*
-     *  enables functionality
+     *  enables functionality - I'M NOT SURE THIS ISUSED OR RELEVANT
      */
     console.log('LOADING APP IN WINDOW', this)
     window.__COMFYAPP = this
@@ -423,6 +408,38 @@ export class ComfyApp {
       return this.extensions
     }
     return useExtensionStore().enabledExtensions
+  }
+
+  /**
+   * Send message with workflow data to wrapping iFrame layer.
+   */
+  public async sendWorkflowDataToPlaybookWrapper() {
+    console.log('Comfy Window Sending: SendWorkflowDataToPlaybookWrapper')
+
+    const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+    const graphData = await this.graphToPrompt()
+
+    const messageData: WorkflowWindowMessageData = {
+      message: 'SendWorkflowDataToPlaybookWrapper',
+      data: graphData.workflow
+    }
+
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
+
+  /**
+   * Send message with workflow data to wrapping iFrame layer.
+   */
+  async notifyPlaybookWrapperGraphInitialized() {
+    console.log('Comfy Window Sending: ComfyWindowInitialized')
+
+    const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+
+    const messageData: WorkflowWindowMessageData = {
+      message: 'ComfyWindowInitialized'
+    }
+
+    window.top.postMessage(messageData, wrapperOrigin)
   }
 
   /**
@@ -1973,6 +1990,9 @@ export class ComfyApp {
     this.#addWidgetLinkHandling()
 
     await this.#invokeExtensionsAsync('setup')
+
+    // Post message to iFrame wrapper to notify setup complete.
+    this.notifyPlaybookWrapperGraphInitialized()
   }
 
   resizeCanvas() {
@@ -2670,7 +2690,6 @@ export class ComfyApp {
   }
 
   async queuePrompt(number, batchCount = 1) {
-    console.log('clicki')
     this.#queueItems.push({ number, batchCount })
 
     // Only have one action process the items so each one gets a unique seed correctly
