@@ -93,6 +93,10 @@ import {
 } from './playbook-scripts/playbookMessaging'
 import { areSelectedItemsEqual, restructureSelectedNodesForPlaybookWrapper } from './playbook-scripts/playbookHelpers'
 
+import { IWidget } from '@comfyorg/litegraph'
+import { shallowReactive } from 'vue'
+import { WorkflowWindowMessageData } from './playbookTypes'
+
 export const ANIM_PREVIEW_WIDGET = '$$comfy_animation_preview'
 
 function sanitizeNodeName(string: string) {
@@ -286,49 +290,33 @@ export class ComfyApp {
     this.bypassBgColor = '#FF00FF'
 
     /*
-     *  listener used for communication between iframe and playbook app
+     *  Subscribe listener to receive messaging from iFrame wrapper layer.
      */
-
     window.addEventListener('message', async (event) => {
-      const origin = import.meta.env.VITE_CONNECT_TO
+      const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+
       console.log('external event', {
-        eo: event.origin,
-        origin,
-        s: event.origin === origin
+        eventOrigin: event.origin,
+        expectedOrigin: wrapperOrigin,
+        originsMatch: event.origin === wrapperOrigin
       })
-      if (event.origin === origin) {
-        console.log('HELLO FROM THE PLAYBOOK', event.data, event)
 
-        const { graph, extensions } = window.__COMFYAPP
+      // Verify this message came from iFrame layer.
+      if (event.origin !== wrapperOrigin) return
 
-        const {
-          _nodes_by_id: nodes_by_id,
-          _nodes: nodes,
-          _nodes_in_order: nodes_ordered
-        } = graph
+      const eventMessageData: WorkflowWindowMessageData = event.data
 
-        const p = await this.graphToPrompt()
-        const json = JSON.stringify(p['workflow'], null, 2)
-
-        const dataToSend = {
-          ...p
-          // workflow: {
-          //   //nodes_ordered,
-          //   nodes: mapSlimComfyNodes(nodes)
-          //   //nodes_by_id,
-          // },
-          // extensions: mapSlimExtensions(extensions)
-        }
-        console.log('DATA TO SEND:', dataToSend)
-
-        window.top.postMessage(JSON.parse(JSON.stringify(dataToSend)), origin)
-      } else {
-        return
+      if (eventMessageData.message === 'SendWorkflowDataToComfyWindow') {
+        console.log(
+          'Comfy Window Received: SendWorkflowDataToComfyWindow',
+          eventMessageData
+        )
+        this.loadGraphData(eventMessageData.data)
       }
     })
 
     /*
-     *  enables functionality
+     *  enables functionality - I'M NOT SURE THIS ISUSED OR RELEVANT
      */
     console.log('LOADING APP IN WINDOW', this)
     window.__COMFYAPP = this
@@ -645,7 +633,690 @@ export class ComfyApp {
     }
   }
 
-  /*
+  get enabledExtensions() {
+    if (!this.vueAppReady) {
+      return this.extensions
+    }
+    return useExtensionStore().enabledExtensions
+  }
+
+  /**
+   * Send message with workflow data to wrapping iFrame layer.
+   */
+  public async sendWorkflowDataToPlaybookWrapper() {
+    console.log('Comfy Window Sending: SendWorkflowDataToPlaybookWrapper')
+
+    const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+    const graphData = await this.graphToPrompt()
+
+    const messageData: WorkflowWindowMessageData = {
+      message: 'SendWorkflowDataToPlaybookWrapper',
+      data: graphData.workflow
+    }
+
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
+
+  /**
+   * Send message with workflow data to wrapping iFrame layer.
+   */
+  async notifyPlaybookWrapperGraphInitialized() {
+    console.log('Comfy Window Sending: ComfyWindowInitialized')
+
+    const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+
+    const messageData: WorkflowWindowMessageData = {
+      message: 'ComfyWindowInitialized'
+    }
+
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
+
+  /**
+   * Invoke an extension callback
+   * @param {keyof ComfyExtension} method The extension callback to execute
+   * @param  {any[]} args Any arguments to pass to the callback
+   * @returns
+   */
+  #invokeExtensions(method, ...args) {
+    let results = []
+    for (const ext of this.enabledExtensions) {
+      if (method in ext) {
+        try {
+          results.push(ext[method](...args, this))
+        } catch (error) {
+          console.error(
+            `Error calling extension '${ext.name}' method '${method}'`,
+            { error },
+            { extension: ext },
+            { args }
+          )
+        }
+      }
+    }
+    return results
+  }
+
+  /**
+   * Invoke an async extension callback
+   * Each callback will be invoked concurrently
+   * @param {string} method The extension callback to execute
+   * @param  {...any} args Any arguments to pass to the callback
+   * @returns
+   */
+  async #invokeExtensionsAsync(method, ...args) {
+    return await Promise.all(
+      this.enabledExtensions.map(async (ext) => {
+        if (method in ext) {
+          try {
+            return await ext[method](...args, this)
+          } catch (error) {
+            console.error(
+              `Error calling extension '${ext.name}' method '${method}'`,
+              { error },
+              { extension: ext },
+              { args }
+            )
+          }
+        }
+      })
+    )
+  }
+
+  #addRestoreWorkflowView() {
+    const serialize = LGraph.prototype.serialize
+    const self = this
+    LGraph.prototype.serialize = function () {
+      const workflow = serialize.apply(this, arguments)
+
+      // Store the drag & scale info in the serialized workflow if the setting is enabled
+      if (self.enableWorkflowViewRestore.value) {
+        if (!workflow.extra) {
+          workflow.extra = {}
+        }
+        workflow.extra.ds = {
+          scale: self.canvas.ds.scale,
+          offset: self.canvas.ds.offset
+        }
+      } else if (workflow.extra?.ds) {
+        // Clear any old view data
+        delete workflow.extra.ds
+      }
+
+      return workflow
+    }
+    this.enableWorkflowViewRestore = this.ui.settings.addSetting({
+      id: 'Comfy.EnableWorkflowViewRestore',
+      category: ['Comfy', 'Workflow', 'EnableWorkflowViewRestore'],
+      name: 'Save and restore canvas position and zoom level in workflows',
+      type: 'boolean',
+      defaultValue: true
+    })
+  }
+
+  /**
+   * Adds special context menu handling for nodes
+   * e.g. this adds Open Image functionality for nodes that show images
+   * @param {*} node The node to add the menu handler
+   */
+  #addNodeContextMenuHandler(node) {
+    function getCopyImageOption(img) {
+      if (typeof window.ClipboardItem === 'undefined') return []
+      return [
+        {
+          content: 'Copy Image',
+          callback: async () => {
+            const url = new URL(img.src)
+            url.searchParams.delete('preview')
+
+            const writeImage = async (blob) => {
+              await navigator.clipboard.write([
+                new ClipboardItem({
+                  [blob.type]: blob
+                })
+              ])
+            }
+
+            try {
+              const data = await fetch(url)
+              const blob = await data.blob()
+              try {
+                await writeImage(blob)
+              } catch (error) {
+                // Chrome seems to only support PNG on write, convert and try again
+                if (blob.type !== 'image/png') {
+                  const canvas = $el('canvas', {
+                    width: img.naturalWidth,
+                    height: img.naturalHeight
+                  }) as HTMLCanvasElement
+                  const ctx = canvas.getContext('2d')
+                  let image
+                  if (typeof window.createImageBitmap === 'undefined') {
+                    image = new Image()
+                    const p = new Promise((resolve, reject) => {
+                      image.onload = resolve
+                      image.onerror = reject
+                    }).finally(() => {
+                      URL.revokeObjectURL(image.src)
+                    })
+                    image.src = URL.createObjectURL(blob)
+                    await p
+                  } else {
+                    image = await createImageBitmap(blob)
+                  }
+                  try {
+                    ctx.drawImage(image, 0, 0)
+                    canvas.toBlob(writeImage, 'image/png')
+                  } finally {
+                    if (typeof image.close === 'function') {
+                      image.close()
+                    }
+                  }
+
+                  return
+                }
+                throw error
+              }
+            } catch (error) {
+              useToastStore().addAlert(
+                'Error copying image: ' + (error.message ?? error)
+              )
+            }
+          }
+        }
+      ]
+    }
+
+    node.prototype.getExtraMenuOptions = function (_, options) {
+      if (this.imgs) {
+        // If this node has images then we add an open in new tab item
+        let img
+        if (this.imageIndex != null) {
+          // An image is selected so select that
+          img = this.imgs[this.imageIndex]
+        } else if (this.overIndex != null) {
+          // No image is selected but one is hovered
+          img = this.imgs[this.overIndex]
+        }
+        if (img) {
+          options.unshift(
+            {
+              content: 'Open Image',
+              callback: () => {
+                let url = new URL(img.src)
+                url.searchParams.delete('preview')
+                window.open(url, '_blank')
+              }
+            },
+            ...getCopyImageOption(img),
+            {
+              content: 'Save Image',
+              callback: () => {
+                const a = document.createElement('a')
+                let url = new URL(img.src)
+                url.searchParams.delete('preview')
+                a.href = url.toString()
+                a.setAttribute(
+                  'download',
+                  new URLSearchParams(url.search).get('filename')
+                )
+                document.body.append(a)
+                a.click()
+                requestAnimationFrame(() => a.remove())
+              }
+            }
+          )
+        }
+      }
+
+      options.push({
+        content: 'Bypass',
+        callback: (obj) => {
+          if (this.mode === 4) this.mode = 0
+          else this.mode = 4
+          this.graph.change()
+        }
+      })
+
+      // prevent conflict of clipspace content
+      if (!ComfyApp.clipspace_return_node) {
+        options.push({
+          content: 'Copy (Clipspace)',
+          callback: (obj) => {
+            ComfyApp.copyToClipspace(this)
+          }
+        })
+
+        if (ComfyApp.clipspace != null) {
+          options.push({
+            content: 'Paste (Clipspace)',
+            callback: () => {
+              ComfyApp.pasteFromClipspace(this)
+            }
+          })
+        }
+
+        if (ComfyApp.isImageNode(this)) {
+          options.push({
+            content: 'Open in MaskEditor',
+            callback: (obj) => {
+              ComfyApp.copyToClipspace(this)
+              ComfyApp.clipspace_return_node = this
+              ComfyApp.open_maskeditor()
+            }
+          })
+        }
+      }
+    }
+  }
+
+  #addNodeKeyHandler(node) {
+    const app = this
+    const origNodeOnKeyDown = node.prototype.onKeyDown
+
+    node.prototype.onKeyDown = function (e) {
+      if (origNodeOnKeyDown && origNodeOnKeyDown.apply(this, e) === false) {
+        return false
+      }
+
+      if (this.flags.collapsed || !this.imgs || this.imageIndex === null) {
+        return
+      }
+
+      let handled = false
+
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        if (e.key === 'ArrowLeft') {
+          this.imageIndex -= 1
+        } else if (e.key === 'ArrowRight') {
+          this.imageIndex += 1
+        }
+        this.imageIndex %= this.imgs.length
+
+        if (this.imageIndex < 0) {
+          this.imageIndex = this.imgs.length + this.imageIndex
+        }
+        handled = true
+      } else if (e.key === 'Escape') {
+        this.imageIndex = null
+        handled = true
+      }
+
+      if (handled === true) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        return false
+      }
+    }
+  }
+
+  /**
+   * Adds Custom drawing logic for nodes
+   * e.g. Draws images and handles thumbnail navigation on nodes that output images
+   * @param {*} node The node to add the draw handler
+   */
+  #addDrawBackgroundHandler(node) {
+    const app = this
+
+    function getImageTop(node) {
+      let shiftY
+      if (node.imageOffset != null) {
+        shiftY = node.imageOffset
+      } else {
+        if (node.widgets?.length) {
+          const w = node.widgets[node.widgets.length - 1]
+          shiftY = w.last_y
+          if (w.computeSize) {
+            shiftY += w.computeSize()[1] + 4
+          } else if (w.computedHeight) {
+            shiftY += w.computedHeight
+          } else {
+            shiftY += LiteGraph.NODE_WIDGET_HEIGHT + 4
+          }
+        } else {
+          shiftY = node.computeSize()[1]
+        }
+      }
+      return shiftY
+    }
+
+    node.prototype.setSizeForImage = function (force) {
+      if (!force && this.animatedImages) return
+
+      if (this.inputHeight || this.freeWidgetSpace > 210) {
+        this.setSize(this.size)
+        return
+      }
+      const minHeight = getImageTop(this) + 220
+      if (this.size[1] < minHeight) {
+        this.setSize([this.size[0], minHeight])
+      }
+    }
+
+    function unsafeDrawBackground(ctx) {
+      if (!this.flags.collapsed) {
+        let imgURLs = []
+        let imagesChanged = false
+
+        const output = app.nodeOutputs[this.id + '']
+        if (output?.images) {
+          this.animatedImages = output?.animated?.find(Boolean)
+          if (this.images !== output.images) {
+            this.images = output.images
+            imagesChanged = true
+            imgURLs = imgURLs.concat(
+              output.images.map((params) => {
+                return api.apiURL(
+                  '/view?' +
+                    new URLSearchParams(params).toString() +
+                    (this.animatedImages ? '' : app.getPreviewFormatParam()) +
+                    app.getRandParam()
+                )
+              })
+            )
+          }
+        }
+
+        const preview = app.nodePreviewImages[this.id + '']
+        if (this.preview !== preview) {
+          this.preview = preview
+          imagesChanged = true
+          if (preview != null) {
+            imgURLs.push(preview)
+          }
+        }
+
+        if (imagesChanged) {
+          this.imageIndex = null
+          if (imgURLs.length > 0) {
+            Promise.all(
+              imgURLs.map((src) => {
+                return new Promise((r) => {
+                  const img = new Image()
+                  img.onload = () => r(img)
+                  img.onerror = () => r(null)
+                  img.src = src
+                })
+              })
+            ).then((imgs) => {
+              if (
+                (!output || this.images === output.images) &&
+                (!preview || this.preview === preview)
+              ) {
+                this.imgs = imgs.filter(Boolean)
+                this.setSizeForImage?.()
+                app.graph.setDirtyCanvas(true)
+              }
+            })
+          } else {
+            this.imgs = null
+          }
+        }
+
+        const is_all_same_aspect_ratio = (imgs) => {
+          // assume: imgs.length >= 2
+          let ratio = imgs[0].naturalWidth / imgs[0].naturalHeight
+
+          for (let i = 1; i < imgs.length; i++) {
+            let this_ratio = imgs[i].naturalWidth / imgs[i].naturalHeight
+            if (ratio != this_ratio) return false
+          }
+
+          return true
+        }
+
+        if (this.imgs?.length) {
+          const widgetIdx = this.widgets?.findIndex(
+            (w) => w.name === ANIM_PREVIEW_WIDGET
+          )
+
+          if (this.animatedImages) {
+            // Instead of using the canvas we'll use a IMG
+            if (widgetIdx > -1) {
+              // Replace content
+              const widget = this.widgets[widgetIdx]
+              widget.options.host.updateImages(this.imgs)
+            } else {
+              const host = createImageHost(this)
+              this.setSizeForImage(true)
+              const widget = this.addDOMWidget(
+                ANIM_PREVIEW_WIDGET,
+                'img',
+                host.el,
+                {
+                  host,
+                  getHeight: host.getHeight,
+                  onDraw: host.onDraw,
+                  hideOnZoom: false
+                }
+              )
+              widget.serializeValue = () => undefined
+              widget.options.host.updateImages(this.imgs)
+            }
+            return
+          }
+
+          if (widgetIdx > -1) {
+            this.widgets[widgetIdx].onRemove?.()
+            this.widgets.splice(widgetIdx, 1)
+          }
+
+          const canvas = app.graph.list_of_graphcanvas[0]
+          const mouse = canvas.graph_mouse
+          if (!canvas.pointer_is_down && this.pointerDown) {
+            if (
+              mouse[0] === this.pointerDown.pos[0] &&
+              mouse[1] === this.pointerDown.pos[1]
+            ) {
+              this.imageIndex = this.pointerDown.index
+            }
+            this.pointerDown = null
+          }
+
+          let imageIndex = this.imageIndex
+          const numImages = this.imgs.length
+          if (numImages === 1 && !imageIndex) {
+            this.imageIndex = imageIndex = 0
+          }
+
+          const top = getImageTop(this)
+          var shiftY = top
+
+          let dw = this.size[0]
+          let dh = this.size[1]
+          dh -= shiftY
+
+          if (imageIndex == null) {
+            var cellWidth, cellHeight, shiftX, cell_padding, cols
+
+            const compact_mode = is_all_same_aspect_ratio(this.imgs)
+            if (!compact_mode) {
+              // use rectangle cell style and border line
+              cell_padding = 2
+              // Prevent infinite canvas2d scale-up
+              const largestDimension = this.imgs.reduce(
+                (acc, current) =>
+                  Math.max(acc, current.naturalWidth, current.naturalHeight),
+                0
+              )
+              const fakeImgs = []
+              fakeImgs.length = this.imgs.length
+              fakeImgs[0] = {
+                naturalWidth: largestDimension,
+                naturalHeight: largestDimension
+              }
+              ;({ cellWidth, cellHeight, cols, shiftX } = calculateImageGrid(
+                fakeImgs,
+                dw,
+                dh
+              ))
+            } else {
+              cell_padding = 0
+              ;({ cellWidth, cellHeight, cols, shiftX } = calculateImageGrid(
+                this.imgs,
+                dw,
+                dh
+              ))
+            }
+
+            let anyHovered = false
+            this.imageRects = []
+            for (let i = 0; i < numImages; i++) {
+              const img = this.imgs[i]
+              const row = Math.floor(i / cols)
+              const col = i % cols
+              const x = col * cellWidth + shiftX
+              const y = row * cellHeight + shiftY
+              if (!anyHovered) {
+                anyHovered = LiteGraph.isInsideRectangle(
+                  mouse[0],
+                  mouse[1],
+                  x + this.pos[0],
+                  y + this.pos[1],
+                  cellWidth,
+                  cellHeight
+                )
+                if (anyHovered) {
+                  this.overIndex = i
+                  let value = 110
+                  if (canvas.pointer_is_down) {
+                    if (!this.pointerDown || this.pointerDown.index !== i) {
+                      this.pointerDown = { index: i, pos: [...mouse] }
+                    }
+                    value = 125
+                  }
+                  ctx.filter = `contrast(${value}%) brightness(${value}%)`
+                  canvas.canvas.style.cursor = 'pointer'
+                }
+              }
+              this.imageRects.push([x, y, cellWidth, cellHeight])
+
+              let wratio = cellWidth / img.width
+              let hratio = cellHeight / img.height
+              var ratio = Math.min(wratio, hratio)
+
+              let imgHeight = ratio * img.height
+              let imgY =
+                row * cellHeight + shiftY + (cellHeight - imgHeight) / 2
+              let imgWidth = ratio * img.width
+              let imgX = col * cellWidth + shiftX + (cellWidth - imgWidth) / 2
+
+              ctx.drawImage(
+                img,
+                imgX + cell_padding,
+                imgY + cell_padding,
+                imgWidth - cell_padding * 2,
+                imgHeight - cell_padding * 2
+              )
+              if (!compact_mode) {
+                // rectangle cell and border line style
+                ctx.strokeStyle = '#8F8F8F'
+                ctx.lineWidth = 1
+                ctx.strokeRect(
+                  x + cell_padding,
+                  y + cell_padding,
+                  cellWidth - cell_padding * 2,
+                  cellHeight - cell_padding * 2
+                )
+              }
+
+              ctx.filter = 'none'
+            }
+
+            if (!anyHovered) {
+              this.pointerDown = null
+              this.overIndex = null
+            }
+          } else {
+            // Draw individual
+            let w = this.imgs[imageIndex].naturalWidth
+            let h = this.imgs[imageIndex].naturalHeight
+
+            const scaleX = dw / w
+            const scaleY = dh / h
+            const scale = Math.min(scaleX, scaleY, 1)
+
+            w *= scale
+            h *= scale
+
+            let x = (dw - w) / 2
+            let y = (dh - h) / 2 + shiftY
+            ctx.drawImage(this.imgs[imageIndex], x, y, w, h)
+
+            const drawButton = (x, y, sz, text) => {
+              const hovered = LiteGraph.isInsideRectangle(
+                mouse[0],
+                mouse[1],
+                x + this.pos[0],
+                y + this.pos[1],
+                sz,
+                sz
+              )
+              let fill = '#333'
+              let textFill = '#fff'
+              let isClicking = false
+              if (hovered) {
+                canvas.canvas.style.cursor = 'pointer'
+                if (canvas.pointer_is_down) {
+                  fill = '#1e90ff'
+                  isClicking = true
+                } else {
+                  fill = '#eee'
+                  textFill = '#000'
+                }
+              } else {
+                this.pointerWasDown = null
+              }
+
+              ctx.fillStyle = fill
+              ctx.beginPath()
+              ctx.roundRect(x, y, sz, sz, [4])
+              ctx.fill()
+              ctx.fillStyle = textFill
+              ctx.font = '12px Arial'
+              ctx.textAlign = 'center'
+              ctx.fillText(text, x + 15, y + 20)
+
+              return isClicking
+            }
+
+            if (numImages > 1) {
+              if (
+                drawButton(
+                  dw - 40,
+                  dh + top - 40,
+                  30,
+                  `${this.imageIndex + 1}/${numImages}`
+                )
+              ) {
+                let i =
+                  this.imageIndex + 1 >= numImages ? 0 : this.imageIndex + 1
+                if (!this.pointerDown || !this.pointerDown.index === i) {
+                  this.pointerDown = { index: i, pos: [...mouse] }
+                }
+              }
+
+              if (drawButton(dw - 40, top + 10, 30, `x`)) {
+                if (!this.pointerDown || !this.pointerDown.index === null) {
+                  this.pointerDown = { index: null, pos: [...mouse] }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    node.prototype.onDrawBackground = function (ctx) {
+      try {
+        unsafeDrawBackground.call(this, ctx)
+      } catch (error) {
+        console.error('Error drawing node background', error)
+      }
+    }
+  }
+
+  /**
    * Adds a handler allowing drag+drop of files onto the window to load workflows
    */
   #addDropHandler() {
@@ -1070,6 +1741,10 @@ export class ComfyApp {
       },
       100
     )
+    await this.#invokeExtensionsAsync('setup')
+
+    // Post message to iFrame wrapper to notify setup complete.
+    this.notifyPlaybookWrapperGraphInitialized()
   }
 
   resizeCanvas() {
@@ -1486,7 +2161,6 @@ export class ComfyApp {
   }
 
   async queuePrompt(number, batchCount = 1) {
-    console.log('clicki')
     this.#queueItems.push({ number, batchCount })
 
     // Only have one action process the items so each one gets a unique seed correctly
