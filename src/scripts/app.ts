@@ -252,10 +252,6 @@ export class ComfyApp {
       }
     })
 
-    /*
-     *  enables functionality - I'M NOT SURE THIS ISUSED OR RELEVANT
-     */
-    console.log('LOADING APP IN WINDOW', this)
     window.__COMFYAPP = this
 
     /*
