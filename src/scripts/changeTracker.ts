@@ -66,6 +66,10 @@ export class ChangeTracker {
       api.dispatchEvent(
         new CustomEvent('graphChanged', { detail: this.activeState })
       )
+
+      // Send updated workflow data to Playbook wrapper if graph changed.
+      if (window.__COMFYAPP)
+        window.__COMFYAPP.sendWorkflowDataToPlaybookWrapper()
     }
   }
 
