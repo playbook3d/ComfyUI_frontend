@@ -208,6 +208,7 @@ export class ComfyApp {
           event.origin
         )
         this.playbookWrapperOrigin = event.origin
+        this.notifyPlaybookWrapperGraphInitialized()
       }
 
       if (eventMessageData.message === 'SendWorkflowDataToComfyWindow') {
@@ -444,7 +445,10 @@ export class ComfyApp {
    * Send message with workflow data to wrapping iFrame layer.
    */
   async notifyPlaybookWrapperGraphInitialized() {
-    console.log('Comfy Window Sending: ComfyWindowInitialized')
+    console.log(
+      'Comfy Window Sending: ComfyWindowInitialized: target origin: ',
+      this.playbookWrapperOrigin
+    )
 
     // const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
 
@@ -2005,7 +2009,7 @@ export class ComfyApp {
     await this.#invokeExtensionsAsync('setup')
 
     // Post message to iFrame wrapper to notify setup complete.
-    this.notifyPlaybookWrapperGraphInitialized()
+    // this.notifyPlaybookWrapperGraphInitialized()
   }
 
   resizeCanvas() {
