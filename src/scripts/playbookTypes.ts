@@ -5,6 +5,7 @@ export interface WorkflowWindowMessageData {
     | 'RequestWorkflowDataFromComfyWindow'
     | 'SendWorkflowDataToComfyWindow'
     | 'ComfyWindowInitialized'
+    | 'SendWrapperOriginToComfyWindow'
     | 'SendWorkflowDataToPlaybookWrapper'
   data?: ComfyWorkflowJSON
 }
