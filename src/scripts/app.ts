@@ -143,6 +143,10 @@ export class ComfyApp {
   playbookWrapperOrigin: string
   // ------------- |
 
+  // Playbook Fields
+  playbookWrapperOrigin: string
+  // ------------- |
+
   /**
    * @deprecated Use useExecutionStore().executingNodeId instead
    */
@@ -230,25 +234,35 @@ export class ComfyApp {
      *  Subscribe listener to receive messaging from iFrame wrapper layer.
      */
     window.addEventListener('message', async (event) => {
-      const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+      // const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+
+      console.log('Comfy Window Received: ', event)
 
       console.log('external event', {
-        eventOrigin: event.origin,
-        expectedOrigin: wrapperOrigin,
-        originsMatch: event.origin === wrapperOrigin
+        eventOrigin: event.origin
+        // expectedOrigin: wrapperOrigin,
+        // originsMatch: event.origin === wrapperOrigin
       })
 
-      // Verify this message came from iFrame layer.
-      if (event.origin !== wrapperOrigin) return
+      // // Verify this message came from iFrame layer.
+      // if (event.origin !== wrapperOrigin) return
 
       const eventMessageData: WorkflowWindowMessageData = event.data
+
+      if (eventMessageData.message === 'SendWrapperOriginToComfyWindow') {
+        console.log(
+          'Comfy Window Received: SendWrapperOriginToComfyWindow',
+          event.origin
+        )
+        this.playbookWrapperOrigin = event.origin
+      }
 
       if (eventMessageData.message === 'SendWorkflowDataToComfyWindow') {
         console.log(
           'Comfy Window Received: SendWorkflowDataToComfyWindow',
           eventMessageData
         )
-        this.loadGraphData(eventMessageData.data)
+        this.loadGraphData(eventMessageData.data as ComfyWorkflowJSON)
       }
     })
 
@@ -474,6 +488,41 @@ export class ComfyApp {
       return this.extensions
     }
     return useExtensionStore().enabledExtensions
+  }
+
+  /**
+   * Send message with workflow data to wrapping iFrame layer.
+   */
+  public async sendWorkflowDataToPlaybookWrapper() {
+    // const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+    const graphData = await this.graphToPrompt()
+
+    const messageData: WorkflowWindowMessageData = {
+      message: 'SendWorkflowDataToPlaybookWrapper',
+      data: graphData.workflow
+    }
+
+    console.log(
+      'Comfy Window Sending: SendWorkflowDataToPlaybookWrapper: ',
+      messageData
+    )
+
+    window.top.postMessage(messageData, this.playbookWrapperOrigin)
+  }
+
+  /**
+   * Send message with workflow data to wrapping iFrame layer.
+   */
+  async notifyPlaybookWrapperGraphInitialized() {
+    console.log('Comfy Window Sending: ComfyWindowInitialized')
+
+    // const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+
+    const messageData: WorkflowWindowMessageData = {
+      message: 'ComfyWindowInitialized'
+    }
+
+    window.top.postMessage(messageData, this.playbookWrapperOrigin)
   }
 
   /**
