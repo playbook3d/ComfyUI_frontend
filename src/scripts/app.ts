@@ -187,18 +187,7 @@ export class ComfyApp {
      *  Subscribe listener to receive messaging from iFrame wrapper layer.
      */
     window.addEventListener('message', async (event) => {
-      // const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
-
       console.log('Comfy Window Received: ', event)
-
-      console.log('external event', {
-        eventOrigin: event.origin
-        // expectedOrigin: wrapperOrigin,
-        // originsMatch: event.origin === wrapperOrigin
-      })
-
-      // // Verify this message came from iFrame layer.
-      // if (event.origin !== wrapperOrigin) return
 
       const eventMessageData: WorkflowWindowMessageData = event.data
 
@@ -2007,9 +1996,6 @@ export class ComfyApp {
     this.#addWidgetLinkHandling()
 
     await this.#invokeExtensionsAsync('setup')
-
-    // Post message to iFrame wrapper to notify setup complete.
-    // this.notifyPlaybookWrapperGraphInitialized()
   }
 
   resizeCanvas() {
