@@ -230,25 +230,35 @@ export class ComfyApp {
      *  Subscribe listener to receive messaging from iFrame wrapper layer.
      */
     window.addEventListener('message', async (event) => {
-      console.log('Comfy Window Received: ', event)
-
       const eventMessageData: WorkflowWindowMessageData = event.data
 
-      if (eventMessageData.message === 'SendWrapperOriginToComfyWindow') {
-        console.log(
-          'Comfy Window Received: SendWrapperOriginToComfyWindow',
-          event.origin
-        )
-        this.playbookWrapperOrigin = event.origin
-        this.notifyPlaybookWrapperGraphInitialized()
-      }
+      switch (eventMessageData.message) {
+        case 'SendWrapperOriginToComfyWindow':
+          console.log(
+            'Comfy Window Received: SendWrapperOriginToComfyWindow',
+            event.origin
+          )
+          this.playbookWrapperOrigin = event.origin
+          this.notifyPlaybookWrapperGraphInitialized()
+          break
 
-      if (eventMessageData.message === 'SendWorkflowDataToComfyWindow') {
-        console.log(
-          'Comfy Window Received: SendWorkflowDataToComfyWindow',
-          eventMessageData
-        )
-        this.loadGraphData(eventMessageData.data as ComfyWorkflowJSON)
+        case 'SendWorkflowDataToComfyWindow':
+          console.log(
+            'Comfy Window Received: SendWorkflowDataToComfyWindow',
+            eventMessageData
+          )
+          this.loadGraphData(eventMessageData.data as ComfyWorkflowJSON)
+          break
+
+        case 'RequestWorkflowDataFromComfyWindow':
+          console.log(
+            'Comfy Window Received: RequestWorkflowDataFromComfyWindow'
+          )
+          this.sendWorkflowDataToPlaybookWrapper()
+          break
+
+        default:
+          break
       }
     })
 
@@ -442,12 +452,11 @@ export class ComfyApp {
    * Send message with workflow data to wrapping iFrame layer.
    */
   public async sendWorkflowDataToPlaybookWrapper() {
-    // const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
     const graphData = await this.graphToPrompt()
 
     const messageData: WorkflowWindowMessageData = {
       message: 'SendWorkflowDataToPlaybookWrapper',
-      data: graphData.workflow
+      data: graphData
     }
 
     console.log(
@@ -466,8 +475,6 @@ export class ComfyApp {
       'Comfy Window Sending: ComfyWindowInitialized: target origin: ',
       this.playbookWrapperOrigin
     )
-
-    // const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
 
     const messageData: WorkflowWindowMessageData = {
       message: 'ComfyWindowInitialized'
