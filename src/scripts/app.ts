@@ -247,7 +247,7 @@ export class ComfyApp {
             'Comfy Window Received: SendWorkflowDataToComfyWindow',
             eventMessageData
           )
-          this.loadGraphData(eventMessageData.data as ComfyWorkflowJSON)
+          this.loadGraphData(eventMessageData.data as ComfyWorkflowJSON, true)
           break
 
         case 'RequestWorkflowDataFromComfyWindow':
@@ -983,6 +983,46 @@ export class ComfyApp {
 
     await useExtensionService().invokeExtensionsAsync('init')
     await this.registerNodes()
+    initWidgets(this)
+
+    // Playbook: Disabling this functionality to avoid cached workflow
+    // data being loaded on graph load.
+    // Load previous workflow
+    // let restored = false
+    // try {
+    //   const loadWorkflow = async (json) => {
+    //     if (json) {
+    //       const workflow = JSON.parse(json)
+    //       const workflowName = getStorageValue('Comfy.PreviousWorkflow')
+    //       await this.loadGraphData(workflow, true, true, workflowName)
+    //       return true
+    //     }
+    //   }
+    //   const clientId = api.initialClientId ?? api.clientId
+    //   restored =
+    //     (clientId &&
+    //       (await loadWorkflow(
+    //         sessionStorage.getItem(`workflow:${clientId}`)
+    //       ))) ||
+    //     (await loadWorkflow(localStorage.getItem('workflow')))
+    // } catch (err) {
+    //   console.error('Error loading previous workflow', err)
+    // }
+
+    // // We failed to restore a workflow so load the default
+    // if (!restored) {
+    //   await this.loadGraphData()
+    // }
+
+    // Save current workflow automatically
+    setInterval(() => {
+      const sortNodes = useSettingStore().get('Comfy.Workflow.SortNodeIdOnSave')
+      const workflow = JSON.stringify(this.graph.serialize({ sortNodes }))
+      localStorage.setItem('workflow', workflow)
+      if (api.clientId) {
+        sessionStorage.setItem(`workflow:${api.clientId}`, workflow)
+      }
+    }, 1000)
 
     this.#addDrawNodeHandler()
     this.#addDropHandler()
@@ -1341,6 +1381,9 @@ export class ComfyApp {
     requestAnimationFrame(() => {
       this.graph.setDirtyCanvas(true, true)
     })
+
+    // Send updated workflow data to Playbook wrapper if graph changed.
+    if (window.__COMFYAPP) window.__COMFYAPP.sendWorkflowDataToPlaybookWrapper()
   }
 
   /**
