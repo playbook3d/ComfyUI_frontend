@@ -251,7 +251,7 @@ export class ComfyApp {
             'Comfy Window Received: SendWorkflowDataToComfyWindow',
             eventMessageData
           )
-          this.loadGraphData(eventMessageData.data as ComfyWorkflowJSON)
+          this.loadGraphData(eventMessageData.data as ComfyWorkflowJSON, true)
           break
 
         case 'RequestWorkflowDataFromComfyWindow':
