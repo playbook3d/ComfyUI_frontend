@@ -1922,6 +1922,7 @@ export class ComfyApp {
     this.#addRestoreWorkflowView()
 
     this.graph = new LGraph()
+    console.log('ComfyUI: new LGraph created')
 
     this.#addAfterConfigureHandler()
 
