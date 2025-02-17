@@ -47,7 +47,7 @@ import { useExtensionStore } from '@/stores/extensionStore'
 import { useFirebaseAuthStore } from '@/stores/firebaseAuthStore'
 import { KeyComboImpl, useKeybindingStore } from '@/stores/keybindingStore'
 import { useCommandStore } from '@/stores/commandStore'
-import { ComfyWorkflowNodeData, WorkflowWindowMessageData } from './playbook-scripts/playbookTypes'
+import { ComfyWorkflowNodeData } from './playbook-scripts/playbookTypes'
 import { useModelStore } from '@/stores/modelStore'
 import { SYSTEM_NODE_DEFS, useNodeDefStore } from '@/stores/nodeDefStore'
 import { useSettingStore } from '@/stores/settingStore'
@@ -667,9 +667,13 @@ export class ComfyApp {
     console.log('Comfy Window Sending: ComfyWindowInitialized')
 
     // const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+    console.log(
+      'Comfy Window Sending: ComfyGraphSetupComplete: target origin: ',
+      this.playbookWrapperOrigin
+    )
 
     const messageData: WorkflowWindowMessageData = {
-      message: 'ComfyWindowInitialized'
+      message: 'ComfyGraphSetupComplete'
     }
 
     window.top.postMessage(messageData, this.playbookWrapperOrigin)
@@ -1655,6 +1659,7 @@ export class ComfyApp {
       }
     })
 
+
     this.#addAfterConfigureHandler()
 
     this.canvas = new LGraphCanvas(canvasEl, this.graph)
@@ -1787,6 +1792,11 @@ export class ComfyApp {
     await this.#invokeExtensionsAsync('setup')
 
     // Post message to iFrame wrapper to notify setup complete.
+    // const messageData: WorkflowWindowMessageData = {
+    //   message: 'ComfyGraphSetupComplete'
+    // }
+    // window.top.postMessage(messageData, this.playbookWrapperOrigin)
+
     this.notifyPlaybookWrapperGraphInitialized()
   }
 
