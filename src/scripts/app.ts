@@ -1076,11 +1076,32 @@ export class ComfyApp {
 
     await this.#invokeExtensionsAsync('setup')
 
-    const messageData: WorkflowWindowMessageData = {
-      message: 'ComfyGraphSetupComplete'
-    }
+    this.waitForPlaybookWrapperOriginToSendSetupComplete()
+  }
 
-    window.top.postMessage(messageData, this.playbookWrapperOrigin)
+  waitForPlaybookWrapperOriginToSendSetupCompleteInterval = null
+  waitForPlaybookWrapperOriginToSendSetupComplete() {
+    this.waitForPlaybookWrapperOriginToSendSetupCompleteInterval = setInterval(
+      () => {
+        console.log(
+          'ComfyUI: setup complete: sending ComfyGraphSetupComplete to ',
+          this.playbookWrapperOrigin
+        )
+
+        if (this.playbookWrapperOrigin) {
+          const messageData: WorkflowWindowMessageData = {
+            message: 'ComfyGraphSetupComplete'
+          }
+
+          window.top.postMessage(messageData, this.playbookWrapperOrigin)
+
+          clearInterval(
+            this.waitForPlaybookWrapperOriginToSendSetupCompleteInterval
+          )
+        }
+      },
+      500
+    )
   }
 
   resizeCanvas() {
