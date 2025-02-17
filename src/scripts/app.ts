@@ -668,12 +668,12 @@ export class ComfyApp {
 
     // const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
     console.log(
-      'Comfy Window Sending: ComfyGraphSetupComplete: target origin: ',
+      'Comfy Window Sending: WrapperOriginSetOnComfyInstance: target origin: ',
       this.playbookWrapperOrigin
     )
 
     const messageData: WorkflowWindowMessageData = {
-      message: 'ComfyGraphSetupComplete'
+      message: 'WrapperOriginSetOnComfyInstance'
     }
 
     window.top.postMessage(messageData, this.playbookWrapperOrigin)
@@ -1791,13 +1791,11 @@ export class ComfyApp {
     )
     await this.#invokeExtensionsAsync('setup')
 
-    // Post message to iFrame wrapper to notify setup complete.
-    // const messageData: WorkflowWindowMessageData = {
-    //   message: 'ComfyGraphSetupComplete'
-    // }
-    // window.top.postMessage(messageData, this.playbookWrapperOrigin)
+    const messageData: WorkflowWindowMessageData = {
+      message: 'ComfyGraphSetupComplete'
+    }
 
-    this.notifyPlaybookWrapperGraphInitialized()
+    window.top.postMessage(messageData, this.playbookWrapperOrigin)
   }
 
   resizeCanvas() {
