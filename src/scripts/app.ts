@@ -239,13 +239,7 @@ export class ComfyApp {
             event.origin
           )
           this.playbookWrapperOrigin = event.origin
-
-          // if (!this.graph) {
-          //   this.graph = new LGraph()
-          //   console.log('ComfyUI: new LGraph created after SendWrapperOriginToComfyWindow')
-          // }
-
-          // this.notifyPlaybookWrapperGraphInitialized()
+          this.notifyWrapperOriginSetOnComfyInstance()
           break
 
         case 'SendWorkflowDataToComfyWindow':
@@ -476,14 +470,14 @@ export class ComfyApp {
   /**
    * Send message with workflow data to wrapping iFrame layer.
    */
-  async notifyPlaybookWrapperGraphInitialized() {
+  async notifyWrapperOriginSetOnComfyInstance() {
     console.log(
-      'Comfy Window Sending: ComfyGraphSetupComplete: target origin: ',
+      'Comfy Window Sending: WrapperOriginSetOnComfyInstance: target origin: ',
       this.playbookWrapperOrigin
     )
 
     const messageData: WorkflowWindowMessageData = {
-      message: 'ComfyGraphSetupComplete'
+      message: 'WrapperOriginSetOnComfyInstance'
     }
 
     window.top.postMessage(messageData, this.playbookWrapperOrigin)
@@ -1040,12 +1034,11 @@ export class ComfyApp {
 
     await this.#invokeExtensionsAsync('setup')
 
-    // const messageData: WorkflowWindowMessageData = {
-    //   message: 'ComfyGraphSetupComplete'
-    // }
-    // window.top.postMessage(messageData, this.playbookWrapperOrigin)
+    const messageData: WorkflowWindowMessageData = {
+      message: 'ComfyGraphSetupComplete'
+    }
 
-    this.notifyPlaybookWrapperGraphInitialized()
+    window.top.postMessage(messageData, this.playbookWrapperOrigin)
   }
 
   resizeCanvas() {
