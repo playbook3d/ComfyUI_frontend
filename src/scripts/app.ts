@@ -196,7 +196,7 @@ export class ComfyApp {
             event.origin
           )
           this.playbookWrapperOrigin = event.origin
-          this.notifyPlaybookWrapperGraphInitialized()
+          this.notifyWrapperOriginSetOnComfyInstance()
           break
 
         case 'SendWorkflowDataToComfyWindow':
@@ -442,14 +442,14 @@ export class ComfyApp {
   /**
    * Send message with workflow data to wrapping iFrame layer.
    */
-  async notifyPlaybookWrapperGraphInitialized() {
+  async notifyWrapperOriginSetOnComfyInstance() {
     console.log(
-      'Comfy Window Sending: ComfyWindowInitialized: target origin: ',
+      'Comfy Window Sending: WrapperOriginSetOnComfyInstance: target origin: ',
       this.playbookWrapperOrigin
     )
 
     const messageData: WorkflowWindowMessageData = {
-      message: 'ComfyWindowInitialized'
+      message: 'WrapperOriginSetOnComfyInstance'
     }
 
     window.top.postMessage(messageData, this.playbookWrapperOrigin)
@@ -1921,7 +1921,12 @@ export class ComfyApp {
     this.#addApiUpdateHandlers()
     this.#addRestoreWorkflowView()
 
-    this.graph = new LGraph()
+    if (!this.graph) {
+      this.graph = new LGraph()
+
+      console.log('ComfyUI: new LGraph created in setup')
+    }
+    // this.graph = new LGraph()
 
     this.#addAfterConfigureHandler()
 
@@ -2005,6 +2010,33 @@ export class ComfyApp {
     this.#addWidgetLinkHandling()
 
     await this.#invokeExtensionsAsync('setup')
+
+    this.waitForPlaybookWrapperOriginToSendSetupComplete()
+  }
+
+  waitForPlaybookWrapperOriginToSendSetupCompleteInterval = null
+  waitForPlaybookWrapperOriginToSendSetupComplete() {
+    this.waitForPlaybookWrapperOriginToSendSetupCompleteInterval = setInterval(
+      () => {
+        console.log(
+          'ComfyUI: setup complete: sending ComfyGraphSetupComplete to ',
+          this.playbookWrapperOrigin
+        )
+
+        if (this.playbookWrapperOrigin) {
+          const messageData: WorkflowWindowMessageData = {
+            message: 'ComfyGraphSetupComplete'
+          }
+
+          window.top.postMessage(messageData, this.playbookWrapperOrigin)
+
+          clearInterval(
+            this.waitForPlaybookWrapperOriginToSendSetupCompleteInterval
+          )
+        }
+      },
+      500
+    )
   }
 
   resizeCanvas() {
