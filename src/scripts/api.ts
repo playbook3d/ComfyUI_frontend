@@ -1,3 +1,6 @@
+import axios from 'axios'
+
+import config from '@/config'
 import type {
   EmbeddingsResponse,
   ExecutedWsMessage,
@@ -29,9 +32,7 @@ import {
 } from '@/schemas/nodeDefSchema'
 import { WorkflowTemplates } from '@/types/workflowTemplateTypes'
 
-import axios from 'axios'
 import nodes_definition from './nodes_definition.json'
-import config from '@/config'
 
 interface QueuePromptRequestBody {
   client_id: string
@@ -213,10 +214,19 @@ export class ComfyApi extends EventTarget {
     return this.api_base + route
   }
 
-  fetchApi(route: string, dataToReturn?: any, options?: RequestInit, code?: number) {
+  fetchApi(
+    route: string,
+    dataToReturn?: any,
+    options?: RequestInit,
+    code?: number
+  ) {
     if (this.is_offline) {
       return new Promise<Response>((resolve) =>
-        resolve(new Response(JSON.stringify(dataToReturn, null), {status: code ?? 200}))
+        resolve(
+          new Response(JSON.stringify(dataToReturn, null), {
+            status: code ?? 200
+          })
+        )
       )
     }
     if (!options) {
@@ -623,7 +633,10 @@ export class ComfyApi extends EventTarget {
     Pending: PendingTaskItem[]
   }> {
     try {
-      const res = await this.fetchApi('/queue', { queue_running: [], queue_pending: [] })
+      const res = await this.fetchApi('/queue', {
+        queue_running: [],
+        queue_pending: []
+      })
       const data = await res.json()
       return {
         // Running action uses a different endpoint for cancelling
@@ -921,7 +934,10 @@ export class ComfyApi extends EventTarget {
 
   async listUserDataFullInfo(dir: string): Promise<UserDataFullInfo[]> {
     const resp = await this.fetchApi(
-      `/userdata?dir=${encodeURIComponent(dir)}&recurse=true&split=false&full_info=true`, undefined, undefined, 404
+      `/userdata?dir=${encodeURIComponent(dir)}&recurse=true&split=false&full_info=true`,
+      undefined,
+      undefined,
+      404
     )
     if (resp.status === 404) return []
     if (resp.status !== 200) {

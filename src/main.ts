@@ -1,4 +1,11 @@
 import '@comfyorg/litegraph/style.css'
+// import { mapSlimComfyNodes, mapSlimExtensions } from './helper/comfyuiNodes'
+
+// import { mapSlimComfyNodes, mapSlimExtensions } from './helper/comfyuiNodes'
+
+// import { mapSlimComfyNodes, mapSlimExtensions } from './helper/comfyuiNodes'
+
+import '@comfyorg/litegraph/style.css'
 import { definePreset } from '@primevue/themes'
 import Aura from '@primevue/themes/aura'
 import * as Sentry from '@sentry/vue'
@@ -10,13 +17,6 @@ import ToastService from 'primevue/toastservice'
 import Tooltip from 'primevue/tooltip'
 import { createApp } from 'vue'
 
-// import { mapSlimComfyNodes, mapSlimExtensions } from './helper/comfyuiNodes'
-
-// import { mapSlimComfyNodes, mapSlimExtensions } from './helper/comfyuiNodes'
-
-// import { mapSlimComfyNodes, mapSlimExtensions } from './helper/comfyuiNodes'
-
-import '@comfyorg/litegraph/style.css'
 import '@/assets/css/style.css'
 import router from '@/router'
 

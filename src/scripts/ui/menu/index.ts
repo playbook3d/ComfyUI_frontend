@@ -1,10 +1,10 @@
 import type { ComfyApp } from '@/scripts/app'
+import { downloadBlob } from '@/scripts/utils'
+import { useSettingStore } from '@/stores/settingStore'
 
 import { $el } from '../../ui'
 import { ComfyButtonGroup } from '../components/buttonGroup'
 import './menu.css'
-import { useSettingStore } from '@/stores/settingStore'
-import { downloadBlob } from '@/scripts/utils'
 
 // Export to make sure following components are shimmed and exported by vite
 export { ComfyButton } from '../components/button'

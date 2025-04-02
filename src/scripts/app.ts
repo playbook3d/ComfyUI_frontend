@@ -10,6 +10,7 @@ import type { IWidget, Rect, Vector2 } from '@comfyorg/litegraph'
 import _ from 'lodash'
 import type { ToastMessageOptions } from 'primevue/toast'
 import { reactive } from 'vue'
+import { shallowReactive } from 'vue'
 
 import { st, t } from '@/i18n'
 import type { NodeError, ResultItem } from '@/schemas/apiSchema'
@@ -49,6 +50,7 @@ import { deserialiseAndCreate } from '@/utils/vintageClipboard'
 
 import { type ComfyApi, PromptExecutionError, api } from './api'
 import { defaultGraph } from './defaultGraph'
+import { WorkflowWindowMessageData } from './playbookTypes'
 import {
   getFlacMetadata,
   getLatentMetadata,
@@ -59,9 +61,11 @@ import {
 import { $el, ComfyUI } from './ui'
 import { ComfyAppMenu } from './ui/menu/index'
 import { clone } from './utils'
-import { type ComfyWidgetConstructor, ComfyWidgets, initWidgets } from './widgets'
-import { shallowReactive } from 'vue'
-import { WorkflowWindowMessageData } from './playbookTypes'
+import {
+  type ComfyWidgetConstructor,
+  ComfyWidgets,
+  initWidgets
+} from './widgets'
 
 export const ANIM_PREVIEW_WIDGET = '$$comfy_animation_preview'
 
