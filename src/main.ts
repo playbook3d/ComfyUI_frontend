@@ -14,12 +14,20 @@ import { createApp } from 'vue'
 
 // import { mapSlimComfyNodes, mapSlimExtensions } from './helper/comfyuiNodes'
 
+// import { mapSlimComfyNodes, mapSlimExtensions } from './helper/comfyuiNodes'
+
 import '@comfyorg/litegraph/style.css'
 import '@/assets/css/style.css'
 import router from '@/router'
 
 import App from './App.vue'
 import { i18n } from './i18n'
+
+declare global {
+  interface Window {
+    __COMFYAPP: any
+  }
+}
 
 declare global {
   interface Window {

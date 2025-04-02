@@ -147,6 +147,10 @@ export class ComfyApp {
   playbookWrapperOrigin: string
   // ------------- |
 
+  // Playbook Fields
+  playbookWrapperOrigin: string
+  // ------------- |
+
   /**
    * @deprecated Use useExecutionStore().executingNodeId instead
    */
@@ -232,6 +236,45 @@ export class ComfyApp {
 
     /*
      *  Subscribe listener to receive messaging from iFrame wrapper layer.
+     */
+    window.addEventListener('message', async (event) => {
+      const eventMessageData: WorkflowWindowMessageData = event.data
+
+      switch (eventMessageData.message) {
+        case 'SendWrapperOriginToComfyWindow':
+          console.log(
+            'Comfy Window Received: SendWrapperOriginToComfyWindow',
+            event.origin
+          )
+          this.playbookWrapperOrigin = event.origin
+          this.notifyWrapperOriginSetOnComfyInstance()
+          break
+
+        case 'SendWorkflowDataToComfyWindow':
+          console.log(
+            'Comfy Window Received: SendWorkflowDataToComfyWindow',
+            eventMessageData
+          )
+          this.loadGraphData(eventMessageData.data as ComfyWorkflowJSON, true)
+          break
+
+        case 'RequestWorkflowDataFromComfyWindow':
+          console.log(
+            'Comfy Window Received: RequestWorkflowDataFromComfyWindow'
+          )
+          this.sendWorkflowDataToPlaybookWrapper()
+          break
+
+        default:
+          break
+      }
+    })
+
+    window.__COMFYAPP = this
+
+    /**
+     * List of extensions that are registered with the app
+     * @type {ComfyExtension[]}
      */
     window.addEventListener('message', async (event) => {
       const eventMessageData: WorkflowWindowMessageData = event.data
