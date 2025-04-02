@@ -59,7 +59,7 @@ import {
 import { $el, ComfyUI } from './ui'
 import { ComfyAppMenu } from './ui/menu/index'
 import { clone } from './utils'
-import { type ComfyWidgetConstructor, ComfyWidgets } from './widgets'
+import { type ComfyWidgetConstructor, ComfyWidgets, initWidgets } from './widgets'
 import { shallowReactive } from 'vue'
 import { WorkflowWindowMessageData } from './playbookTypes'
 

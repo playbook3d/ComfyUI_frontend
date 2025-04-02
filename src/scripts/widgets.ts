@@ -286,3 +286,33 @@ export const ComfyWidgets: Record<string, ComfyWidgetConstructor> = {
   COMBO: transformWidgetConstructorV2ToV1(useComboWidget()),
   IMAGEUPLOAD: useImageUploadWidget()
 }
+
+export function initWidgets(app) {
+  app.ui.settings.addSetting({
+    id: 'Comfy.WidgetControlMode',
+    category: ['Comfy', 'Node Widget', 'WidgetControlMode'],
+    name: 'Widget control mode',
+    tooltip:
+      'Controls when widget values are updated (randomize/increment/decrement), either before the prompt is queued or after.',
+    type: 'combo',
+    defaultValue: 'after',
+    options: ['before', 'after'],
+    onChange(value) {
+      controlValueRunBefore = value === 'before'
+      for (const n of app.graph.nodes) {
+        if (!n.widgets) continue
+        for (const w of n.widgets) {
+          if (w[IS_CONTROL_WIDGET]) {
+            updateControlWidgetLabel(w)
+            if (w.linkedWidgets) {
+              for (const l of w.linkedWidgets) {
+                updateControlWidgetLabel(l)
+              }
+            }
+          }
+        }
+      }
+      app.graph.setDirtyCanvas(true)
+    }
+  })
+}

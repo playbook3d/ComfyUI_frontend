@@ -116,12 +116,12 @@ export const useSettingStore = defineStore('setting', () => {
    * @param setting - The setting to register.
    */
   function addSetting(setting: SettingParams) {
-    if (!setting.id) {
-      throw new Error('Settings must have an ID')
-    }
-    if (setting.id in settingsById.value) {
-      throw new Error(`Setting ${setting.id} must have a unique ID.`)
-    }
+    // if (!setting.id) {
+    //   throw new Error('Settings must have an ID')
+    // }
+    // if (setting.id in settingsById.value) {
+    //   throw new Error(`Setting ${setting.id} must have a unique ID.`)
+    // }
 
     settingsById.value[setting.id] = setting
 

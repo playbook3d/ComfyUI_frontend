@@ -1,5 +1,3 @@
-import axios from 'axios'
-
 import type {
   EmbeddingsResponse,
   ExecutedWsMessage,
@@ -196,7 +194,7 @@ export class ComfyApi extends EventTarget {
    */
   user: string
   socket: WebSocket | null = null
-  is_offline: boolean = false
+  is_offline: boolean = true
   reportedUnknownMessageTypes = new Set<string>()
 
   constructor() {
@@ -221,10 +219,10 @@ export class ComfyApi extends EventTarget {
     return this.api_base + route
   }
 
-  fetchApi(route: string, dataToReturn?: any, options?: RequestInit) {
+  fetchApi(route: string, dataToReturn?: any, options?: RequestInit, code?: number) {
     if (this.is_offline) {
       return new Promise<Response>((resolve) =>
-        resolve(new Response(JSON.stringify(dataToReturn, null)))
+        resolve(new Response(JSON.stringify(dataToReturn, null), {status: code ?? 200}))
       )
     }
     if (!options) {
@@ -631,7 +629,7 @@ export class ComfyApi extends EventTarget {
     Pending: PendingTaskItem[]
   }> {
     try {
-      const res = await this.fetchApi('/queue')
+      const res = await this.fetchApi('/queue', { queue_running: [], queue_pending: [] })
       const data = await res.json()
       return {
         // Running action uses a different endpoint for cancelling
@@ -659,7 +657,7 @@ export class ComfyApi extends EventTarget {
     max_items: number = 200
   ): Promise<{ History: HistoryTaskItem[] }> {
     try {
-      const res = await this.fetchApi(`/history?max_items=${max_items}`)
+      const res = await this.fetchApi(`/history?max_items=${max_items}`, [])
       const json: Promise<HistoryTaskItem[]> = await res.json()
       return {
         History: Object.values(json).map((item) => ({
@@ -928,7 +926,7 @@ export class ComfyApi extends EventTarget {
 
   async listUserDataFullInfo(dir: string): Promise<UserDataFullInfo[]> {
     const resp = await this.fetchApi(
-      `/userdata?dir=${encodeURIComponent(dir)}&recurse=true&split=false&full_info=true`
+      `/userdata?dir=${encodeURIComponent(dir)}&recurse=true&split=false&full_info=true`, undefined, undefined, 404
     )
     if (resp.status === 404) return []
     if (resp.status !== 200) {
@@ -964,7 +962,8 @@ export class ComfyApi extends EventTarget {
    * @returns The custom nodes i18n data
    */
   async getCustomNodesI18n(): Promise<Record<string, any>> {
-    return (await axios.get(this.apiURL('/i18n'))).data
+    return {}
+    // return (await axios.get(this.apiURL('/i18n'))).data
   }
 }
 
