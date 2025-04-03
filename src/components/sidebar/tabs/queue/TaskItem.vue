@@ -1,9 +1,14 @@
 <template>
   <div class="task-item" @contextmenu="handleContextMenu">
     <div class="task-result-preview">
-      <template v-if="task.displayStatus === TaskItemDisplayStatus.Completed">
+      <template
+        v-if="
+          task.displayStatus === TaskItemDisplayStatus.Completed ||
+          cancelledWithResults
+        "
+      >
         <ResultItem
-          v-if="flatOutputs.length"
+          v-if="flatOutputs.length && coverResult"
           :result="coverResult"
           @preview="handlePreview"
         />
@@ -20,7 +25,7 @@
         >...</span
       >
       <i
-        v-else-if="task.displayStatus === TaskItemDisplayStatus.Cancelled"
+        v-else-if="cancelledWithoutResults"
         class="pi pi-exclamation-triangle"
       ></i>
       <i
@@ -37,7 +42,12 @@
             :label="`${node?.type} (#${node?.id})`"
             link
             size="small"
-            @click="app.goToNode(node?.id)"
+            @click="
+              () => {
+                if (!node) return
+                litegraphService.goToNode(node.id)
+              }
+            "
           />
         </Tag>
         <Tag :severity="taskTagSeverity(task.displayStatus)">
@@ -64,19 +74,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
-import ResultItem from './ResultItem.vue'
-import { TaskItemDisplayStatus, type TaskItemImpl } from '@/stores/queueStore'
-import { ComfyNode } from '@/types/comfyWorkflow'
-import { app } from '@/scripts/app'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+
+import { ComfyNode } from '@/schemas/comfyWorkflowSchema'
 import { api } from '@/scripts/api'
+import { useLitegraphService } from '@/services/litegraphService'
+import { TaskItemDisplayStatus, type TaskItemImpl } from '@/stores/queueStore'
+
+import ResultItem from './ResultItem.vue'
 
 const props = defineProps<{
   task: TaskItemImpl
   isFlatTask: boolean
 }>()
+
+const litegraphService = useLitegraphService()
 
 const flatOutputs = props.task.flatOutputs
 const coverResult = flatOutputs.length
@@ -86,7 +100,7 @@ const coverResult = flatOutputs.length
 const node: ComfyNode | null =
   flatOutputs.length && props.task.workflow
     ? props.task.workflow.nodes.find(
-        (n: ComfyNode) => n.id == coverResult.nodeId
+        (n: ComfyNode) => n.id == coverResult?.nodeId
       ) ?? null
     : null
 const progressPreviewBlobUrl = ref('')
@@ -94,7 +108,7 @@ const progressPreviewBlobUrl = ref('')
 const emit = defineEmits<{
   (
     e: 'contextmenu',
-    value: { task: TaskItemImpl; event: MouseEvent; node?: ComfyNode }
+    value: { task: TaskItemImpl; event: MouseEvent; node: ComfyNode | null }
   ): void
   (e: 'preview', value: TaskItemImpl): void
   (e: 'task-output-length-clicked', value: TaskItemImpl): void
@@ -105,6 +119,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (progressPreviewBlobUrl.value) {
+    URL.revokeObjectURL(progressPreviewBlobUrl.value)
+  }
   api.removeEventListener('b_preview', onProgressPreviewReceived)
 })
 
@@ -159,9 +176,26 @@ const formatTime = (time?: number) => {
 
 const onProgressPreviewReceived = async ({ detail }: CustomEvent) => {
   if (props.task.displayStatus === TaskItemDisplayStatus.Running) {
+    if (progressPreviewBlobUrl.value) {
+      URL.revokeObjectURL(progressPreviewBlobUrl.value)
+    }
     progressPreviewBlobUrl.value = URL.createObjectURL(detail)
   }
 }
+
+const cancelledWithResults = computed(() => {
+  return (
+    props.task.displayStatus === TaskItemDisplayStatus.Cancelled &&
+    flatOutputs.length
+  )
+})
+
+const cancelledWithoutResults = computed(() => {
+  return (
+    props.task.displayStatus === TaskItemDisplayStatus.Cancelled &&
+    flatOutputs.length === 0
+  )
+})
 </script>
 
 <style scoped>

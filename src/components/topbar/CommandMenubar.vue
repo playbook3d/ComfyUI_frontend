@@ -1,6 +1,6 @@
 <template>
   <Menubar
-    :model="items"
+    :model="translatedItems"
     class="top-menubar border-none p-0 bg-transparent"
     :pt="{
       rootList: 'gap-0 flex-nowrap w-auto',
@@ -8,7 +8,7 @@
       item: 'relative'
     }"
   >
-    <template #item="{ item, props }">
+    <template #item="{ item, props, root }">
       <a
         class="p-menubar-item-link"
         v-bind="props.action"
@@ -19,20 +19,25 @@
         <span class="p-menubar-item-label">{{ item.label }}</span>
         <span
           v-if="item?.comfyCommand?.keybinding"
-          class="ml-auto border border-surface rounded text-muted text-xs p-1 keybinding-tag"
+          class="ml-auto border border-surface rounded text-muted text-xs text-nowrap p-1 keybinding-tag"
         >
           {{ item.comfyCommand.keybinding.combo.toString() }}
         </span>
+        <i v-if="!root && item.items" class="ml-auto pi pi-angle-right" />
       </a>
     </template>
   </Menubar>
 </template>
 
 <script setup lang="ts">
+import Menubar from 'primevue/menubar'
+import type { MenuItem } from 'primevue/menuitem'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
 import { useMenuItemStore } from '@/stores/menuItemStore'
 import { useSettingStore } from '@/stores/settingStore'
-import Menubar from 'primevue/menubar'
-import { computed } from 'vue'
+import { normalizeI18nKey } from '@/utils/formatUtil'
 
 const settingStore = useSettingStore()
 const dropdownDirection = computed(() =>
@@ -40,14 +45,26 @@ const dropdownDirection = computed(() =>
 )
 
 const menuItemsStore = useMenuItemStore()
-const items = menuItemsStore.menuItems
+const { t } = useI18n()
+const translateMenuItem = (item: MenuItem): MenuItem => {
+  const label = typeof item.label === 'function' ? item.label() : item.label
+  const translatedLabel = label
+    ? t(`menuLabels.${normalizeI18nKey(label)}`, label)
+    : undefined
+
+  return {
+    ...item,
+    label: translatedLabel,
+    items: item.items?.map(translateMenuItem)
+  }
+}
+
+const translatedItems = computed(() =>
+  menuItemsStore.menuItems.map(translateMenuItem)
+)
 </script>
 
 <style scoped>
-.top-menubar :deep(.p-menubar-item-link) svg {
-  display: none;
-}
-
 :deep(.p-menubar-submenu.dropdown-direction-up) {
   @apply top-auto bottom-full flex-col-reverse;
 }

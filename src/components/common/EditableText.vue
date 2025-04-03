@@ -1,8 +1,9 @@
 <template>
   <div class="editable-text">
-    <span v-if="!props.isEditing">
+    <span v-if="!isEditing">
       {{ modelValue }}
     </span>
+    <!-- Avoid double triggering finishEditing event when keyup.enter is triggered -->
     <InputText
       v-else
       type="text"
@@ -10,7 +11,7 @@
       fluid
       v-model:modelValue="inputValue"
       ref="inputRef"
-      @keyup.enter="finishEditing"
+      @keyup.enter="blurInputElement"
       @click.stop
       :pt="{
         root: {
@@ -26,32 +27,27 @@
 import InputText from 'primevue/inputtext'
 import { nextTick, ref, watch } from 'vue'
 
-interface EditableTextProps {
+const { modelValue, isEditing = false } = defineProps<{
   modelValue: string
   isEditing?: boolean
-}
-
-const props = withDefaults(defineProps<EditableTextProps>(), {
-  isEditing: false
-})
+}>()
 
 const emit = defineEmits(['update:modelValue', 'edit'])
-const inputValue = ref<string>(props.modelValue)
-const isEditingFinished = ref<boolean>(false)
-const inputRef = ref(null)
+const inputValue = ref<string>(modelValue)
+const inputRef = ref<InstanceType<typeof InputText> | undefined>()
+
+const blurInputElement = () => {
+  // @ts-expect-error - $el is an internal property of the InputText component
+  inputRef.value?.$el.blur()
+}
 const finishEditing = () => {
-  if (isEditingFinished.value) {
-    return
-  }
-  isEditingFinished.value = true
   emit('edit', inputValue.value)
 }
 watch(
-  () => props.isEditing,
+  () => isEditing,
   (newVal) => {
     if (newVal) {
-      inputValue.value = props.modelValue
-      isEditingFinished.value = false
+      inputValue.value = modelValue
       nextTick(() => {
         if (!inputRef.value) return
         const fileName = inputValue.value.includes('.')
@@ -59,6 +55,7 @@ watch(
           : inputValue.value
         const start = 0
         const end = fileName.length
+        // @ts-expect-error - $el is an internal property of the InputText component
         const inputElement = inputRef.value.$el
         inputElement.setSelectionRange?.(start, end)
       })

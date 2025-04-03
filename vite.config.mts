@@ -1,16 +1,18 @@
-import { defineConfig, Plugin } from 'vite'
-import type { UserConfigExport } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
+import dotenv from 'dotenv'
 import path from 'path'
-import dotenv from "dotenv"
-import Icons from 'unplugin-icons/vite'
 import IconsResolver from 'unplugin-icons/resolver'
+import Icons from 'unplugin-icons/vite'
 import Components from 'unplugin-vue-components/vite'
+import { Plugin, defineConfig } from 'vite'
+import type { UserConfigExport } from 'vitest/config'
 
 dotenv.config()
 
 const IS_DEV = process.env.NODE_ENV === 'development'
 const SHOULD_MINIFY = process.env.ENABLE_MINIFY === 'true'
+// vite dev server will listen on all addresses, including LAN and public addresses
+const VITE_REMOTE_DEV = process.env.VITE_REMOTE_DEV === 'true'
 
 interface ShimResult {
   code: string
@@ -18,9 +20,9 @@ interface ShimResult {
 }
 
 function isLegacyFile(id: string): boolean {
-  return id.endsWith('.ts') && (
-    id.includes("src/extensions/core") ||
-    id.includes("src/scripts")
+  return (
+    id.endsWith('.ts') &&
+    (id.includes('src/extensions/core') || id.includes('src/scripts'))
   )
 }
 
@@ -41,15 +43,15 @@ function comfyAPIPlugin(): Plugin {
           const shimComment = `// Shim for ${relativePath}\n`
 
           this.emitFile({
-            type: "asset",
+            type: 'asset',
             fileName: shimFileName,
-            source: shimComment + result.exports.join("")
+            source: shimComment + result.exports.join('')
           })
         }
 
         return {
           code: result.code,
-          map: null  // If you're not modifying the source map, return null
+          map: null // If you're not modifying the source map, return null
         }
       }
     }
@@ -62,7 +64,8 @@ function transformExports(code: string, id: string): ShimResult {
   let newCode = code
 
   // Regex to match different types of exports
-  const regex = /export\s+(const|let|var|function|class|async function)\s+([a-zA-Z$_][a-zA-Z\d$_]*)(\s|\()/g
+  const regex =
+    /export\s+(const|let|var|function|class|async function)\s+([a-zA-Z$_][a-zA-Z\d$_]*)(\s|\()/g
   let match
 
   while ((match = regex.exec(code)) !== null) {
@@ -73,7 +76,9 @@ function transformExports(code: string, id: string): ShimResult {
       newCode += `\nwindow.comfyAPI.${moduleName} = window.comfyAPI.${moduleName} || {};`
     }
     newCode += `\nwindow.comfyAPI.${moduleName}.${name} = ${name};`
-    exports.push(`export const ${name} = window.comfyAPI.${moduleName}.${name};\n`)
+    exports.push(
+      `export const ${name} = window.comfyAPI.${moduleName}.${name};\n`
+    )
   }
 
   return {
@@ -86,17 +91,19 @@ function getModuleName(id: string): string {
   // Simple example to derive a module name from the file path
   const parts = id.split('/')
   const fileName = parts[parts.length - 1]
-  return fileName.replace(/\.\w+$/, '')  // Remove file extension
+  return fileName.replace(/\.\w+$/, '') // Remove file extension
 }
 
-const DEV_SERVER_COMFYUI_URL = process.env.DEV_SERVER_COMFYUI_URL || 'http://127.0.0.1:8188'
+const DEV_SERVER_COMFYUI_URL =
+  process.env.DEV_SERVER_COMFYUI_URL || 'http://127.0.0.1:8188'
 
 export default defineConfig({
   base: '',
   server: {
+    host: VITE_REMOTE_DEV ? '0.0.0.0' : undefined,
     proxy: {
       '/internal': {
-        target: DEV_SERVER_COMFYUI_URL,
+        target: DEV_SERVER_COMFYUI_URL
       },
 
       '/api': {
@@ -108,12 +115,16 @@ export default defineConfig({
             res.end(JSON.stringify([]))
           }
           return null
-        },
+        }
       },
 
       '/ws': {
         target: DEV_SERVER_COMFYUI_URL,
         ws: true
+      },
+
+      '/workflow_templates': {
+        target: DEV_SERVER_COMFYUI_URL
       },
 
       '/testsubrouteindex': {
@@ -128,7 +139,7 @@ export default defineConfig({
     comfyAPIPlugin(),
 
     Icons({
-      'compiler': 'vue3'
+      compiler: 'vue3'
     }),
 
     Components({
@@ -165,7 +176,15 @@ export default defineConfig({
   },
 
   define: {
-    '__COMFYUI_FRONTEND_VERSION__': JSON.stringify(process.env.npm_package_version)
+    __COMFYUI_FRONTEND_VERSION__: JSON.stringify(
+      process.env.npm_package_version
+    ),
+    __SENTRY_ENABLED__: JSON.stringify(
+      !(process.env.NODE_ENV === 'development' || !process.env.SENTRY_DSN)
+    ),
+    __SENTRY_DSN__: JSON.stringify(process.env.SENTRY_DSN || ''),
+    __ALGOLIA_APP_ID__: JSON.stringify(process.env.ALGOLIA_APP_ID || ''),
+    __ALGOLIA_API_KEY__: JSON.stringify(process.env.ALGOLIA_API_KEY || '')
   },
 
   resolve: {
@@ -175,6 +194,6 @@ export default defineConfig({
   },
 
   optimizeDeps: {
-    exclude: ['@comfyorg/litegraph']
+    exclude: ['@comfyorg/litegraph', '@comfyorg/comfyui-electron-types']
   }
 }) as UserConfigExport

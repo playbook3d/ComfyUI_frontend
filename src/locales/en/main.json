@@ -1,0 +1,1029 @@
+{
+  "g": {
+    "currentUser": "Current user",
+    "empty": "Empty",
+    "noWorkflowsFound": "No workflows found.",
+    "comingSoon": "Coming Soon",
+    "firstTimeUIMessage": "This is the first time you use the new UI. Choose \"Menu > Use New Menu > Disabled\" to restore the old UI.",
+    "download": "Download",
+    "import": "Import",
+    "loadAllFolders": "Load All Folders",
+    "refresh": "Refresh",
+    "terminal": "Terminal",
+    "logs": "Logs",
+    "videoFailedToLoad": "Video failed to load",
+    "extensionName": "Extension Name",
+    "reloadToApplyChanges": "Reload to apply changes",
+    "insert": "Insert",
+    "systemInfo": "System Info",
+    "devices": "Devices",
+    "about": "About",
+    "add": "Add",
+    "confirm": "Confirm",
+    "confirmed": "Confirmed",
+    "reset": "Reset",
+    "resetKeybindingsTooltip": "Reset keybindings to default",
+    "customizeFolder": "Customize Folder",
+    "icon": "Icon",
+    "color": "Color",
+    "error": "Error",
+    "loading": "Loading",
+    "findIssues": "Find Issues",
+    "reportIssue": "Send Report",
+    "reportIssueTooltip": "Submit the error report to Comfy Org",
+    "reportSent": "Report Submitted",
+    "copyToClipboard": "Copy to Clipboard",
+    "openNewIssue": "Open New Issue",
+    "showReport": "Show Report",
+    "imageFailedToLoad": "Image failed to load",
+    "reconnecting": "Reconnecting",
+    "reconnected": "Reconnected",
+    "delete": "Delete",
+    "rename": "Rename",
+    "save": "Save",
+    "saving": "Saving",
+    "no": "No",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "install": "Install",
+    "installing": "Installing",
+    "overwrite": "Overwrite",
+    "customize": "Customize",
+    "experimental": "BETA",
+    "deprecated": "DEPR",
+    "loadWorkflow": "Load Workflow",
+    "goToNode": "Go to Node",
+    "settings": "Settings",
+    "searchWorkflows": "Search Workflows",
+    "searchSettings": "Search Settings",
+    "searchNodes": "Search Nodes",
+    "searchModels": "Search Models",
+    "searchKeybindings": "Search Keybindings",
+    "searchExtensions": "Search Extensions",
+    "noResultsFound": "No Results Found",
+    "searchFailedMessage": "We couldn't find any settings matching your search. Try adjusting your search terms.",
+    "noTasksFound": "No Tasks Found",
+    "noTasksFoundMessage": "There are no tasks in the queue.",
+    "newFolder": "New Folder",
+    "enableAll": "Enable All",
+    "disableAll": "Disable All",
+    "command": "Command",
+    "keybinding": "Keybinding",
+    "upload": "Upload",
+    "export": "Export",
+    "workflow": "Workflow",
+    "success": "Success",
+    "ok": "OK",
+    "feedback": "Feedback",
+    "continue": "Continue",
+    "control_after_generate": "control after generate",
+    "control_before_generate": "control before generate",
+    "choose_file_to_upload": "choose file to upload",
+    "capture": "capture",
+    "nodes": "Nodes",
+    "community": "Community",
+    "all": "All",
+    "update": "Update",
+    "updated": "Updated",
+    "resultsCount": "Found {count} Results",
+    "status": "Status",
+    "description": "Description",
+    "name": "Name",
+    "category": "Category",
+    "sort": "Sort",
+    "filter": "Filter",
+    "apply": "Apply",
+    "enabled": "Enabled",
+    "installed": "Installed",
+    "restart": "Restart",
+    "missing": "Missing",
+    "inProgress": "In progress",
+    "completed": "Completed",
+    "interrupted": "Interrupted",
+    "enabling": "Enabling",
+    "disabling": "Disabling",
+    "updating": "Updating"
+  },
+  "manager": {
+    "title": "Custom Nodes Manager",
+    "failed": "Failed ({count})",
+    "installationQueue": "Installation Queue",
+    "changingVersion": "Changing version from {from} to {to}",
+    "dependencies": "Dependencies",
+    "inWorkflow": "In Workflow",
+    "infoPanelEmpty": "Click an item to see the info",
+    "restartToApplyChanges": "To apply changes, please restart ComfyUI",
+    "loadingVersions": "Loading versions...",
+    "selectVersion": "Select Version",
+    "downloads": "Downloads",
+    "repository": "Repository",
+    "uninstall": "Uninstall",
+    "uninstalling": "Uninstalling",
+    "update": "Update",
+    "uninstallSelected": "Uninstall Selected",
+    "updatingAllPacks": "Updating all packages",
+    "license": "License",
+    "nightlyVersion": "Nightly",
+    "latestVersion": "Latest",
+    "createdBy": "Created By",
+    "totalNodes": "Total Nodes",
+    "discoverCommunityContent": "Discover community-made Node Packs, Extensions, and more...",
+    "errorConnecting": "Error connecting to the Comfy Node Registry.",
+    "noResultsFound": "No results found matching your search.",
+    "tryDifferentSearch": "Please try a different search query.",
+    "tryAgainLater": "Please try again later.",
+    "nodePack": "Node Pack",
+    "searchPlaceholder": "Search",
+    "version": "Version",
+    "lastUpdated": "Last Updated",
+    "noDescription": "No description available",
+    "installSelected": "Install Selected",
+    "packsSelected": "Packs Selected",
+    "status": {
+      "active": "Active",
+      "pending": "Pending",
+      "flagged": "Flagged",
+      "deleted": "Deleted",
+      "banned": "Banned",
+      "unknown": "Unknown"
+    },
+    "sort": {
+      "rating": "Rating",
+      "downloads": "Most Popular"
+    },
+    "filter": {
+      "nodePack": "Node Pack",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    }
+  },
+  "issueReport": {
+    "submitErrorReport": "Submit Error Report (Optional)",
+    "provideEmail": "Give us your email (optional)",
+    "provideAdditionalDetails": "Provide additional details (optional)",
+    "stackTrace": "Stack Trace",
+    "systemStats": "System Stats",
+    "contactFollowUp": "Contact me for follow up",
+    "notifyResolve": "Notify me when resolved",
+    "helpFix": "Help Fix This",
+    "rating": "Rating",
+    "feedbackTitle": "Help us improve ComfyUI by providing feedback",
+    "validation": {
+      "maxLength": "Message too long",
+      "invalidEmail": "Please enter a valid email address"
+    }
+  },
+  "color": {
+    "noColor": "No Color",
+    "default": "Default",
+    "blue": "Blue",
+    "green": "Green",
+    "red": "Red",
+    "pink": "Pink",
+    "yellow": "Yellow",
+    "brown": "Brown",
+    "pale_blue": "Pale Blue",
+    "cyan": "Cyan",
+    "purple": "Purple",
+    "black": "Black",
+    "custom": "Custom"
+  },
+  "contextMenu": {
+    "Inputs": "Inputs",
+    "Outputs": "Outputs",
+    "Properties": "Properties",
+    "Properties Panel": "Properties Panel",
+    "Title": "Title",
+    "Mode": "Mode",
+    "Resize": "Resize",
+    "Collapse": "Collapse",
+    "Expand": "Expand",
+    "Pin": "Pin",
+    "Unpin": "Unpin",
+    "Clone": "Clone",
+    "Remove": "Remove",
+    "Colors": "Colors",
+    "Shapes": "Shapes",
+    "Bypass": "Bypass",
+    "Copy (Clipspace)": "Copy (Clipspace)",
+    "Convert Widget to Input": "Convert Widget to Input",
+    "Convert Input to Widget": "Convert Input to Widget",
+    "Add Node": "Add Node",
+    "Add Group": "Add Group",
+    "Convert to Group Node": "Convert to Group Node",
+    "Manage Group Nodes": "Manage Group Nodes",
+    "Add Group For Selected Nodes": "Add Group For Selected Nodes",
+    "Save Selected as Template": "Save Selected as Template",
+    "Node Templates": "Node Templates",
+    "Manage": "Manage",
+    "Convert ": "Convert ",
+    " to input": " to input",
+    " to widget": " to widget",
+    "Search": "Search"
+  },
+  "icon": {
+    "bookmark": "Bookmark",
+    "folder": "Folder",
+    "star": "Star",
+    "heart": "Heart",
+    "file": "File",
+    "inbox": "Inbox",
+    "box": "Box",
+    "briefcase": "Briefcase",
+    "exclamation-triangle": "Warning"
+  },
+  "welcome": {
+    "title": "Welcome to ComfyUI",
+    "getStarted": "Get Started"
+  },
+  "userSelect": {
+    "newUser": "New user",
+    "enterUsername": "Enter a username",
+    "existingUser": "Existing user",
+    "selectUser": "Select a user",
+    "next": "Next"
+  },
+  "notSupported": {
+    "title": "Your device is not supported",
+    "message": "Only following devices are supported:",
+    "learnMore": "Learn More",
+    "reportIssue": "Report Issue",
+    "supportedDevices": {
+      "macos": "MacOS (M1 or later)",
+      "windows": "Windows (Nvidia GPU with CUDA support)"
+    },
+    "continue": "Continue",
+    "continueTooltip": "I am sure my device is supported"
+  },
+  "downloadGit": {
+    "title": "Download git",
+    "message": "Unable to locate git.  A working copy of git is required for normal operation.",
+    "instructions": "Please download and install the latest version for your operating system.  The Download git button below opens the git-scm.com downloads page.",
+    "warning": "If you are sure you do not need git installed, or there has been a mistake, you may click Skip to byapss this check.  Attempting to run ComfyUI without a working copy of git is not currently supported.",
+    "gitWebsite": "Download git",
+    "skip": "Skip"
+  },
+  "install": {
+    "installLocation": "Install Location",
+    "migration": "Migration",
+    "desktopSettings": "Desktop Settings",
+    "chooseInstallationLocation": "Choose Installation Location",
+    "systemLocations": "System Locations",
+    "failedToSelectDirectory": "Failed to select directory",
+    "pathValidationFailed": "Failed to validate path",
+    "pathExists": "Directory already exists - please ensure you have backed up all data",
+    "cannotWrite": "Unable to write to the selected path",
+    "insufficientFreeSpace": "Insufficient space - minimum free space",
+    "isOneDrive": "OneDrive is not supported. Please install ComfyUI in another location.",
+    "nonDefaultDrive": "Please install ComfyUI on your system drive (eg. C:\\). Drives with different file systems may cause unpredicable issues. Models and other files can be stored on other drives after installation.",
+    "parentMissing": "Path does not exist - create the containing directory first",
+    "unhandledError": "Unknown error",
+    "installLocationDescription": "Select the directory for ComfyUI's user data. A python environment will be installed to the selected location.",
+    "installLocationTooltip": "ComfyUI's user data directory. Stores:\n- Python Environment\n- Models\n- Custom nodes\n",
+    "appDataLocationTooltip": "ComfyUI's app data directory. Stores:\n- Logs\n- Server configs",
+    "appPathLocationTooltip": "ComfyUI's app asset directory. Stores the ComfyUI code and assets",
+    "migrateFromExistingInstallation": "Migrate from Existing Installation",
+    "migrationSourcePathDescription": "If you have an existing ComfyUI installation, we can copy/link your existing user files and models to the new installation. Your existing ComfyUI installation will not be affected.",
+    "selectItemsToMigrate": "Select Items to Migrate",
+    "migrationOptional": "Migration is optional. If you don't have an existing installation, you can skip this step.",
+    "desktopAppSettings": "Desktop App Settings",
+    "desktopAppSettingsDescription": "Configure how ComfyUI behaves on your desktop. You can change these settings later.",
+    "gpu": "GPU",
+    "gpuSelection": {
+      "selectGpu": "Select GPU",
+      "selectGpuDescription": "Select the type of GPU you have",
+      "cpuMode": "CPU Mode",
+      "cpuModeDescription": "CPU mode is intended for developers and rare edge cases only.",
+      "cpuModeDescription2": "If you are not absolutely certain you need this, please ignore this box and select your GPU above.",
+      "enableCpuMode": "Enable CPU Mode",
+      "nvidiaDescription": "NVIDIA devices are directly supported using pytorch CUDA builds.",
+      "mpsDescription": "Apple Metal Performance Shaders are supported using pytorch nightly.",
+      "customSkipsPython": "This option skips the normal python setup.",
+      "customComfyNeedsPython": "ComfyUI will not work until python is setup",
+      "customManualVenv": "Manually configure python venv",
+      "customInstallRequirements": "Install all requirements and dependencies (e.g. custom torch)",
+      "customMayNotWork": "This is entirely unsupported, and may simply not work"
+    },
+    "manualConfiguration": {
+      "title": "Manual Configuration",
+      "requirements": "Requirements",
+      "createVenv": "You will need to create a virtual environment in the following directory",
+      "virtualEnvironmentPath": "Virtual environment path",
+      "restartWhenFinished": "When you have finished configuring the virtual environment, please restart ComfyUI."
+    },
+    "settings": {
+      "autoUpdate": "Automatic Updates",
+      "allowMetrics": "Usage Metrics",
+      "errorUpdatingConsent": "Error Updating Consent",
+      "errorUpdatingConsentDetail": "Failed to update metrics consent settings",
+      "autoUpdateDescription": "Automatically download updates when they become available. You will be notified before updates are installed.",
+      "allowMetricsDescription": "Help improve ComfyUI by sending anonymous usage metrics. No personal information or workflow content will be collected.",
+      "learnMoreAboutData": "Learn more about data collection",
+      "dataCollectionDialog": {
+        "title": "About Data Collection",
+        "whatWeCollect": "What we collect:",
+        "whatWeDoNotCollect": "What we don't collect:",
+        "collect": {
+          "errorReports": "Error message and stack trace",
+          "systemInfo": "Hardware, OS type, and app version",
+          "userJourneyEvents": "User journey events"
+        },
+        "doNotCollect": {
+          "personalInformation": "Personal information",
+          "fileSystemInformation": "File system information",
+          "workflowContents": "Workflow contents",
+          "customNodeConfigurations": "Custom node configurations"
+        },
+        "viewFullPolicy": "View full policy"
+      },
+      "pythonMirrorPlaceholder": "Enter Python mirror URL",
+      "pypiMirrorPlaceholder": "Enter PyPI mirror URL",
+      "checkingMirrors": "Checking network access to python mirrors...",
+      "mirrorsReachable": "Network access to python mirrors is good",
+      "mirrorsUnreachable": "Network access to some python mirrors is bad",
+      "mirrorSettings": "Mirror Settings"
+    },
+    "customNodes": "Custom Nodes",
+    "customNodesDescription": "Reinstall custom nodes from existing ComfyUI installations.",
+    "helpImprove": "Please help improve ComfyUI",
+    "moreInfo": "For more info, please read our",
+    "privacyPolicy": "privacy policy",
+    "metricsEnabled": "Metrics Enabled",
+    "metricsDisabled": "Metrics Disabled",
+    "updateConsent": "You previously opted in to reporting crashes. We are now tracking event-based metrics to help identify bugs and improve the app. No personal identifiable information is collected."
+  },
+  "serverStart": {
+    "troubleshoot": "Troubleshoot",
+    "reportIssue": "Report Issue",
+    "openLogs": "Open Logs",
+    "showTerminal": "Show Terminal",
+    "process": {
+      "initial-state": "Loading...",
+      "python-setup": "Setting up Python Environment...",
+      "starting-server": "Starting ComfyUI server...",
+      "ready": "Finishing...",
+      "error": "Unable to start ComfyUI Desktop"
+    }
+  },
+  "serverConfig": {
+    "modifiedConfigs": "You have modified the following server configurations. Restart to apply changes.",
+    "revertChanges": "Revert Changes",
+    "restart": "Restart"
+  },
+  "sideToolbar": {
+    "themeToggle": "Toggle Theme",
+    "logout": "Logout",
+    "queue": "Queue",
+    "nodeLibrary": "Node Library",
+    "workflows": "Workflows",
+    "browseTemplates": "Browse example templates",
+    "openWorkflow": "Open workflow in local file system",
+    "newBlankWorkflow": "Create a new blank workflow",
+    "nodeLibraryTab": {
+      "sortOrder": "Sort Order"
+    },
+    "modelLibrary": "Model Library",
+    "downloads": "Downloads",
+    "queueTab": {
+      "showFlatList": "Show Flat List",
+      "backToAllTasks": "Back to All Tasks",
+      "containImagePreview": "Fill Image Preview",
+      "coverImagePreview": "Fit Image Preview",
+      "clearPendingTasks": "Clear Pending Tasks",
+      "filter": "Filter Outputs",
+      "filters": {
+        "hideCached": "Hide Cached",
+        "hideCanceled": "Hide Canceled"
+      }
+    },
+    "workflowTab": {
+      "confirmDeleteTitle": "Delete workflow?",
+      "confirmDelete": "Are you sure you want to delete this workflow?",
+      "deleted": "Workflow deleted",
+      "deleteFailedTitle": "Delete failed",
+      "deleteFailed": "Attempt to delete the workflow failed.",
+      "dirtyCloseTitle": "Save Changes?",
+      "dirtyClose": "The files below have been changed.  Would you like to save them before closing?",
+      "dirtyCloseHint": "Hold Shift to close without prompt",
+      "confirmOverwriteTitle": "Overwrite existing file?",
+      "confirmOverwrite": "The file below already exists. Would you like to overwrite it?",
+      "workflowTreeType": {
+        "browse": "Browse",
+        "bookmarks": "Bookmarks",
+        "open": "Open"
+      }
+    }
+  },
+  "menu": {
+    "hideMenu": "Hide Menu",
+    "showMenu": "Show Menu",
+    "batchCount": "Batch Count",
+    "batchCountTooltip": "The number of times the workflow generation should be queued",
+    "autoQueue": "Auto Queue",
+    "disabled": "Disabled",
+    "disabledTooltip": "The workflow will not be automatically queued",
+    "instant": "Instant",
+    "instantTooltip": "The workflow will be queued instantly after a generation finishes",
+    "onChange": "On Change",
+    "onChangeTooltip": "The workflow will be queued once a change is made",
+    "runWorkflow": "Run workflow (Shift to queue at front)",
+    "runWorkflowFront": "Run workflow (Queue at front)",
+    "run": "Run",
+    "execute": "Execute",
+    "interrupt": "Cancel current run",
+    "refresh": "Refresh node definitions",
+    "clipspace": "Open Clipspace",
+    "resetView": "Reset canvas view",
+    "clear": "Clear workflow",
+    "toggleBottomPanel": "Toggle Bottom Panel"
+  },
+  "tabMenu": {
+    "duplicateTab": "Duplicate Tab",
+    "closeTab": "Close Tab",
+    "closeTabsToLeft": "Close Tabs to Left",
+    "closeTabsToRight": "Close Tabs to Right",
+    "closeOtherTabs": "Close Other Tabs",
+    "addToBookmarks": "Add to Bookmarks",
+    "removeFromBookmarks": "Remove from Bookmarks"
+  },
+  "templateWorkflows": {
+    "title": "Get Started with a Template",
+    "category": {
+      "ComfyUI Examples": "ComfyUI Examples",
+      "Custom Nodes": "Custom Nodes",
+      "Basics": "Basics",
+      "Flux": "Flux",
+      "ControlNet": "ControlNet",
+      "Upscaling": "Upscaling",
+      "Video": "Video",
+      "SD3_5": "SD3.5",
+      "SDXL": "SDXL",
+      "Area Composition": "Area Composition",
+      "3D": "3D",
+      "Audio": "Audio"
+    },
+    "template": {
+      "Flux": {
+        "flux_dev_checkpoint_example": "Flux Dev",
+        "flux_schnell": "Flux Schnell",
+        "flux_fill_inpaint_example": "Flux Inpaint",
+        "flux_fill_outpaint_example": "Flux Outpaint",
+        "flux_canny_model_example": "Flux Canny Model",
+        "flux_redux_model_example": "Flux Redux Model",
+        "flux_depth_lora_example": "Flux Depth Lora"
+      },
+      "Basics": {
+        "default": "Image Generation",
+        "image2image": "Image to Image",
+        "embedding_example": "Embedding",
+        "gligen_textbox_example": "Gligen Textbox",
+        "lora": "Lora",
+        "lora_multiple": "Lora Multiple",
+        "inpaint_example": "Inpaint",
+        "inpain_model_outpainting": "Outpaint"
+      },
+      "ControlNet": {
+        "controlnet_example": "Scribble ControlNet",
+        "2_pass_pose_worship": "Pose ControlNet 2 Pass",
+        "depth_controlnet": "Depth ControlNet",
+        "depth_t2i_adapter": "Depth T2I Adapter",
+        "mixing_controlnets": "Mixing ControlNets"
+      },
+      "Upscaling": {
+        "esrgan_example": "ESRGAN",
+        "hiresfix_latent_workflow": "Upscale",
+        "hiresfix_esrgan_workflow": "HiresFix ESRGAN Workflow",
+        "latent_upscale_different_prompt_model": "Latent Upscale Different Prompt Model"
+      },
+      "Video": {
+        "text_to_video_wan": "Wan 2.1 Text to Video",
+        "image_to_video_wan": "Wan 2.1 Image to Video",
+        "image_to_video": "SVD Image to Video",
+        "txt_to_image_to_video": "SVD Text to Image to Video",
+        "ltxv_image_to_video": "LTXV Image to Video",
+        "ltxv_text_to_video": "LTXV Text to Video",
+        "mochi_text_to_video_example": "Mochi Text to Video",
+        "hunyuan_video_text_to_video": "Hunyuan Video Text to Video"
+      },
+      "SD3_5": {
+        "sd3_5_simple_example": "SD3.5 Simple",
+        "sd3_5_large_canny_controlnet_example": "SD3.5 Large Canny ControlNet",
+        "sd3_5_large_depth": "SD3.5 Large Depth",
+        "sd3_5_large_blur": "SD3.5 Large Blur"
+      },
+      "SDXL": {
+        "sdxl_simple_example": "SDXL Simple",
+        "sdxl_refiner_prompt_example": "SDXL Refiner Prompt",
+        "sdxl_revision_text_prompts": "SDXL Revision Text Prompts",
+        "sdxl_revision_zero_positive": "SDXL Revision Zero Positive",
+        "sdxlturbo_example": "SDXL Turbo"
+      },
+      "Area Composition": {
+        "area_composition": "Area Composition",
+        "area_composition_reversed": "Area Composition Reversed",
+        "area_composition_square_area_for_subject": "Area Composition Square Area for Subject"
+      },
+      "3D": {
+        "stable_zero123_example": "Stable Zero123",
+        "hunyuan3d-non-multiview-train": "Hunyuan3D 2.0",
+        "hunyuan-3d-multiview-elf": "Hunyuan3D 2.0 MV",
+        "hunyuan-3d-turbo": "Hunyuan3D 2.0 MV Turbo"
+      },
+      "Audio": {
+        "stable_audio_example": "Stable Audio"
+      }
+    }
+  },
+  "graphCanvasMenu": {
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "resetView": "Reset View",
+    "fitView": "Fit View",
+    "selectMode": "Select Mode",
+    "panMode": "Pan Mode",
+    "toggleLinkVisibility": "Toggle Link Visibility"
+  },
+  "groupNode": {
+    "create": "Create group node",
+    "enterName": "Enter name"
+  },
+  "nodeTemplates": {
+    "saveAsTemplate": "Save as template",
+    "enterName": "Enter name"
+  },
+  "workflowService": {
+    "exportWorkflow": "Export Workflow",
+    "enterFilename": "Enter the filename",
+    "saveWorkflow": "Save workflow"
+  },
+  "electronFileDownload": {
+    "inProgress": "In Progress",
+    "pause": "Pause Download",
+    "paused": "Paused",
+    "resume": "Resume Download",
+    "cancel": "Cancel Download",
+    "cancelled": "Cancelled"
+  },
+  "maskEditor": {
+    "Invert": "Invert",
+    "Clear": "Clear",
+    "Brush Settings": "Brush Settings",
+    "Brush Shape": "Brush Shape",
+    "Thickness": "Thickness",
+    "Opacity": "Opacity",
+    "Hardness": "Hardness",
+    "Smoothing Precision": "Smoothing Precision",
+    "Reset to Default": "Reset to Default",
+    "Paint Bucket Settings": "Paint Bucket Settings",
+    "Tolerance": "Tolerance",
+    "Fill Opacity": "Fill Opacity",
+    "Color Select Settings": "Color Select Settings",
+    "Selection Opacity": "Selection Opacity",
+    "Live Preview": "Live Preview",
+    "Apply to Whole Image": "Apply to Whole Image",
+    "Method": "Method",
+    "Stop at mask": "Stop at mask",
+    "Mask Tolerance": "Mask Tolerance",
+    "Layers": "Layers",
+    "Mask Layer": "Mask Layer",
+    "Mask Opacity": "Mask Opacity",
+    "Image Layer": "Image Layer"
+  },
+  "menuLabels": {
+    "Workflow": "Workflow",
+    "Edit": "Edit",
+    "Help": "Help",
+    "Open Custom Nodes Folder": "Open Custom Nodes Folder",
+    "Open Inputs Folder": "Open Inputs Folder",
+    "Open Logs Folder": "Open Logs Folder",
+    "Open extra_model_paths_yaml": "Open extra_model_paths.yaml",
+    "Open Models Folder": "Open Models Folder",
+    "Open Outputs Folder": "Open Outputs Folder",
+    "Open DevTools": "Open DevTools",
+    "Desktop User Guide": "Desktop User Guide",
+    "Quit": "Quit",
+    "Reinstall": "Reinstall",
+    "Restart": "Restart",
+    "Browse Templates": "Browse Templates",
+    "Delete Selected Items": "Delete Selected Items",
+    "Fit view to selected nodes": "Fit view to selected nodes",
+    "Reset View": "Reset View",
+    "Canvas Toggle Link Visibility": "Canvas Toggle Link Visibility",
+    "Canvas Toggle Lock": "Canvas Toggle Lock",
+    "Pin/Unpin Selected Items": "Pin/Unpin Selected Items",
+    "Bypass/Unbypass Selected Nodes": "Bypass/Unbypass Selected Nodes",
+    "Collapse/Expand Selected Nodes": "Collapse/Expand Selected Nodes",
+    "Mute/Unmute Selected Nodes": "Mute/Unmute Selected Nodes",
+    "Pin/Unpin Selected Nodes": "Pin/Unpin Selected Nodes",
+    "Zoom In": "Zoom In",
+    "Zoom Out": "Zoom Out",
+    "Clear Pending Tasks": "Clear Pending Tasks",
+    "Clear Workflow": "Clear Workflow",
+    "Duplicate Current Workflow": "Duplicate Current Workflow",
+    "Export": "Export",
+    "Export (API)": "Export (API)",
+    "Give Feedback": "Give Feedback",
+    "Fit Group To Contents": "Fit Group To Contents",
+    "Group Selected Nodes": "Group Selected Nodes",
+    "Convert selected nodes to group node": "Convert selected nodes to group node",
+    "Manage group nodes": "Manage group nodes",
+    "Ungroup selected group nodes": "Ungroup selected group nodes",
+    "About ComfyUI": "About ComfyUI",
+    "Comfy-Org Discord": "Comfy-Org Discord",
+    "ComfyUI Docs": "ComfyUI Docs",
+    "ComfyUI Forum": "ComfyUI Forum",
+    "ComfyUI Issues": "ComfyUI Issues",
+    "Interrupt": "Interrupt",
+    "Load Default Workflow": "Load Default Workflow",
+    "Custom Nodes Manager": "Custom Nodes Manager",
+    "Toggle Progress Dialog": "Toggle Progress Dialog",
+    "New": "New",
+    "Clipspace": "Clipspace",
+    "Open": "Open",
+    "Queue Prompt": "Queue Prompt",
+    "Queue Prompt (Front)": "Queue Prompt (Front)",
+    "Redo": "Redo",
+    "Refresh Node Definitions": "Refresh Node Definitions",
+    "Save": "Save",
+    "Save As": "Save As",
+    "Show Settings Dialog": "Show Settings Dialog",
+    "Toggle Theme (Dark/Light)": "Toggle Theme (Dark/Light)",
+    "Undo": "Undo",
+    "Close Current Workflow": "Close Current Workflow",
+    "Next Opened Workflow": "Next Opened Workflow",
+    "Previous Opened Workflow": "Previous Opened Workflow",
+    "Toggle Search Box": "Toggle Search Box",
+    "Toggle Bottom Panel": "Toggle Bottom Panel",
+    "Toggle Terminal Bottom Panel": "Toggle Terminal Bottom Panel",
+    "Toggle Logs Bottom Panel": "Toggle Logs Bottom Panel",
+    "Toggle Focus Mode": "Toggle Focus Mode",
+    "Toggle Model Library Sidebar": "Toggle Model Library Sidebar",
+    "Toggle Node Library Sidebar": "Toggle Node Library Sidebar",
+    "Toggle Queue Sidebar": "Toggle Queue Sidebar",
+    "Toggle Workflows Sidebar": "Toggle Workflows Sidebar"
+  },
+  "desktopMenu": {
+    "reinstall": "Reinstall",
+    "confirmReinstall": "This will clear your extra_models_config.yaml file,\nand begin installation again.\n\nAre you sure?",
+    "quit": "Quit",
+    "confirmQuit": "There are unsaved workflows open; any unsaved changes will be lost.  Ignore this and quit?"
+  },
+  "settingsCategories": {
+    "Comfy-Desktop": "Comfy-Desktop",
+    "General": "General",
+    "Appearance": "Appearance",
+    "ColorPalette": "Color Palette",
+    "Comfy": "Comfy",
+    "Workflow": "Workflow",
+    "DevMode": "Dev Mode",
+    "LiteGraph": "Lite Graph",
+    "Node Widget": "Node Widget",
+    "Node": "Node",
+    "Extension": "Extension",
+    "Canvas": "Canvas",
+    "Link": "Link",
+    "Group": "Group",
+    "Menu": "Menu",
+    "Keybinding": "Keybinding",
+    "LinkRelease": "Link Release",
+    "Graph": "Graph",
+    "Locale": "Locale",
+    "Mask Editor": "Mask Editor",
+    "BrushAdjustment": "Brush Adjustment",
+    "NewEditor": "New Editor",
+    "ModelLibrary": "Model Library",
+    "NodeInputConversionSubmenus": "Node Input Conversion Submenus",
+    "NodeLibrary": "Node Library",
+    "Node Search Box": "Node Search Box",
+    "Pointer": "Pointer",
+    "Queue": "Queue",
+    "QueueButton": "Queue Button",
+    "RerouteBeta": "Reroute Beta",
+    "Server": "Server",
+    "Settings": "Settings",
+    "Sidebar": "Sidebar",
+    "Tree Explorer": "Tree Explorer",
+    "Validation": "Validation",
+    "Window": "Window",
+    "Server-Config": "Server-Config",
+    "About": "About",
+    "EditTokenWeight": "Edit Token Weight",
+    "CustomColorPalettes": "Custom Color Palettes",
+    "UV": "UV",
+    "ContextMenu": "Context Menu"
+  },
+  "serverConfigItems": {
+    "listen": {
+      "name": "Host: The IP address to listen on"
+    },
+    "port": {
+      "name": "Port: The port to listen on"
+    },
+    "tls-keyfile": {
+      "name": "TLS Key File: Path to TLS key file for HTTPS"
+    },
+    "tls-certfile": {
+      "name": "TLS Certificate File: Path to TLS certificate file for HTTPS"
+    },
+    "enable-cors-header": {
+      "name": "Enable CORS header: Use \"*\" for all origins or specify domain"
+    },
+    "max-upload-size": {
+      "name": "Maximum upload size (MB)"
+    },
+    "cuda-device": {
+      "name": "CUDA device index to use"
+    },
+    "cuda-malloc": {
+      "name": "Use CUDA malloc for memory allocation"
+    },
+    "global-precision": {
+      "name": "Global floating point precision",
+      "tooltip": "Global floating point precision"
+    },
+    "unet-precision": {
+      "name": "UNET precision",
+      "tooltip": "UNET precision"
+    },
+    "vae-precision": {
+      "name": "VAE precision",
+      "tooltip": "VAE precision"
+    },
+    "cpu-vae": {
+      "name": "Run VAE on CPU"
+    },
+    "text-encoder-precision": {
+      "name": "Text Encoder precision",
+      "tooltip": "Text Encoder precision"
+    },
+    "force-channels-last": {
+      "name": "Force channels-last memory format"
+    },
+    "directml": {
+      "name": "DirectML device index"
+    },
+    "disable-ipex-optimize": {
+      "name": "Disable IPEX optimization"
+    },
+    "preview-method": {
+      "name": "Method used for latent previews"
+    },
+    "preview-size": {
+      "name": "Size of preview images"
+    },
+    "cache-classic": {
+      "name": "Use classic cache system"
+    },
+    "cache-lru": {
+      "name": "Use LRU caching with a maximum of N node results cached.",
+      "tooltip": "May use more RAM/VRAM."
+    },
+    "cross-attention-method": {
+      "name": "Cross attention method"
+    },
+    "disable-xformers": {
+      "name": "Disable xFormers optimization"
+    },
+    "force-upcast-attention": {
+      "name": "Force attention upcast"
+    },
+    "dont-upcast-attention": {
+      "name": "Prevent attention upcast"
+    },
+    "vram-management": {
+      "name": "VRAM management mode"
+    },
+    "reserve-vram": {
+      "name": "Reserved VRAM (GB)",
+      "tooltip": "Set the amount of vram in GB you want to reserve for use by your OS/other software. By default some amount is reverved depending on your OS."
+    },
+    "default-hashing-function": {
+      "name": "Default hashing function for model files"
+    },
+    "disable-smart-memory": {
+      "name": "Disable smart memory management",
+      "tooltip": "Force ComfyUI to aggressively offload to regular ram instead of keeping models in vram when it can."
+    },
+    "deterministic": {
+      "name": "Make pytorch use slower deterministic algorithms when it can.",
+      "tooltip": "Note that this might not make images deterministic in all cases."
+    },
+    "fast": {
+      "name": "Enable some untested and potentially quality deteriorating optimizations."
+    },
+    "dont-print-server": {
+      "name": "Don't print server output to console."
+    },
+    "disable-metadata": {
+      "name": "Disable saving prompt metadata in files."
+    },
+    "disable-all-custom-nodes": {
+      "name": "Disable loading all custom nodes."
+    },
+    "log-level": {
+      "name": "Logging verbosity level"
+    },
+    "input-directory": {
+      "name": "Input directory"
+    },
+    "output-directory": {
+      "name": "Output directory"
+    }
+  },
+  "serverConfigCategories": {
+    "Network": "Network",
+    "CUDA": "CUDA",
+    "Inference": "Inference",
+    "Memory": "Memory",
+    "Preview": "Preview",
+    "Cache": "Cache",
+    "Attention": "Attention",
+    "General": "General",
+    "Directories": "Directories"
+  },
+  "nodeCategories": {
+    "_for_testing": "_for_testing",
+    "custom_sampling": "custom_sampling",
+    "noise": "noise",
+    "sampling": "sampling",
+    "schedulers": "schedulers",
+    "guiders": "guiders",
+    "image": "image",
+    "preprocessors": "preprocessors",
+    "advanced": "advanced",
+    "loaders": "loaders",
+    "model_merging": "model_merging",
+    "attention_experiments": "attention_experiments",
+    "conditioning": "conditioning",
+    "flux": "flux",
+    "hooks": "hooks",
+    "combine": "combine",
+    "cond single": "cond single",
+    "controlnet": "controlnet",
+    "inpaint": "inpaint",
+    "scheduling": "scheduling",
+    "create": "create",
+    "mask": "mask",
+    "deprecated": "deprecated",
+    "latent": "latent",
+    "video": "video",
+    "audio": "audio",
+    "3d": "3d",
+    "ltxv": "ltxv",
+    "sd3": "sd3",
+    "sigmas": "sigmas",
+    "model_patches": "model_patches",
+    "unet": "unet",
+    "gligen": "gligen",
+    "video_models": "video_models",
+    "postprocessing": "postprocessing",
+    "transform": "transform",
+    "batch": "batch",
+    "upscaling": "upscaling",
+    "instructpix2pix": "instructpix2pix",
+    "compositing": "compositing",
+    "samplers": "samplers",
+    "operations": "operations",
+    "debug": "debug",
+    "model": "model",
+    "model_specific": "model_specific",
+    "cond pair": "cond pair",
+    "photomaker": "photomaker",
+    "animation": "animation",
+    "api": "api",
+    "upscale_diffusion": "upscale_diffusion",
+    "clip": "clip",
+    "guidance": "guidance",
+    "stable_cascade": "stable_cascade",
+    "3d_models": "3d_models",
+    "style_model": "style_model"
+  },
+  "dataTypes": {
+    "AUDIO": "AUDIO",
+    "BOOLEAN": "BOOLEAN",
+    "CLIP": "CLIP",
+    "CLIP_VISION": "CLIP_VISION",
+    "CLIP_VISION_OUTPUT": "CLIP_VISION_OUTPUT",
+    "COMBO": "COMBO",
+    "CONDITIONING": "CONDITIONING",
+    "CONTROL_NET": "CONTROL_NET",
+    "FLOAT": "FLOAT",
+    "FLOATS": "FLOATS",
+    "GLIGEN": "GLIGEN",
+    "GUIDER": "GUIDER",
+    "HOOK_KEYFRAMES": "HOOK_KEYFRAMES",
+    "HOOKS": "HOOKS",
+    "IMAGE": "IMAGE",
+    "INT": "INT",
+    "LATENT": "LATENT",
+    "LATENT_OPERATION": "LATENT_OPERATION",
+    "LOAD_3D": "LOAD_3D",
+    "LOAD_3D_ANIMATION": "LOAD_3D_ANIMATION",
+    "MASK": "MASK",
+    "MESH": "MESH",
+    "MODEL": "MODEL",
+    "NOISE": "NOISE",
+    "PHOTOMAKER": "PHOTOMAKER",
+    "SAMPLER": "SAMPLER",
+    "SIGMAS": "SIGMAS",
+    "STRING": "STRING",
+    "STYLE_MODEL": "STYLE_MODEL",
+    "TIMESTEPS_RANGE": "TIMESTEPS_RANGE",
+    "UPSCALE_MODEL": "UPSCALE_MODEL",
+    "VAE": "VAE",
+    "VOXEL": "VOXEL",
+    "WEBCAM": "WEBCAM"
+  },
+  "maintenance": {
+    "title": "Maintenance",
+    "allOk": "No issues were detected.",
+    "status": "Status",
+    "detected": "Detected",
+    "refreshing": "Refreshing",
+    "None": "None",
+    "OK": "OK",
+    "Skipped": "Skipped",
+    "showManual": "Show maintenance tasks",
+    "confirmTitle": "Are you sure?",
+    "terminalDefaultMessage": "When you run a troubleshooting command, any output will be shown here.",
+    "consoleLogs": "Console Logs",
+    "error": {
+      "toastTitle": "Task error",
+      "taskFailed": "Task failed to run.",
+      "cannotContinue": "Unable to continue - errors remain",
+      "defaultDescription": "An error occurred while running a maintenance task."
+    }
+  },
+  "missingModelsDialog": {
+    "doNotAskAgain": "Don't show this again",
+    "missingModels": "Missing Models",
+    "missingModelsMessage": "When loading the graph, the following models were not found"
+  },
+  "errorDialog": {
+    "defaultTitle": "An error occurred",
+    "loadWorkflowTitle": "Loading aborted due to error reloading workflow data",
+    "noStackTrace": "No stacktrace available",
+    "extensionFileHint": "This may be due to the following script",
+    "promptExecutionError": "Prompt execution failed"
+  },
+  "desktopUpdate": {
+    "title": "Updating ComfyUI Desktop",
+    "description": "ComfyUI Desktop is installing new dependencies.  This may take a few minutes.",
+    "terminalDefaultMessage": "Any console output from the update will be shown here."
+  },
+  "clipboard": {
+    "successMessage": "Copied to clipboard",
+    "errorMessage": "Failed to copy to clipboard",
+    "errorNotSupported": "Clipboard API not supported in your browser"
+  },
+  "load3d": {
+    "switchCamera": "Switch Camera",
+    "showGrid": "Show Grid",
+    "backgroundColor": "Background Color",
+    "lightIntensity": "Light Intensity",
+    "fov": "FOV",
+    "previewOutput": "Preview Output",
+    "uploadBackgroundImage": "Upload Background Image",
+    "removeBackgroundImage": "Remove Background Image",
+    "loadingModel": "Loading 3D Model...",
+    "upDirection": "Up Direction",
+    "materialMode": "Material Mode",
+    "scene": "Scene",
+    "model": "Model",
+    "camera": "Camera",
+    "light": "Light",
+    "switchingMaterialMode": "Switching Material Mode...",
+    "edgeThreshold": "Edge Threshold",
+    "export": "Export",
+    "exportModel": "Export Model",
+    "exportingModel": "Exporting model...",
+    "uploadTexture": "Upload Texture",
+    "applyingTexture": "Applying Texture..."
+  },
+  "toastMessages": {
+    "no3dScene": "No 3D scene to apply texture",
+    "failedToApplyTexture": "Failed to apply texture",
+    "no3dSceneToExport": "No 3D scene to export",
+    "failedToExportModel": "Failed to export model as {format}",
+    "fileLoadError": "Unable to find workflow in {fileName}",
+    "dropFileError": "Unable to process dropped item: {error}",
+    "interrupted": "Execution has been interrupted",
+    "pendingTasksDeleted": "Pending tasks deleted",
+    "nothingToGroup": "Nothing to group",
+    "pleaseSelectNodesToGroup": "Please select the nodes (or other groups) to create a group for",
+    "emptyCanvas": "Empty canvas",
+    "fileUploadFailed": "File upload failed",
+    "unableToGetModelFilePath": "Unable to get model file path",
+    "couldNotDetermineFileType": "Could not determine file type",
+    "errorLoadingModel": "Error loading model",
+    "failedToDownloadFile": "Failed to download file",
+    "updateRequested": "Update requested",
+    "nodeDefinitionsUpdated": "Node definitions updated",
+    "errorSaveSetting": "Error saving setting {id}: {err}",
+    "errorCopyImage": "Error copying image: {error}",
+    "noTemplatesToExport": "No templates to export",
+    "failedToFetchLogs": "Failed to fetch server logs"
+  }
+}

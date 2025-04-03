@@ -1,11 +1,12 @@
 <template>
   <ButtonGroup
-    class="p-buttongroup-vertical absolute bottom-[10px] right-[10px] z-[1000] pointer-events-auto"
+    class="p-buttongroup-vertical absolute bottom-[10px] right-[10px] z-[1000]"
   >
     <Button
       severity="secondary"
       icon="pi pi-plus"
       v-tooltip.left="t('graphCanvasMenu.zoomIn')"
+      :aria-label="$t('graphCanvasMenu.zoomIn')"
       @mousedown="repeat('Comfy.Canvas.ZoomIn')"
       @mouseup="stopRepeat"
     />
@@ -13,14 +14,16 @@
       severity="secondary"
       icon="pi pi-minus"
       v-tooltip.left="t('graphCanvasMenu.zoomOut')"
+      :aria-label="$t('graphCanvasMenu.zoomOut')"
       @mousedown="repeat('Comfy.Canvas.ZoomOut')"
       @mouseup="stopRepeat"
     />
     <Button
       severity="secondary"
       icon="pi pi-expand"
-      v-tooltip.left="t('graphCanvasMenu.resetView')"
-      @click="() => commandStore.execute('Comfy.Canvas.ResetView')"
+      v-tooltip.left="t('graphCanvasMenu.fitView')"
+      :aria-label="$t('graphCanvasMenu.fitView')"
+      @click="() => commandStore.execute('Comfy.Canvas.FitView')"
     />
     <Button
       severity="secondary"
@@ -29,6 +32,12 @@
           'graphCanvasMenu.' +
             (canvasStore.canvas?.read_only ? 'panMode' : 'selectMode')
         ) + ' (Space)'
+      "
+      :aria-label="
+        t(
+          'graphCanvasMenu.' +
+            (canvasStore.canvas?.read_only ? 'panMode' : 'selectMode')
+        )
       "
       @click="() => commandStore.execute('Comfy.Canvas.ToggleLock')"
     >
@@ -43,6 +52,7 @@
       severity="secondary"
       :icon="linkHidden ? 'pi pi-eye-slash' : 'pi pi-eye'"
       v-tooltip.left="t('graphCanvasMenu.toggleLinkVisibility')"
+      :aria-label="$t('graphCanvasMenu.toggleLinkVisibility')"
       @click="() => commandStore.execute('Comfy.Canvas.ToggleLinkVisibility')"
       data-testid="toggle-link-visibility-button"
     />
@@ -50,14 +60,15 @@
 </template>
 
 <script setup lang="ts">
-import ButtonGroup from 'primevue/buttongroup'
+import { LiteGraph } from '@comfyorg/litegraph'
 import Button from 'primevue/button'
+import ButtonGroup from 'primevue/buttongroup'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
 import { useCommandStore } from '@/stores/commandStore'
 import { useCanvasStore } from '@/stores/graphStore'
 import { useSettingStore } from '@/stores/settingStore'
-import { useI18n } from 'vue-i18n'
-import { LiteGraph } from '@comfyorg/litegraph'
-import { computed } from 'vue'
 
 const { t } = useI18n()
 const commandStore = useCommandStore()

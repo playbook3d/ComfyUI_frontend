@@ -5,6 +5,7 @@
       :src="result.url"
       class="task-output-image"
       :contain="imageFit === 'contain'"
+      :alt="result.filename"
     />
     <ResultVideo v-else-if="result.isVideo" :result="result" />
     <div v-else class="task-result-preview">
@@ -24,11 +25,13 @@
 </template>
 
 <script setup lang="ts">
-import { ResultItemImpl } from '@/stores/queueStore'
-import ComfyImage from '@/components/common/ComfyImage.vue'
 import Button from 'primevue/button'
 import { computed, onMounted, ref } from 'vue'
+
+import ComfyImage from '@/components/common/ComfyImage.vue'
+import { ResultItemImpl } from '@/stores/queueStore'
 import { useSettingStore } from '@/stores/settingStore'
+
 import ResultVideo from './ResultVideo.vue'
 
 const props = defineProps<{

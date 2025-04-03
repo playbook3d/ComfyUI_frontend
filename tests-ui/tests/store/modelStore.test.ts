@@ -1,22 +1,29 @@
-import { setActivePinia, createPinia } from 'pinia'
-import { useModelStore } from '@/stores/modelStore'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
 import { api } from '@/scripts/api'
+import { useModelStore } from '@/stores/modelStore'
 
 // Mock the api
-jest.mock('@/scripts/api', () => ({
+vi.mock('@/scripts/api', () => ({
   api: {
-    getModels: jest.fn(),
-    viewMetadata: jest.fn()
+    getModels: vi.fn(),
+    getModelFolders: vi.fn(),
+    viewMetadata: vi.fn()
   }
 }))
 
 function enableMocks() {
-  ;(api.getModels as jest.Mock).mockResolvedValue([
-    'sdxl.safetensors',
-    'sdv15.safetensors',
-    'noinfo.safetensors'
+  vi.mocked(api.getModels).mockResolvedValue([
+    { name: 'sdxl.safetensors', pathIndex: 0 },
+    { name: 'sdv15.safetensors', pathIndex: 0 },
+    { name: 'noinfo.safetensors', pathIndex: 0 }
   ])
-  ;(api.viewMetadata as jest.Mock).mockImplementation((_, model) => {
+  vi.mocked(api.getModelFolders).mockResolvedValue([
+    { name: 'checkpoints', folders: ['/path/to/checkpoints'] },
+    { name: 'vae', folders: ['/path/to/vae'] }
+  ])
+  vi.mocked(api.viewMetadata).mockImplementation((_, model) => {
     if (model === 'noinfo.safetensors') {
       return Promise.resolve({})
     }
@@ -37,14 +44,16 @@ function enableMocks() {
 describe('useModelStore', () => {
   let store: ReturnType<typeof useModelStore>
 
-  beforeEach(() => {
+  beforeEach(async () => {
     setActivePinia(createPinia())
     store = useModelStore()
+    vi.resetAllMocks()
   })
 
   it('should load models', async () => {
     enableMocks()
-    const folderStore = await store.getModelsInFolderCached('checkpoints')
+    await store.loadModelFolders()
+    const folderStore = await store.getLoadedModelFolder('checkpoints')
     expect(folderStore).not.toBeNull()
     if (!folderStore) return
     expect(Object.keys(folderStore.models).length).toBe(3)
@@ -52,10 +61,11 @@ describe('useModelStore', () => {
 
   it('should load model metadata', async () => {
     enableMocks()
-    const folderStore = await store.getModelsInFolderCached('checkpoints')
+    await store.loadModelFolders()
+    const folderStore = await store.getLoadedModelFolder('checkpoints')
     expect(folderStore).not.toBeNull()
     if (!folderStore) return
-    const model = folderStore.models['sdxl.safetensors']
+    const model = folderStore.models['0/sdxl.safetensors']
     await model.load()
     expect(model.title).toBe('Title of sdxl.safetensors')
     expect(model.architecture_id).toBe('stable-diffusion-xl-base-v1')
@@ -69,10 +79,11 @@ describe('useModelStore', () => {
 
   it('should handle no metadata', async () => {
     enableMocks()
-    const folderStore = await store.getModelsInFolderCached('checkpoints')
+    await store.loadModelFolders()
+    const folderStore = await store.getLoadedModelFolder('checkpoints')
     expect(folderStore).not.toBeNull()
     if (!folderStore) return
-    const model = folderStore.models['noinfo.safetensors']
+    const model = folderStore.models['0/noinfo.safetensors']
     await model.load()
     expect(model.file_name).toBe('noinfo.safetensors')
     expect(model.title).toBe('noinfo')
@@ -84,8 +95,11 @@ describe('useModelStore', () => {
 
   it('should cache model information', async () => {
     enableMocks()
-    const folderStore1 = await store.getModelsInFolderCached('checkpoints')
-    const folderStore2 = await store.getModelsInFolderCached('checkpoints')
+    await store.loadModelFolders()
+    expect(api.getModels).toHaveBeenCalledTimes(0)
+    await store.getLoadedModelFolder('checkpoints')
+    expect(api.getModels).toHaveBeenCalledTimes(1)
+    await store.getLoadedModelFolder('checkpoints')
     expect(api.getModels).toHaveBeenCalledTimes(1)
   })
 })

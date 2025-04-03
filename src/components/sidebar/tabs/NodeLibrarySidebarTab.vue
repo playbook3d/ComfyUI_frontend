@@ -10,7 +10,7 @@
         text
         severity="secondary"
         @click="nodeBookmarkTreeExplorerRef?.addNewBookmarkFolder()"
-        v-tooltip="$t('newFolder')"
+        v-tooltip.bottom="$t('g.newFolder')"
       />
       <Button
         class="sort-button"
@@ -18,17 +18,17 @@
         text
         severity="secondary"
         @click="alphabeticalSort = !alphabeticalSort"
-        v-tooltip="$t('sideToolbar.nodeLibraryTab.sortOrder')"
+        v-tooltip.bottom="$t('sideToolbar.nodeLibraryTab.sortOrder')"
       />
     </template>
     <template #header>
       <SearchBox
-        class="node-lib-search-box p-4"
+        class="node-lib-search-box p-2 2xl:p-4"
         v-model:modelValue="searchQuery"
         @search="handleSearch"
-        @show-filter="($event) => searchFilter.toggle($event)"
+        @show-filter="($event) => searchFilter?.toggle($event)"
         @remove-filter="onRemoveFilter"
-        :placeholder="$t('searchNodes') + '...'"
+        :placeholder="$t('g.searchNodes') + '...'"
         filter-icon="pi pi-filter"
         :filters
       />
@@ -48,8 +48,8 @@
         class="m-2"
       />
       <TreeExplorer
-        class="node-lib-tree-explorer py-0"
-        :roots="renderedRoot.children"
+        class="node-lib-tree-explorer"
+        :root="renderedRoot"
         v-model:expandedKeys="expandedKeys"
       >
         <template #node="{ node }">
@@ -63,31 +63,31 @@
 
 <script setup lang="ts">
 import Button from 'primevue/button'
+import Divider from 'primevue/divider'
+import Popover from 'primevue/popover'
+import { Ref, computed, h, nextTick, ref, render } from 'vue'
+
+import SearchBox from '@/components/common/SearchBox.vue'
+import { SearchFilter } from '@/components/common/SearchFilterChip.vue'
+import TreeExplorer from '@/components/common/TreeExplorer.vue'
+import NodePreview from '@/components/node/NodePreview.vue'
+import NodeSearchFilter from '@/components/searchbox/NodeSearchFilter.vue'
+import SidebarTabTemplate from '@/components/sidebar/tabs/SidebarTabTemplate.vue'
+import NodeTreeLeaf from '@/components/sidebar/tabs/nodeLibrary/NodeTreeLeaf.vue'
+import { useTreeExpansion } from '@/composables/useTreeExpansion'
+import { useLitegraphService } from '@/services/litegraphService'
+import { FilterAndValue } from '@/services/nodeSearchService'
+import { useNodeBookmarkStore } from '@/stores/nodeBookmarkStore'
 import {
-  buildNodeDefTree,
   ComfyNodeDefImpl,
+  buildNodeDefTree,
   useNodeDefStore
 } from '@/stores/nodeDefStore'
-import { computed, nextTick, ref, Ref } from 'vue'
-import type { TreeNode } from 'primevue/treenode'
-import Popover from 'primevue/popover'
-import Divider from 'primevue/divider'
-import SearchBox from '@/components/common/SearchBox.vue'
-import SidebarTabTemplate from '@/components/sidebar/tabs/SidebarTabTemplate.vue'
-import NodeBookmarkTreeExplorer from './nodeLibrary/NodeBookmarkTreeExplorer.vue'
-import TreeExplorer from '@/components/common/TreeExplorer.vue'
-import NodeTreeLeaf from '@/components/sidebar/tabs/nodeLibrary/NodeTreeLeaf.vue'
-import { app } from '@/scripts/app'
+import type { TreeNode } from '@/types/treeExplorerTypes'
+import type { TreeExplorerNode } from '@/types/treeExplorerTypes'
 import { sortedTree } from '@/utils/treeUtil'
-import { useTreeExpansion } from '@/hooks/treeHooks'
-import NodeSearchFilter from '@/components/searchbox/NodeSearchFilter.vue'
-import { FilterAndValue } from '@/services/nodeSearchService'
-import { SearchFilter } from '@/components/common/SearchFilterChip.vue'
-import type {
-  RenderedTreeExplorerNode,
-  TreeExplorerNode
-} from '@/types/treeExplorerTypes'
-import { useNodeBookmarkStore } from '@/stores/nodeBookmarkStore'
+
+import NodeBookmarkTreeExplorer from './nodeLibrary/NodeBookmarkTreeExplorer.vue'
 
 const nodeDefStore = useNodeDefStore()
 const nodeBookmarkStore = useNodeBookmarkStore()
@@ -97,14 +97,14 @@ const { expandNode, toggleNodeOnEvent } = useTreeExpansion(expandedKeys)
 const nodeBookmarkTreeExplorerRef = ref<InstanceType<
   typeof NodeBookmarkTreeExplorer
 > | null>(null)
-const searchFilter = ref(null)
+const searchFilter = ref<InstanceType<typeof Popover> | null>(null)
 const alphabeticalSort = ref(false)
 
 const searchQuery = ref<string>('')
 
 const root = computed(() => {
   const root = filteredRoot.value || nodeDefStore.nodeTree
-  return alphabeticalSort.value ? sortedTree(root) : root
+  return alphabeticalSort.value ? sortedTree(root, { groupLeaf: true }) : root
 })
 
 const renderedRoot = computed<TreeExplorerNode<ComfyNodeDefImpl>>(() => {
@@ -116,21 +116,26 @@ const renderedRoot = computed<TreeExplorerNode<ComfyNodeDefImpl>>(() => {
       label: node.leaf ? node.data.display_name : node.label,
       leaf: node.leaf,
       data: node.data,
-      getIcon: (node: TreeExplorerNode<ComfyNodeDefImpl>) => {
-        if (node.leaf) {
+      getIcon() {
+        if (this.leaf) {
           return 'pi pi-circle-fill'
         }
       },
       children,
       draggable: node.leaf,
-      handleClick: (
-        node: RenderedTreeExplorerNode<ComfyNodeDefImpl>,
-        e: MouseEvent
-      ) => {
-        if (node.leaf) {
-          app.addNodeOnGraph(node.data, { pos: app.getCanvasCenter() })
+      renderDragPreview(container) {
+        const vnode = h(NodePreview, { nodeDef: node.data })
+        render(vnode, container)
+        return () => {
+          render(null, container)
+        }
+      },
+      handleClick(e: MouseEvent) {
+        if (this.leaf) {
+          // @ts-expect-error fixme ts strict error
+          useLitegraphService().addNodeOnGraph(this.data)
         } else {
-          toggleNodeOnEvent(e, node)
+          toggleNodeOnEvent(e, this)
         }
       }
     }
@@ -169,6 +174,7 @@ const handleSearch = (query: string) => {
   )
 
   nextTick(() => {
+    // @ts-expect-error fixme ts strict error
     expandNode(filteredRoot.value)
   })
 }
@@ -185,6 +191,7 @@ const onAddFilter = (filterAndValue: FilterAndValue) => {
   handleSearch(searchQuery.value)
 }
 
+// @ts-expect-error fixme ts strict error
 const onRemoveFilter = (filterAndValue) => {
   const index = filters.value.findIndex((f) => f === filterAndValue)
   if (index !== -1) {

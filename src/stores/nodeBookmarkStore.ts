@@ -1,42 +1,20 @@
-// @ts-strict-ignore
+import _ from 'lodash'
 import { defineStore } from 'pinia'
 import { computed } from 'vue'
-import { useSettingStore } from './settingStore'
+
+import type { BookmarkCustomization } from '@/schemas/apiSchema'
+import type { TreeNode } from '@/types/treeExplorerTypes'
+
 import { useNodeDefStore } from './nodeDefStore'
 import { ComfyNodeDefImpl, createDummyFolderNodeDef } from './nodeDefStore'
 import { buildNodeDefTree } from './nodeDefStore'
-import type { TreeNode } from 'primevue/treenode'
-import _ from 'lodash'
-import type { BookmarkCustomization } from '@/types/apiTypes'
+import { useSettingStore } from './settingStore'
 
 export const BOOKMARK_SETTING_ID = 'Comfy.NodeLibrary.Bookmarks.V2'
 
 export const useNodeBookmarkStore = defineStore('nodeBookmark', () => {
   const settingStore = useSettingStore()
   const nodeDefStore = useNodeDefStore()
-
-  const migrateLegacyBookmarks = () => {
-    const legacyBookmarks = settingStore.get('Comfy.NodeLibrary.Bookmarks')
-    if (!legacyBookmarks.length) {
-      return
-    }
-
-    legacyBookmarks.forEach((bookmark: string) => {
-      // If the bookmark is a folder, add it as a bookmark
-      if (bookmark.endsWith('/')) {
-        addBookmark(bookmark)
-        return
-      }
-      const category = bookmark.split('/').slice(0, -1).join('/')
-      const displayName = bookmark.split('/').pop()
-      const nodeDef = nodeDefStore.nodeDefsByDisplayName[displayName]
-
-      if (!nodeDef) return
-      addBookmark(`${category === '' ? '' : category + '/'}${nodeDef.name}`)
-    })
-    settingStore.set('Comfy.NodeLibrary.Bookmarks', [])
-  }
-
   const bookmarks = computed<string[]>(() =>
     settingStore.get(BOOKMARK_SETTING_ID)
   )
@@ -70,7 +48,7 @@ export const useNodeBookmarkStore = defineStore('nodeBookmark', () => {
         if (bookmark.endsWith('/')) return createDummyFolderNodeDef(bookmark)
 
         const parts = bookmark.split('/')
-        const name = parts.pop()
+        const name = parts.pop() ?? ''
         const category = parts.join('/')
         const srcNodeDef = nodeDefStore.nodeDefsByName[name]
         if (!srcNodeDef) {
@@ -95,14 +73,12 @@ export const useNodeBookmarkStore = defineStore('nodeBookmark', () => {
     )
   }
 
-  const addNewBookmarkFolder = (parent?: ComfyNodeDefImpl) => {
+  const addNewBookmarkFolder = (
+    parent: ComfyNodeDefImpl | undefined,
+    folderName: string
+  ) => {
     const parentPath = parent ? parent.nodePath : ''
-    let newFolderPath = parentPath + 'New Folder/'
-    let suffix = 1
-    while (bookmarks.value.some((b: string) => b.startsWith(newFolderPath))) {
-      newFolderPath = parentPath + `New Folder ${suffix}/`
-      suffix++
-    }
+    const newFolderPath = parentPath + folderName + '/'
     addBookmark(newFolderPath)
     return newFolderPath
   }
@@ -190,7 +166,7 @@ export const useNodeBookmarkStore = defineStore('nodeBookmark', () => {
     settingStore.set('Comfy.NodeLibrary.BookmarksCustomization', {
       ...bookmarksCustomization.value,
       [nodePath]: undefined
-    })
+    } as Record<string, BookmarkCustomization>)
   }
 
   const renameBookmarkCustomization = (
@@ -226,8 +202,6 @@ export const useNodeBookmarkStore = defineStore('nodeBookmark', () => {
     deleteBookmarkCustomization,
     renameBookmarkCustomization,
     defaultBookmarkIcon,
-    defaultBookmarkColor,
-
-    migrateLegacyBookmarks
+    defaultBookmarkColor
   }
 })

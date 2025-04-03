@@ -1,20 +1,22 @@
-// @ts-strict-ignore
+import {
+  type LGraphNode,
+  type LGraphNodeConstructor,
+  LiteGraph
+} from '@comfyorg/litegraph'
+
+import { useToastStore } from '@/stores/toastStore'
+
+import { type ComfyApp, app } from '../../scripts/app'
 import { $el, ComfyDialog } from '../../scripts/ui'
 import { DraggableList } from '../../scripts/ui/draggableList'
 import { GroupNodeConfig, GroupNodeHandler } from './groupNode'
 import './groupNodeManage.css'
-import { app, type ComfyApp } from '../../scripts/app'
-import {
-  LiteGraph,
-  type LGraphNode,
-  type LGraphNodeConstructor
-} from '@comfyorg/litegraph'
-import { useToastStore } from '@/stores/toastStore'
 
 const ORDER: symbol = Symbol()
 const PREFIX = 'workflow'
 const SEPARATOR = '>'
 
+// @ts-expect-error fixme ts strict error
 function merge(target, source) {
   if (typeof target === 'object' && typeof source === 'object') {
     for (const key in source) {
@@ -33,6 +35,7 @@ function merge(target, source) {
 }
 
 export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
+  // @ts-expect-error fixme ts strict error
   tabs: Record<
     'Inputs' | 'Outputs' | 'Widgets',
     { tab: HTMLAnchorElement; page: HTMLElement }
@@ -50,22 +53,30 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
       >
     >
   > = {}
+  // @ts-expect-error fixme ts strict error
   nodeItems: any[]
   app: ComfyApp
+  // @ts-expect-error fixme ts strict error
   groupNodeType: LGraphNodeConstructor<LGraphNode>
   groupNodeDef: any
   groupData: any
 
+  // @ts-expect-error fixme ts strict error
   innerNodesList: HTMLUListElement
+  // @ts-expect-error fixme ts strict error
   widgetsPage: HTMLElement
+  // @ts-expect-error fixme ts strict error
   inputsPage: HTMLElement
+  // @ts-expect-error fixme ts strict error
   outputsPage: HTMLElement
   draggable: any
 
   get selectedNodeInnerIndex() {
+    // @ts-expect-error fixme ts strict error
     return +this.nodeItems[this.selectedNodeIndex].dataset.nodeindex
   }
 
+  // @ts-expect-error fixme ts strict error
   constructor(app) {
     super()
     this.app = app
@@ -74,14 +85,18 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
     }) as HTMLDialogElement
   }
 
+  // @ts-expect-error fixme ts strict error
   changeTab(tab) {
     this.tabs[this.selectedTab].tab.classList.remove('active')
     this.tabs[this.selectedTab].page.classList.remove('active')
+    // @ts-expect-error fixme ts strict error
     this.tabs[tab].tab.classList.add('active')
+    // @ts-expect-error fixme ts strict error
     this.tabs[tab].page.classList.add('active')
     this.selectedTab = tab
   }
 
+  // @ts-expect-error fixme ts strict error
   changeNode(index, force?) {
     if (!force && this.selectedNodeIndex === index) return
 
@@ -105,19 +120,20 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
   }
 
   getGroupData() {
-    this.groupNodeType =
-      LiteGraph.registered_node_types[
-        `${PREFIX}${SEPARATOR}` + this.selectedGroup
-      ]
+    this.groupNodeType = LiteGraph.registered_node_types[
+      `${PREFIX}${SEPARATOR}` + this.selectedGroup
+    ] as LGraphNodeConstructor<LGraphNode>
     this.groupNodeDef = this.groupNodeType.nodeData
     this.groupData = GroupNodeHandler.getGroupData(this.groupNodeType)
   }
 
+  // @ts-expect-error fixme ts strict error
   changeGroup(group, reset = true) {
     this.selectedGroup = group
     this.getGroupData()
 
     const nodes = this.groupData.nodeData.nodes
+    // @ts-expect-error fixme ts strict error
     this.nodeItems = nodes.map((n, i) =>
       $el(
         'li.draggable-item',
@@ -153,6 +169,7 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
       this.changeNode(0)
     } else {
       const items = this.draggable.getAllItems()
+      // @ts-expect-error fixme ts strict error
       let index = items.findIndex((item) => item.classList.contains('selected'))
       if (index === -1) index = this.selectedNodeIndex
       this.changeNode(index, true)
@@ -163,6 +180,7 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
     this.draggable = new DraggableList(this.innerNodesList, 'li')
     this.draggable.addEventListener(
       'dragend',
+      // @ts-expect-error fixme ts strict error
       ({ detail: { oldPosition, newPosition } }) => {
         if (oldPosition === newPosition) return
         ordered.splice(newPosition, 0, ordered.splice(oldPosition, 1)[0])
@@ -185,6 +203,7 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
     value: any
   }) {
     const { nodeIndex, section, prop, value } = props
+    // @ts-expect-error fixme ts strict error
     const groupMod = (this.modifications[this.selectedGroup] ??= {})
     const nodesMod = (groupMod.nodes ??= {})
     const nodeMod = (nodesMod[nodeIndex ?? this.selectedNodeInnerIndex] ??= {})
@@ -197,10 +216,12 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
     }
   }
 
+  // @ts-expect-error fixme ts strict error
   getEditElement(section, prop, value, placeholder, checked, checkable = true) {
     if (value === placeholder) value = ''
 
     const mods =
+      // @ts-expect-error fixme ts strict error
       this.modifications[this.selectedGroup]?.nodes?.[
         this.selectedNodeInnerIndex
       ]?.[section]?.[prop]
@@ -218,6 +239,7 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
         value,
         placeholder,
         type: 'text',
+        // @ts-expect-error fixme ts strict error
         onchange: (e) => {
           this.storeModification({
             section,
@@ -231,6 +253,7 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
           type: 'checkbox',
           checked,
           disabled: !checkable,
+          // @ts-expect-error fixme ts strict error
           onchange: (e) => {
             this.storeModification({
               section,
@@ -247,6 +270,7 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
     const widgets =
       this.groupData.oldToNewWidgetMap[this.selectedNodeInnerIndex]
     const items = Object.keys(widgets ?? {})
+    // @ts-expect-error fixme ts strict error
     const type = app.graph.extra.groupNodes[this.selectedGroup]
     const config = type.config?.[this.selectedNodeInnerIndex]?.input
     this.widgetsPage.replaceChildren(
@@ -266,9 +290,11 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
   buildInputsPage() {
     const inputs = this.groupData.nodeInputs[this.selectedNodeInnerIndex]
     const items = Object.keys(inputs ?? {})
+    // @ts-expect-error fixme ts strict error
     const type = app.graph.extra.groupNodes[this.selectedGroup]
     const config = type.config?.[this.selectedNodeInnerIndex]?.input
     this.inputsPage.replaceChildren(
+      // @ts-expect-error fixme ts strict error
       ...items
         .map((oldName) => {
           let value = inputs[oldName]
@@ -298,12 +324,14 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
     const groupOutputs =
       this.groupData.oldToNewOutputMap[this.selectedNodeInnerIndex]
 
+    // @ts-expect-error fixme ts strict error
     const type = app.graph.extra.groupNodes[this.selectedGroup]
     const config = type.config?.[this.selectedNodeInnerIndex]?.output
     const node = this.groupData.nodeData.nodes[this.selectedNodeInnerIndex]
     const checkable = node.type !== 'PrimitiveNode'
     this.outputsPage.replaceChildren(
       ...outputs
+        // @ts-expect-error fixme ts strict error
         .map((type, slot) => {
           const groupOutputIndex = groupOutputs?.[slot]
           const oldName = innerNodeDef.output_name?.[slot] ?? type
@@ -326,6 +354,7 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
     return !!outputs.length
   }
 
+  // @ts-expect-error fixme ts strict error
   show(type?) {
     const groupNodes = Object.keys(app.graph.extra?.groupNodes ?? {}).sort(
       (a, b) => a.localeCompare(b)
@@ -347,7 +376,9 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
       ['Inputs', this.inputsPage],
       ['Widgets', this.widgetsPage],
       ['Outputs', this.outputsPage]
+      // @ts-expect-error fixme ts strict error
     ].reduce((p, [name, page]: [string, HTMLElement]) => {
+      // @ts-expect-error fixme ts strict error
       p[name] = {
         tab: $el('a', {
           onclick: () => {
@@ -366,6 +397,7 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
         $el(
           'select',
           {
+            // @ts-expect-error fixme ts strict error
             onchange: (e) => {
               this.changeGroup(e.target.value)
             }
@@ -373,7 +405,7 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
           groupNodes.map((g) =>
             $el('option', {
               textContent: g,
-              selected: `${PREFIX}${SEPARATOR}` + g === type,
+              selected: `${PREFIX}${SEPARATOR}${g}` === type,
               value: g
             })
           )
@@ -393,7 +425,7 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
         $el(
           'button.comfy-btn',
           {
-            onclick: (e) => {
+            onclick: () => {
               const node = app.graph.nodes.find(
                 (n) => n.type === `${PREFIX}${SEPARATOR}` + this.selectedGroup
               )
@@ -408,6 +440,7 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
                   `Are you sure you want to remove the node: "${this.selectedGroup}"`
                 )
               ) {
+                // @ts-expect-error fixme ts strict error
                 delete app.graph.extra.groupNodes[this.selectedGroup]
                 LiteGraph.unregisterNodeType(
                   `${PREFIX}${SEPARATOR}` + this.selectedGroup
@@ -426,12 +459,14 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
               let recreateNodes = []
               const types = {}
               for (const g in this.modifications) {
+                // @ts-expect-error fixme ts strict error
                 const type = app.graph.extra.groupNodes[g]
                 let config = (type.config ??= {})
 
                 let nodeMods = this.modifications[g]?.nodes
                 if (nodeMods) {
                   const keys = Object.keys(nodeMods)
+                  // @ts-expect-error fixme ts strict error
                   if (nodeMods[keys[0]][ORDER]) {
                     // If any node is reordered, they will all need sequencing
                     const orderedNodes = []
@@ -439,8 +474,10 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
                     const orderedConfig = {}
 
                     for (const n of keys) {
+                      // @ts-expect-error fixme ts strict error
                       const order = nodeMods[n][ORDER].order
                       orderedNodes[order] = type.nodes[+n]
+                      // @ts-expect-error fixme ts strict error
                       orderedMods[order] = nodeMods[n]
                       orderedNodes[order].index = order
                     }
@@ -461,6 +498,7 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
                     // Rewrite modifications
                     for (const id of keys) {
                       if (config[id]) {
+                        // @ts-expect-error fixme ts strict error
                         orderedConfig[type.nodes[id].index] = config[id]
                       }
                       delete config[id]
@@ -474,16 +512,20 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
                   merge(config, nodeMods)
                 }
 
+                // @ts-expect-error fixme ts strict error
                 types[g] = type
 
                 if (!nodesByType) {
                   nodesByType = app.graph.nodes.reduce((p, n) => {
+                    // @ts-expect-error fixme ts strict error
                     p[n.type] ??= []
+                    // @ts-expect-error fixme ts strict error
                     p[n.type].push(n)
                     return p
                   }, {})
                 }
 
+                // @ts-expect-error fixme ts strict error
                 const nodes = nodesByType[`${PREFIX}${SEPARATOR}` + g]
                 if (nodes) recreateNodes.push(...nodes)
               }
@@ -512,13 +554,15 @@ export class ManageGroupDialog extends ComfyDialog<HTMLDialogElement> {
     this.element.replaceChildren(outer)
     this.changeGroup(
       type
-        ? groupNodes.find((g) => `${PREFIX}${SEPARATOR}` + g === type)
+        ? groupNodes.find((g) => `${PREFIX}${SEPARATOR}${g}` === type) ??
+            groupNodes[0]
         : groupNodes[0]
     )
     this.element.showModal()
 
     this.element.addEventListener('close', () => {
       this.draggable?.dispose()
+      this.element.remove()
     })
   }
 }

@@ -12,49 +12,41 @@
       :data-test="src"
       class="comfy-image-blur"
       :style="{ 'background-image': `url(${src})` }"
+      :alt="alt"
     />
     <img
       :src="src"
       @error="handleImageError"
       class="comfy-image-main"
-      :class="[...classArray]"
+      :class="classProp"
+      :alt="alt"
     />
   </span>
   <div v-if="imageBroken" class="broken-image-placeholder">
     <i class="pi pi-image"></i>
-    <span>{{ $t('imageFailedToLoad') }}</span>
+    <span>{{ $t('g.imageFailedToLoad') }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 
-const props = withDefaults(
-  defineProps<{
-    src: string
-    class?: string | string[] | object
-    contain: boolean
-  }>(),
-  {
-    contain: false
-  }
-)
+const {
+  src,
+  class: classProp,
+  contain = false,
+  alt = 'Image content'
+} = defineProps<{
+  src: string
+  class?: any
+  contain?: boolean
+  alt?: string
+}>()
 
 const imageBroken = ref(false)
-const handleImageError = (e: Event) => {
+const handleImageError = () => {
   imageBroken.value = true
 }
-
-const classArray = computed(() => {
-  if (Array.isArray(props.class)) {
-    return props.class
-  } else if (typeof props.class === 'string') {
-    return props.class.split(' ')
-  } else if (typeof props.class === 'object') {
-    return Object.keys(props.class).filter((key) => props.class[key])
-  }
-  return []
-})
 </script>
 
 <style scoped>

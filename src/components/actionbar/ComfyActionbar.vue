@@ -4,33 +4,15 @@
     :style="style"
     :class="{ 'is-dragging': isDragging, 'is-docked': isDocked }"
   >
-    <div class="actionbar-content flex items-center" ref="panelRef">
+    <div class="actionbar-content flex items-center select-none" ref="panelRef">
       <span class="drag-handle cursor-move mr-2 p-0!" ref="dragHandleRef">
       </span>
       <ComfyQueueButton />
-      <Divider layout="vertical" class="mx-1" />
-      <ButtonGroup class="flex flex-nowrap">
-        <Button
-          v-tooltip.bottom="$t('menu.refresh')"
-          icon="pi pi-refresh"
-          severity="secondary"
-          text
-          @click="() => commandStore.execute('Comfy.RefreshNodeDefinitions')"
-        />
-      </ButtonGroup>
     </div>
   </Panel>
 </template>
 
 <script lang="ts" setup>
-import { computed, inject, nextTick, onMounted, Ref, ref, watch } from 'vue'
-import Panel from 'primevue/panel'
-import Divider from 'primevue/divider'
-import Button from 'primevue/button'
-import ButtonGroup from 'primevue/buttongroup'
-import ComfyQueueButton from './ComfyQueueButton.vue'
-import { useSettingStore } from '@/stores/settingStore'
-import { useCommandStore } from '@/stores/commandStore'
 import {
   useDraggable,
   useElementBounding,
@@ -40,9 +22,14 @@ import {
   watchDebounced
 } from '@vueuse/core'
 import { clamp } from 'lodash'
+import Panel from 'primevue/panel'
+import { Ref, computed, inject, nextTick, onMounted, ref, watch } from 'vue'
+
+import { useSettingStore } from '@/stores/settingStore'
+
+import ComfyQueueButton from './ComfyQueueButton.vue'
 
 const settingsStore = useSettingStore()
-const commandStore = useCommandStore()
 
 const visible = computed(
   () => settingsStore.get('Comfy.UseNewMenu') !== 'Disabled'
@@ -140,30 +127,45 @@ const adjustMenuPosition = () => {
     const menuWidth = panelRef.value.offsetWidth
     const menuHeight = panelRef.value.offsetHeight
 
-    // Calculate the distance from each edge
+    // Calculate distances to all edges
+    const distanceLeft = lastDragState.value.x
     const distanceRight =
       lastDragState.value.windowWidth - (lastDragState.value.x + menuWidth)
+    const distanceTop = lastDragState.value.y
     const distanceBottom =
       lastDragState.value.windowHeight - (lastDragState.value.y + menuHeight)
 
-    // Determine if the menu is closer to right/bottom or left/top
-    const anchorRight = distanceRight < lastDragState.value.x
-    const anchorBottom = distanceBottom < lastDragState.value.y
+    // Find the smallest distance to determine which edge to anchor to
+    const distances = [
+      { edge: 'left', distance: distanceLeft },
+      { edge: 'right', distance: distanceRight },
+      { edge: 'top', distance: distanceTop },
+      { edge: 'bottom', distance: distanceBottom }
+    ]
+    const closestEdge = distances.reduce((min, curr) =>
+      curr.distance < min.distance ? curr : min
+    )
 
-    // Calculate new position
-    if (anchorRight) {
-      x.value =
-        screenWidth - (lastDragState.value.windowWidth - lastDragState.value.x)
-    } else {
-      x.value = lastDragState.value.x
-    }
+    // Calculate vertical position as a percentage of screen height
+    const verticalRatio =
+      lastDragState.value.y / lastDragState.value.windowHeight
+    const horizontalRatio =
+      lastDragState.value.x / lastDragState.value.windowWidth
 
-    if (anchorBottom) {
-      y.value =
-        screenHeight -
-        (lastDragState.value.windowHeight - lastDragState.value.y)
+    // Apply positioning based on closest edge
+    if (closestEdge.edge === 'left') {
+      x.value = closestEdge.distance // Maintain exact distance from left
+      y.value = verticalRatio * screenHeight
+    } else if (closestEdge.edge === 'right') {
+      x.value = screenWidth - menuWidth - closestEdge.distance // Maintain exact distance from right
+      y.value = verticalRatio * screenHeight
+    } else if (closestEdge.edge === 'top') {
+      x.value = horizontalRatio * screenWidth
+      y.value = closestEdge.distance // Maintain exact distance from top
     } else {
-      y.value = lastDragState.value.y
+      // bottom
+      x.value = horizontalRatio * screenWidth
+      y.value = screenHeight - menuHeight - closestEdge.distance // Maintain exact distance from bottom
     }
 
     // Ensure the menu stays within the screen bounds
@@ -230,7 +232,15 @@ watch([isDragging, isOverlappingWithTopMenu], ([dragging, overlapping]) => {
   @apply p-1;
 }
 
+.is-docked :deep(.p-panel-content) {
+  @apply p-0;
+}
+
 :deep(.p-panel-header) {
   display: none;
+}
+
+.drag-handle {
+  @apply w-3 h-max;
 }
 </style>

@@ -13,19 +13,21 @@
       v-model="selectedFilterValue"
       :options="filterValues"
       filter
+      autoFilterFocus
     />
   </div>
   <div class="_footer">
-    <Button type="button" :label="$t('add')" @click="submit"></Button>
+    <Button type="button" :label="$t('g.add')" @click="submit"></Button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { NodeFilter, type FilterAndValue } from '@/services/nodeSearchService'
 import Button from 'primevue/button'
-import SelectButton from 'primevue/selectbutton'
 import Select from 'primevue/select'
-import { ref, onMounted, computed } from 'vue'
+import SelectButton from 'primevue/selectbutton'
+import { computed, onMounted, ref } from 'vue'
+
+import { type FilterAndValue, NodeFilter } from '@/services/nodeSearchService'
 import { useNodeDefStore } from '@/stores/nodeDefStore'
 
 const filters = computed(() => nodeDefStore.nodeSearchService.nodeFilters)

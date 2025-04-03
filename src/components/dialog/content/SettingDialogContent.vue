@@ -1,96 +1,103 @@
 <template>
   <div class="settings-container">
-    <ScrollPanel class="settings-sidebar flex-shrink-0 p-2 w-64">
+    <ScrollPanel class="settings-sidebar flex-shrink-0 p-2 w-48 2xl:w-64">
       <SearchBox
         class="settings-search-box w-full mb-2"
         v-model:modelValue="searchQuery"
         @search="handleSearch"
-        :placeholder="$t('searchSettings') + '...'"
+        :placeholder="$t('g.searchSettings') + '...'"
+        :debounce-time="128"
       />
       <Listbox
         v-model="activeCategory"
         :options="categories"
-        optionLabel="label"
+        optionLabel="translatedLabel"
         scrollHeight="100%"
-        :disabled="inSearch"
+        :optionDisabled="
+          (option: SettingTreeNode) =>
+            !queryIsEmpty && !searchResultsCategories.has(option.label ?? '')
+        "
         class="border-none w-full"
       />
     </ScrollPanel>
-    <Divider layout="vertical" />
-    <ScrollPanel class="settings-content flex-grow">
-      <Tabs :value="tabValue">
-        <TabPanels class="settings-tab-panels">
-          <TabPanel key="search-results" value="Search Results">
-            <div v-if="searchResults.length > 0">
-              <SettingGroup
-                v-for="(group, i) in searchResults"
-                :key="group.label"
-                :divider="i !== 0"
-                :group="group"
-              />
-            </div>
-            <NoResultsPlaceholder
-              v-else
-              icon="pi pi-search"
-              :title="$t('noResultsFound')"
-              :message="$t('searchFailedMessage')"
-            />
-          </TabPanel>
-          <TabPanel
-            v-for="category in categories"
-            :key="category.key"
-            :value="category.label"
-          >
-            <SettingGroup
-              v-for="(group, i) in sortedGroups(category)"
-              :key="group.label"
-              :divider="i !== 0"
-              :group="{
-                label: group.label,
-                settings: flattenTree<SettingParams>(group)
-              }"
-            />
-          </TabPanel>
-          <TabPanel key="about" value="About">
-            <AboutPanel />
-          </TabPanel>
-          <TabPanel key="keybinding" value="Keybinding">
-            <Suspense>
-              <KeybindingPanel />
-              <template #fallback>
-                <div>Loading keybinding panel...</div>
-              </template>
-            </Suspense>
-          </TabPanel>
-          <TabPanel key="extension" value="Extension">
-            <Suspense>
-              <ExtensionPanel />
-              <template #fallback>
-                <div>Loading extension panel...</div>
-              </template>
-            </Suspense>
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-    </ScrollPanel>
+    <Divider layout="vertical" class="mx-1 2xl:mx-4 hidden md:flex" />
+    <Divider layout="horizontal" class="flex md:hidden" />
+    <Tabs :value="tabValue" :lazy="true" class="settings-content h-full w-full">
+      <TabPanels class="settings-tab-panels h-full w-full pr-0">
+        <PanelTemplate value="Search Results">
+          <SettingsPanel :settingGroups="searchResults" />
+        </PanelTemplate>
+
+        <PanelTemplate
+          v-for="category in settingCategories"
+          :key="category.key"
+          :value="category.label ?? ''"
+        >
+          <template #header>
+            <CurrentUserMessage v-if="tabValue === 'Comfy'" />
+            <FirstTimeUIMessage v-if="tabValue === 'Comfy'" />
+            <ColorPaletteMessage v-if="tabValue === 'Appearance'" />
+          </template>
+          <SettingsPanel :settingGroups="sortedGroups(category)" />
+        </PanelTemplate>
+
+        <AboutPanel />
+        <Suspense>
+          <KeybindingPanel />
+          <template #fallback>
+            <div>Loading keybinding panel...</div>
+          </template>
+        </Suspense>
+
+        <Suspense>
+          <ExtensionPanel />
+          <template #fallback>
+            <div>Loading extension panel...</div>
+          </template>
+        </Suspense>
+
+        <Suspense>
+          <ServerConfigPanel />
+          <template #fallback>
+            <div>Loading server config panel...</div>
+          </template>
+        </Suspense>
+      </TabPanels>
+    </Tabs>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
-import Listbox from 'primevue/listbox'
-import Tabs from 'primevue/tabs'
-import TabPanels from 'primevue/tabpanels'
-import TabPanel from 'primevue/tabpanel'
 import Divider from 'primevue/divider'
+import Listbox from 'primevue/listbox'
 import ScrollPanel from 'primevue/scrollpanel'
-import { SettingTreeNode, useSettingStore } from '@/stores/settingStore'
-import { SettingParams } from '@/types/settingTypes'
-import SettingGroup from './setting/SettingGroup.vue'
+import TabPanels from 'primevue/tabpanels'
+import Tabs from 'primevue/tabs'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
 import SearchBox from '@/components/common/SearchBox.vue'
-import NoResultsPlaceholder from '@/components/common/NoResultsPlaceholder.vue'
+import { st } from '@/i18n'
+import {
+  SettingTreeNode,
+  getSettingInfo,
+  useSettingStore
+} from '@/stores/settingStore'
+import { ISettingGroup, SettingParams } from '@/types/settingTypes'
+import { isElectron } from '@/utils/envUtil'
+import { normalizeI18nKey } from '@/utils/formatUtil'
 import { flattenTree } from '@/utils/treeUtil'
+
 import AboutPanel from './setting/AboutPanel.vue'
+import ColorPaletteMessage from './setting/ColorPaletteMessage.vue'
+import CurrentUserMessage from './setting/CurrentUserMessage.vue'
+import FirstTimeUIMessage from './setting/FirstTimeUIMessage.vue'
+import PanelTemplate from './setting/PanelTemplate.vue'
+import SettingsPanel from './setting/SettingsPanel.vue'
+
+const props = defineProps<{
+  defaultPanel?: 'about' | 'keybinding' | 'extension' | 'server-config'
+}>()
 
 const KeybindingPanel = defineAsyncComponent(
   () => import('./setting/KeybindingPanel.vue')
@@ -98,11 +105,9 @@ const KeybindingPanel = defineAsyncComponent(
 const ExtensionPanel = defineAsyncComponent(
   () => import('./setting/ExtensionPanel.vue')
 )
-
-interface ISettingGroup {
-  label: string
-  settings: SettingParams[]
-}
+const ServerConfigPanel = defineAsyncComponent(
+  () => import('./setting/ServerConfigPanel.vue')
+)
 
 const aboutPanelNode: SettingTreeNode = {
   key: 'about',
@@ -122,85 +127,160 @@ const extensionPanelNode: SettingTreeNode = {
   children: []
 }
 
-const extensionPanelNodeList = computed<SettingTreeNode[]>(() => {
-  const settingStore = useSettingStore()
-  const showExtensionPanel = settingStore.get('Comfy.Settings.ExtensionPanel')
-  return showExtensionPanel ? [extensionPanelNode] : []
+const serverConfigPanelNode: SettingTreeNode = {
+  key: 'server-config',
+  label: 'Server-Config',
+  children: []
+}
+
+/**
+ * Server config panel is only available in Electron. We might want to support
+ * it in the web version in the future.
+ */
+const serverConfigPanelNodeList = computed<SettingTreeNode[]>(() => {
+  return isElectron() ? [serverConfigPanelNode] : []
 })
 
 const settingStore = useSettingStore()
 const settingRoot = computed<SettingTreeNode>(() => settingStore.settingTree)
-const categories = computed<SettingTreeNode[]>(() => [
-  ...(settingRoot.value.children || []),
-  keybindingPanelNode,
-  ...extensionPanelNodeList.value,
-  aboutPanelNode
-])
+const settingCategories = computed<SettingTreeNode[]>(
+  () => settingRoot.value.children ?? []
+)
+const { t } = useI18n()
+const categories = computed<SettingTreeNode[]>(() =>
+  [
+    ...settingCategories.value,
+    keybindingPanelNode,
+    extensionPanelNode,
+    ...serverConfigPanelNodeList.value,
+    aboutPanelNode
+  ].map((node) => ({
+    ...node,
+    translatedLabel: t(
+      `settingsCategories.${normalizeI18nKey(node.label)}`,
+      node.label
+    )
+  }))
+)
+
 const activeCategory = ref<SettingTreeNode | null>(null)
-const searchResults = ref<ISettingGroup[]>([])
-
-watch(activeCategory, (newCategory, oldCategory) => {
-  if (newCategory === null) {
-    activeCategory.value = oldCategory
-  }
-})
-
+const getDefaultCategory = () => {
+  return props.defaultPanel
+    ? categories.value.find((x) => x.key === props.defaultPanel) ??
+        categories.value[0]
+    : categories.value[0]
+}
 onMounted(() => {
-  activeCategory.value = categories.value[0]
+  activeCategory.value = getDefaultCategory()
 })
 
-const sortedGroups = (category: SettingTreeNode) => {
-  return [...(category.children || [])].sort((a, b) =>
-    a.label.localeCompare(b.label)
-  )
+const sortedGroups = (category: SettingTreeNode): ISettingGroup[] => {
+  return [...(category.children ?? [])]
+    .sort((a, b) => a.label.localeCompare(b.label))
+    .map((group) => ({
+      label: group.label,
+      settings: flattenTree<SettingParams>(group)
+    }))
 }
 
 const searchQuery = ref<string>('')
+const filteredSettingIds = ref<string[]>([])
 const searchInProgress = ref<boolean>(false)
 watch(searchQuery, () => (searchInProgress.value = true))
 
+const searchResults = computed<ISettingGroup[]>(() => {
+  const groupedSettings: { [key: string]: SettingParams[] } = {}
+
+  filteredSettingIds.value.forEach((id) => {
+    const setting = settingStore.settingsById[id]
+    const info = getSettingInfo(setting)
+    const groupLabel = info.subCategory
+
+    if (
+      activeCategory.value === null ||
+      activeCategory.value.label === info.category
+    ) {
+      if (!groupedSettings[groupLabel]) {
+        groupedSettings[groupLabel] = []
+      }
+      groupedSettings[groupLabel].push(setting)
+    }
+  })
+
+  return Object.entries(groupedSettings).map(([label, settings]) => ({
+    label,
+    settings
+  }))
+})
+
+/**
+ * Settings categories that contains at least one setting in search results.
+ */
+const searchResultsCategories = computed<Set<string>>(() => {
+  return new Set(
+    filteredSettingIds.value.map(
+      (id) => getSettingInfo(settingStore.settingsById[id]).category
+    )
+  )
+})
+
 const handleSearch = (query: string) => {
   if (!query) {
-    searchResults.value = []
+    filteredSettingIds.value = []
+    activeCategory.value ??= getDefaultCategory()
     return
   }
 
+  const queryLower = query.toLocaleLowerCase()
   const allSettings = flattenTree<SettingParams>(settingRoot.value)
-  const filteredSettings = allSettings.filter(
-    (setting) =>
-      setting.id.toLowerCase().includes(query.toLowerCase()) ||
-      setting.name.toLowerCase().includes(query.toLowerCase())
-  )
+  const filteredSettings = allSettings.filter((setting) => {
+    const idLower = setting.id.toLowerCase()
+    const nameLower = setting.name.toLowerCase()
+    const translatedName = st(
+      `settings.${normalizeI18nKey(setting.id)}.name`,
+      setting.name
+    ).toLocaleLowerCase()
+    const info = getSettingInfo(setting)
+    const translatedCategory = st(
+      `settingsCategories.${normalizeI18nKey(info.category)}`,
+      info.category
+    ).toLocaleLowerCase()
+    const translatedSubCategory = st(
+      `settingsCategories.${normalizeI18nKey(info.subCategory)}`,
+      info.subCategory
+    ).toLocaleLowerCase()
 
-  const groupedSettings: { [key: string]: SettingParams[] } = {}
-  filteredSettings.forEach((setting) => {
-    const groupLabel = setting.id.split('.')[1]
-    if (!groupedSettings[groupLabel]) {
-      groupedSettings[groupLabel] = []
-    }
-    groupedSettings[groupLabel].push(setting)
+    return (
+      idLower.includes(queryLower) ||
+      nameLower.includes(queryLower) ||
+      translatedName.includes(queryLower) ||
+      translatedCategory.includes(queryLower) ||
+      translatedSubCategory.includes(queryLower)
+    )
   })
 
-  searchResults.value = Object.entries(groupedSettings).map(
-    ([label, settings]) => ({
-      label,
-      settings
-    })
-  )
+  filteredSettingIds.value = filteredSettings.map((x) => x.id)
   searchInProgress.value = false
+  activeCategory.value = null
 }
 
-const inSearch = computed(
-  () => searchQuery.value.length > 0 && !searchInProgress.value
+const queryIsEmpty = computed(() => searchQuery.value.length === 0)
+const inSearch = computed(() => !queryIsEmpty.value && !searchInProgress.value)
+const tabValue = computed<string>(() =>
+  inSearch.value ? 'Search Results' : activeCategory.value?.label ?? ''
 )
-const tabValue = computed(() =>
-  inSearch.value ? 'Search Results' : activeCategory.value?.label
-)
+// Don't allow null category to be set outside of search.
+// In search mode, the active category can be null to show all search results.
+watch(activeCategory, (_, oldValue) => {
+  if (!tabValue.value) {
+    activeCategory.value = oldValue
+  }
+})
 </script>
 
 <style>
 .settings-tab-panels {
-  padding-top: 0px !important;
+  padding-top: 0 !important;
 }
 </style>
 
@@ -209,7 +289,7 @@ const tabValue = computed(() =>
   display: flex;
   height: 70vh;
   width: 60vw;
-  max-width: 1024px;
+  max-width: 64rem;
   overflow: hidden;
 }
 
@@ -217,10 +297,15 @@ const tabValue = computed(() =>
   .settings-container {
     flex-direction: column;
     height: auto;
+    width: 80vw;
   }
 
   .settings-sidebar {
     width: 100%;
+  }
+
+  .settings-content {
+    height: 350px;
   }
 }
 

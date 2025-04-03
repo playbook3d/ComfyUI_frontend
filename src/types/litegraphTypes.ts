@@ -1,35 +1,24 @@
-// @ts-strict-ignore
 import type {
   ConnectingLink,
-  LGraphNode,
-  Vector2,
   INodeInputSlot,
   INodeOutputSlot,
-  INodeSlot
+  INodeSlot,
+  ISlotType,
+  LGraphNode,
+  Vector2
 } from '@comfyorg/litegraph'
-import type { ISlotType } from '@comfyorg/litegraph'
 import { LiteGraph } from '@comfyorg/litegraph'
+import { RerouteId } from '@comfyorg/litegraph/dist/Reroute'
 
 export class ConnectingLinkImpl implements ConnectingLink {
-  node: LGraphNode
-  slot: number
-  input: INodeInputSlot | null
-  output: INodeOutputSlot | null
-  pos: Vector2
-
   constructor(
-    node: LGraphNode,
-    slot: number,
-    input: INodeInputSlot | null,
-    output: INodeOutputSlot | null,
-    pos: Vector2
-  ) {
-    this.node = node
-    this.slot = slot
-    this.input = input
-    this.output = output
-    this.pos = pos
-  }
+    public node: LGraphNode,
+    public slot: number,
+    public input: INodeInputSlot | null | undefined | any,
+    public output: INodeOutputSlot | null | undefined | any,
+    public pos: Vector2,
+    public afterRerouteId?: RerouteId
+  ) {}
 
   static createFromPlainObject(obj: ConnectingLink) {
     return new ConnectingLinkImpl(
@@ -37,12 +26,13 @@ export class ConnectingLinkImpl implements ConnectingLink {
       obj.slot,
       obj.input,
       obj.output,
-      obj.pos
+      obj.pos,
+      obj.afterRerouteId
     )
   }
 
   get type(): ISlotType | null {
-    const result = this.input ? this.input.type : this.output.type
+    const result = this.input ? this.input.type : this.output?.type ?? null
     return result === -1 ? null : result
   }
 
@@ -59,8 +49,9 @@ export class ConnectingLinkImpl implements ConnectingLink {
       this.releaseSlotType === 'output' ? newNode.outputs : newNode.inputs
     if (!newNodeSlots) return
 
-    const newNodeSlot = newNodeSlots.findIndex((slot: INodeSlot) =>
-      LiteGraph.isValidConnection(slot.type, this.type)
+    const newNodeSlot = newNodeSlots.findIndex(
+      (slot: INodeSlot) =>
+        this.type && LiteGraph.isValidConnection(slot.type, this.type)
     )
 
     if (newNodeSlot === -1) {
@@ -71,9 +62,9 @@ export class ConnectingLinkImpl implements ConnectingLink {
     }
 
     if (this.releaseSlotType === 'input') {
-      this.node.connect(this.slot, newNode, newNodeSlot)
+      this.node.connect(this.slot, newNode, newNodeSlot, this.afterRerouteId)
     } else {
-      newNode.connect(newNodeSlot, this.node, this.slot)
+      newNode.connect(newNodeSlot, this.node, this.slot, this.afterRerouteId)
     }
   }
 }

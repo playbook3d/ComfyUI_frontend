@@ -1,8 +1,11 @@
 import { defineStore } from 'pinia'
 import type { MenuItem } from 'primevue/menuitem'
 import { ref } from 'vue'
-import { useCommandStore } from './commandStore'
+
+import { CORE_MENU_COMMANDS } from '@/constants/coreMenuCommands'
 import { ComfyExtension } from '@/types/comfy'
+
+import { useCommandStore } from './commandStore'
 
 export const useMenuItemStore = defineStore('menuItem', () => {
   const commandStore = useCommandStore()
@@ -49,7 +52,7 @@ export const useMenuItemStore = defineStore('menuItem', () => {
       .map(
         (command) =>
           ({
-            command: command.function,
+            command: () => commandStore.execute(command.id),
             label: command.menubarLabel,
             icon: command.icon,
             tooltip: command.tooltip,
@@ -77,52 +80,17 @@ export const useMenuItemStore = defineStore('menuItem', () => {
     })
   }
 
-  // Core menu commands
-  registerCommands(['Workflow'], ['Comfy.NewBlankWorkflow'])
-
-  registerCommands(
-    ['Workflow'],
-    ['Comfy.OpenWorkflow', 'Comfy.BrowseTemplates']
-  )
-  registerCommands(
-    ['Workflow'],
-    [
-      'Comfy.SaveWorkflow',
-      'Comfy.SaveWorkflowAs',
-      'Comfy.ExportWorkflow',
-      'Comfy.ExportWorkflowAPI'
-    ]
-  )
-
-  registerCommands(['Edit'], ['Comfy.Undo', 'Comfy.Redo'])
-  registerCommands(['Edit'], ['Comfy.ClearWorkflow'])
-  registerCommands(['Edit'], ['Comfy.OpenClipspace'])
-
-  registerMenuGroup(
-    ['Help'],
-    [
-      {
-        icon: 'pi pi-github',
-        label: 'ComfyUI Issues',
-        url: 'https://github.com/comfyanonymous/ComfyUI/issues'
-      },
-      {
-        icon: 'pi pi-info-circle',
-        label: 'ComfyUI Docs',
-        url: 'https://docs.comfy.org/'
-      },
-      {
-        icon: 'pi pi-discord',
-        label: 'Comfy-Org',
-        url: 'https://www.comfy.org/discord'
-      }
-    ]
-  )
+  const registerCoreMenuCommands = () => {
+    for (const [path, commands] of CORE_MENU_COMMANDS) {
+      registerCommands(path, commands)
+    }
+  }
 
   return {
     menuItems,
     registerMenuGroup,
     registerCommands,
-    loadExtensionMenuCommands
+    loadExtensionMenuCommands,
+    registerCoreMenuCommands
   }
 })

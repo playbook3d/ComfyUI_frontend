@@ -1,24 +1,38 @@
-// @ts-strict-ignore
-import { ComfyWorkflowJSON } from '@/types/comfyWorkflow'
-import {
-  DownloadModelStatus,
-  HistoryTaskItem,
-  PendingTaskItem,
-  RunningTaskItem,
-  ComfyNodeDef,
-  validateComfyNodeDef,
+import axios from 'axios'
+
+import config from '@/config'
+import type {
   EmbeddingsResponse,
+  ExecutedWsMessage,
+  ExecutingWsMessage,
+  ExecutionCachedWsMessage,
+  ExecutionErrorWsMessage,
+  ExecutionInterruptedWsMessage,
+  ExecutionStartWsMessage,
+  ExecutionSuccessWsMessage,
   ExtensionsResponse,
+  HistoryTaskItem,
+  LogsRawResponse,
+  LogsWsMessage,
+  PendingTaskItem,
+  ProgressWsMessage,
   PromptResponse,
+  RunningTaskItem,
+  Settings,
+  StatusWsMessage,
+  StatusWsMessageStatus,
   SystemStats,
   User,
-  Settings,
   UserDataFullInfo
-} from '@/types/apiTypes'
-import axios from 'axios'
-import defaultWorkflow from './default_workflow.json'
+} from '@/schemas/apiSchema'
+import type { ComfyWorkflowJSON, NodeId } from '@/schemas/comfyWorkflowSchema'
+import {
+  type ComfyNodeDef,
+  validateComfyNodeDef
+} from '@/schemas/nodeDefSchema'
+import { WorkflowTemplates } from '@/types/workflowTemplateTypes'
+
 import nodes_definition from './nodes_definition.json'
-import config from '@/config'
 
 interface QueuePromptRequestBody {
   client_id: string
@@ -34,19 +48,153 @@ interface QueuePromptRequestBody {
   number?: number
 }
 
-class ComfyApi extends EventTarget {
+/** Dictionary of Frontend-generated API calls */
+interface FrontendApiCalls {
+  graphChanged: ComfyWorkflowJSON
+  promptQueued: { number: number; batchCount: number }
+  graphCleared: never
+  reconnecting: never
+  reconnected: never
+}
+
+/** Dictionary of calls originating from ComfyUI core */
+interface BackendApiCalls {
+  progress: ProgressWsMessage
+  executing: ExecutingWsMessage
+  executed: ExecutedWsMessage
+  status: StatusWsMessage
+  execution_start: ExecutionStartWsMessage
+  execution_success: ExecutionSuccessWsMessage
+  execution_error: ExecutionErrorWsMessage
+  execution_interrupted: ExecutionInterruptedWsMessage
+  execution_cached: ExecutionCachedWsMessage
+  logs: LogsWsMessage
+  /** Mr Blob Preview, I presume? */
+  b_preview: Blob
+}
+
+/** Dictionary of all api calls */
+interface ApiCalls extends BackendApiCalls, FrontendApiCalls {}
+
+/** Used to create a discriminating union on type value. */
+interface ApiMessage<T extends keyof ApiCalls> {
+  type: T
+  data: ApiCalls[T]
+}
+
+/** Ensures workers get a fair shake. */
+type Unionize<T> = T[keyof T]
+
+/**
+ *  Discriminated union of generic, i.e.:
+ * ```ts
+ * // Convert
+ * type ApiMessageUnion = ApiMessage<'status' | 'executing' | ...>
+ * // To
+ * type ApiMessageUnion = ApiMessage<'status'> | ApiMessage<'executing'> | ...
+ * ```
+ */
+type ApiMessageUnion = Unionize<{
+  [Key in keyof ApiCalls]: ApiMessage<Key>
+}>
+
+/** Wraps all properties in {@link CustomEvent}. */
+type AsCustomEvents<T> = {
+  readonly [K in keyof T]: CustomEvent<T[K]>
+}
+
+/** Handles differing event and API signatures. */
+type ApiToEventType<T = ApiCalls> = {
+  [K in keyof T]: K extends 'status'
+    ? StatusWsMessageStatus
+    : K extends 'executing'
+      ? NodeId
+      : T[K]
+}
+
+/** Dictionary of types used in the detail for a custom event */
+type ApiEventTypes = ApiToEventType<ApiCalls>
+
+/** Dictionary of API events: `[name]: CustomEvent<Type>` */
+type ApiEvents = AsCustomEvents<ApiEventTypes>
+
+/** {@link Omit} all properties that evaluate to `never`. */
+type NeverNever<T> = {
+  [K in keyof T as T[K] extends never ? never : K]: T[K]
+}
+
+/** {@link Pick} only properties that evaluate to `never`. */
+type PickNevers<T> = {
+  [K in keyof T as T[K] extends never ? K : never]: T[K]
+}
+
+/** Keys (names) of API events that _do not_ pass a {@link CustomEvent} `detail` object. */
+type SimpleApiEvents = keyof PickNevers<ApiEventTypes>
+/** Keys (names) of API events that pass a {@link CustomEvent} `detail` object. */
+type ComplexApiEvents = keyof NeverNever<ApiEventTypes>
+
+/** EventTarget typing has no generic capability. */
+export interface ComfyApi extends EventTarget {
+  addEventListener<TEvent extends keyof ApiEvents>(
+    type: TEvent,
+    callback: ((event: ApiEvents[TEvent]) => void) | null,
+    options?: AddEventListenerOptions | boolean
+  ): void
+
+  removeEventListener<TEvent extends keyof ApiEvents>(
+    type: TEvent,
+    callback: ((event: ApiEvents[TEvent]) => void) | null,
+    options?: EventListenerOptions | boolean
+  ): void
+}
+
+export class PromptExecutionError extends Error {
+  response: PromptResponse
+
+  constructor(response: PromptResponse) {
+    super('Prompt execution failed')
+    this.response = response
+  }
+
+  override toString() {
+    let message = super.message
+    if (typeof this.response.error === 'string') {
+      message += ': ' + this.response.error
+    } else if (this.response.error.details) {
+      message += ': ' + this.response.error.details
+    }
+
+    for (const [_, nodeError] of Object.entries(
+      this.response.node_errors ?? []
+    )) {
+      message += '\n' + nodeError.class_type + ':'
+      for (const errorReason of nodeError.errors) {
+        message += '\n    - ' + errorReason.message + ': ' + errorReason.details
+      }
+    }
+
+    return message
+  }
+}
+
+export class ComfyApi extends EventTarget {
   #registered = new Set()
   api_host: string
   api_base: string
-  initialClientId: string
-  user: string
-  socket?: WebSocket
+  /**
+   * The client id from the initial session storage.
+   */
+  initialClientId: string | null
+  /**
+   * The current client id from websocket status updates.
+   */
   clientId?: string
   is_offline: boolean = false
   reportedUnknownMessageTypes = new Set<string>()
 
   constructor() {
     super()
+    this.user = ''
     this.api_host = location.host
     this.api_base = location.pathname.split('/').slice(0, -1).join('/')
     console.log('Running on', this.api_host)
@@ -66,10 +214,19 @@ class ComfyApi extends EventTarget {
     return this.api_base + route
   }
 
-  fetchApi(route: string, dataToReturn?: any, options?: RequestInit) {
+  fetchApi(
+    route: string,
+    dataToReturn?: any,
+    options?: RequestInit,
+    code?: number
+  ) {
     if (this.is_offline) {
       return new Promise<Response>((resolve) =>
-        resolve(new Response(JSON.stringify(dataToReturn, null)))
+        resolve(
+          new Response(JSON.stringify(dataToReturn, null), {
+            status: code ?? 200
+          })
+        )
       )
     }
     if (!options) {
@@ -81,17 +238,60 @@ class ComfyApi extends EventTarget {
     if (!options.cache) {
       options.cache = 'no-cache'
     }
-    options.headers['Comfy-User'] = this.user
+
+    if (Array.isArray(options.headers)) {
+      options.headers.push(['Comfy-User', this.user])
+    } else if (options.headers instanceof Headers) {
+      options.headers.set('Comfy-User', this.user)
+    } else {
+      options.headers['Comfy-User'] = this.user
+    }
     return fetch(this.apiURL(route), options)
   }
 
-  addEventListener(
-    type: string,
-    callback: any,
-    options?: AddEventListenerOptions
+  addEventListener<TEvent extends keyof ApiEvents>(
+    type: TEvent,
+    callback: ((event: ApiEvents[TEvent]) => void) | null,
+    options?: AddEventListenerOptions | boolean
   ) {
-    super.addEventListener(type, callback, options)
+    // Type assertion: strictFunctionTypes.  So long as we emit events in a type-safe fashion, this is safe.
+    super.addEventListener(type, callback as EventListener, options)
     this.#registered.add(type)
+  }
+
+  removeEventListener<TEvent extends keyof ApiEvents>(
+    type: TEvent,
+    callback: ((event: ApiEvents[TEvent]) => void) | null,
+    options?: EventListenerOptions | boolean
+  ): void {
+    super.removeEventListener(type, callback as EventListener, options)
+  }
+
+  /**
+   * Dispatches a custom event.
+   * Provides type safety for the contravariance issue with EventTarget (last checked TS 5.6).
+   * @param type The type of event to emit
+   * @param detail The detail property used for a custom event ({@link CustomEventInit.detail})
+   */
+  dispatchCustomEvent<T extends SimpleApiEvents>(type: T): boolean
+  dispatchCustomEvent<T extends ComplexApiEvents>(
+    type: T,
+    detail: ApiEventTypes[T] | null
+  ): boolean
+  dispatchCustomEvent<T extends keyof ApiEventTypes>(
+    type: T,
+    detail?: ApiEventTypes[T]
+  ): boolean {
+    const event =
+      detail === undefined
+        ? new CustomEvent(type)
+        : new CustomEvent(type, { detail })
+    return super.dispatchEvent(event)
+  }
+
+  /** @deprecated Use {@link dispatchCustomEvent}. */
+  dispatchEvent(event: never): boolean {
+    return super.dispatchEvent(event)
   }
 
   /**
@@ -104,7 +304,7 @@ class ComfyApi extends EventTarget {
         const status = await resp.json()
         this.dispatchEvent(new CustomEvent('status', { detail: status }))
       } catch (error) {
-        this.dispatchEvent(new CustomEvent('status', { detail: null }))
+        this.dispatchCustomEvent('status', null)
       }
     }, 1000)
   }
@@ -135,7 +335,7 @@ class ComfyApi extends EventTarget {
     this.socket.addEventListener('open', () => {
       opened = true
       if (isReconnect) {
-        this.dispatchEvent(new CustomEvent('reconnected'))
+        this.dispatchCustomEvent('reconnected')
       }
     })
 
@@ -152,8 +352,8 @@ class ComfyApi extends EventTarget {
         // this.#createSocket(true)
       }, 300)
       if (opened) {
-        this.dispatchEvent(new CustomEvent('status', { detail: null }))
-        this.dispatchEvent(new CustomEvent('reconnecting'))
+        this.dispatchCustomEvent('status', null)
+        this.dispatchCustomEvent('reconnecting')
       }
     })
 
@@ -179,9 +379,7 @@ class ComfyApi extends EventTarget {
               const imageBlob = new Blob([buffer.slice(4)], {
                 type: imageMime
               })
-              this.dispatchEvent(
-                new CustomEvent('b_preview', { detail: imageBlob })
-              )
+              this.dispatchCustomEvent('b_preview', imageBlob)
               break
             default:
               throw new Error(
@@ -189,63 +387,40 @@ class ComfyApi extends EventTarget {
               )
           }
         } else {
-          const msg = JSON.parse(event.data)
+          const msg = JSON.parse(event.data) as ApiMessageUnion
           switch (msg.type) {
             case 'status':
               if (msg.data.sid) {
-                this.clientId = msg.data.sid
-                window.name = this.clientId // use window name so it isnt reused when duplicating tabs
-                sessionStorage.setItem('clientId', this.clientId) // store in session storage so duplicate tab can load correct workflow
+                const clientId = msg.data.sid
+                this.clientId = clientId
+                window.name = clientId // use window name so it isnt reused when duplicating tabs
+                sessionStorage.setItem('clientId', clientId) // store in session storage so duplicate tab can load correct workflow
               }
-              this.dispatchEvent(
-                new CustomEvent('status', { detail: msg.data.status })
-              )
-              break
-            case 'progress':
-              this.dispatchEvent(
-                new CustomEvent('progress', { detail: msg.data })
-              )
+              this.dispatchCustomEvent('status', msg.data.status ?? null)
               break
             case 'executing':
-              this.dispatchEvent(
-                new CustomEvent('executing', {
-                  detail: msg.data.display_node || msg.data.node
-                })
-              )
-              break
-            case 'executed':
-              this.dispatchEvent(
-                new CustomEvent('executed', { detail: msg.data })
+              this.dispatchCustomEvent(
+                'executing',
+                msg.data.display_node || msg.data.node
               )
               break
             case 'execution_start':
-              this.dispatchEvent(
-                new CustomEvent('execution_start', { detail: msg.data })
-              )
-              break
-            case 'execution_success':
-              this.dispatchEvent(
-                new CustomEvent('execution_success', { detail: msg.data })
-              )
-              break
             case 'execution_error':
-              this.dispatchEvent(
-                new CustomEvent('execution_error', { detail: msg.data })
-              )
-              break
+            case 'execution_interrupted':
             case 'execution_cached':
-              this.dispatchEvent(
-                new CustomEvent('execution_cached', { detail: msg.data })
-              )
-              break
-            case 'download_progress':
-              this.dispatchEvent(
-                new CustomEvent('download_progress', { detail: msg.data })
-              )
+            case 'execution_success':
+            case 'progress':
+            case 'executed':
+            case 'graphChanged':
+            case 'promptQueued':
+            case 'logs':
+            case 'b_preview':
+              this.dispatchCustomEvent(msg.type, msg.data)
               break
             default:
               if (this.#registered.has(msg.type)) {
-                this.dispatchEvent(
+                // Fallback for custom types - calls super direct.
+                super.dispatchEvent(
                   new CustomEvent(msg.type, { detail: msg.data })
                 )
               } else if (!this.reportedUnknownMessageTypes.has(msg.type)) {
@@ -273,6 +448,26 @@ class ComfyApi extends EventTarget {
   async getExtensions(): Promise<ExtensionsResponse> {
     const resp = await this.fetchApi('/extensions', [], { cache: 'no-store' })
     return await resp.json()
+  }
+
+  /**
+   * Gets the available workflow templates from custom nodes.
+   * @returns A map of custom_node names and associated template workflow names.
+   */
+  async getWorkflowTemplates(): Promise<{
+    [customNodesName: string]: string[]
+  }> {
+    const res = await this.fetchApi('/workflow_templates')
+    return await res.json()
+  }
+
+  /**
+   * Gets the index of core workflow templates.
+   */
+  async getCoreWorkflowTemplates(): Promise<WorkflowTemplates[]> {
+    const res = await axios.get(this.fileURL('/templates/index.json'))
+    const contentType = res.headers['content-type']
+    return contentType?.includes('application/json') ? res.data : []
   }
 
   /**
@@ -316,16 +511,20 @@ class ComfyApi extends EventTarget {
   }
 
   /**
-   *
+   * Queues a prompt to be executed
    * @param {number} number The index at which to queue the prompt, passing -1 will insert the prompt at the front of the queue
    * @param {object} prompt The prompt data to queue
+   * @throws {PromptExecutionError} If the prompt fails to execute
    */
   async queuePrompt(
     number: number,
-    { output, workflow }
+    {
+      output,
+      workflow
+    }: { output: Record<number, any>; workflow: ComfyWorkflowJSON }
   ): Promise<PromptResponse> {
     const body: QueuePromptRequestBody = {
-      client_id: this.clientId,
+      client_id: this.clientId ?? '', // TODO: Unify clientId access
       prompt: output,
       extra_data: { extra_pnginfo: { workflow } }
     }
@@ -349,9 +548,7 @@ class ComfyApi extends EventTarget {
     )
 
     if (res.status !== 200) {
-      throw {
-        response: await res.json()
-      }
+      throw new PromptExecutionError(await res.json())
     }
 
     return await res.json()
@@ -361,12 +558,15 @@ class ComfyApi extends EventTarget {
    * Gets a list of model folder keys (eg ['checkpoints', 'loras', ...])
    * @returns The list of model folder keys
    */
-  async getModelFolders(): Promise<string[]> {
-    const res = await this.fetchApi(`/models`)
+  async getModelFolders(): Promise<{ name: string; folders: string[] }[]> {
+    const res = await this.fetchApi(`/experiment/models`)
     if (res.status === 404) {
-      return null
+      return []
     }
-    return await res.json()
+    const folderBlacklist = ['configs', 'custom_nodes']
+    return (await res.json()).filter(
+      (folder: string) => !folderBlacklist.includes(folder)
+    )
   }
 
   /**
@@ -374,10 +574,12 @@ class ComfyApi extends EventTarget {
    * @param {string} folder The folder to list models from, such as 'checkpoints'
    * @returns The list of model filenames within the specified folder
    */
-  async getModels(folder: string) {
-    const res = await this.fetchApi(`/models/${folder}`)
+  async getModels(
+    folder: string
+  ): Promise<{ name: string; pathIndex: number }[]> {
+    const res = await this.fetchApi(`/experiment/models/${folder}`)
     if (res.status === 404) {
-      return null
+      return []
     }
     return await res.json()
   }
@@ -411,36 +613,6 @@ class ComfyApi extends EventTarget {
   }
 
   /**
-   * Tells the server to download a model from the specified URL to the specified directory and filename
-   * @param {string} url The URL to download the model from
-   * @param {string} model_directory The main directory (eg 'checkpoints') to save the model to
-   * @param {string} model_filename The filename to save the model as
-   * @param {number} progress_interval The interval in seconds at which to report download progress (via 'download_progress' event)
-   */
-  async internalDownloadModel(
-    url: string,
-    model_directory: string,
-    model_filename: string,
-    progress_interval: number,
-    folder_path: string
-  ): Promise<DownloadModelStatus> {
-    const res = await this.fetchApi('/internal/models/download', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        url,
-        model_directory,
-        model_filename,
-        progress_interval,
-        folder_path
-      })
-    })
-    return await res.json()
-  }
-
-  /**
    * Loads a list of items (queue or history)
    * @param {string} type The type of items to load, queue or history
    * @returns The items of the specified type grouped by their status
@@ -461,16 +633,19 @@ class ComfyApi extends EventTarget {
     Pending: PendingTaskItem[]
   }> {
     try {
-      const res = await this.fetchApi('/queue')
+      const res = await this.fetchApi('/queue', {
+        queue_running: [],
+        queue_pending: []
+      })
       const data = await res.json()
       return {
         // Running action uses a different endpoint for cancelling
-        Running: data.queue_running.map((prompt) => ({
+        Running: data.queue_running.map((prompt: Record<number, any>) => ({
           taskType: 'Running',
           prompt,
           remove: { name: 'Cancel', cb: () => api.interrupt() }
         })),
-        Pending: data.queue_pending.map((prompt) => ({
+        Pending: data.queue_pending.map((prompt: Record<number, any>) => ({
           taskType: 'Pending',
           prompt
         }))
@@ -489,7 +664,7 @@ class ComfyApi extends EventTarget {
     max_items: number = 200
   ): Promise<{ History: HistoryTaskItem[] }> {
     try {
-      const res = await this.fetchApi(`/history?max_items=${max_items}`)
+      const res = await this.fetchApi(`/history?max_items=${max_items}`, [])
       const json: Promise<HistoryTaskItem[]> = await res.json()
       return {
         History: Object.values(json).map((item) => ({
@@ -650,7 +825,13 @@ class ComfyApi extends EventTarget {
       overwrite?: boolean
       stringify?: boolean
       throwOnError?: boolean
-    } = { overwrite: true, stringify: true, throwOnError: true }
+      full_info?: boolean
+    } = {
+      overwrite: true,
+      stringify: true,
+      throwOnError: true,
+      full_info: false
+    }
   ): Promise<Response> {
     const resp = await this.fetchApi(
       `/userdata/${encodeURIComponent(file)}?overwrite=${options.overwrite}`,
@@ -731,12 +912,15 @@ class ComfyApi extends EventTarget {
     recurse: boolean,
     split?: false
   ): Promise<string[]>
-  async listUserData(dir, recurse, split) {
+  /**
+   * @deprecated Use `listUserDataFullInfo` instead.
+   */
+  async listUserData(dir: string, recurse: boolean, split?: boolean) {
     const resp = await this.fetchApi(
       `/userdata?${new URLSearchParams({
-        recurse,
+        recurse: recurse ? 'true' : 'false',
         dir,
-        split
+        split: split ? 'true' : 'false'
       })}`
     )
     if (resp.status === 404) return []
@@ -750,7 +934,10 @@ class ComfyApi extends EventTarget {
 
   async listUserDataFullInfo(dir: string): Promise<UserDataFullInfo[]> {
     const resp = await this.fetchApi(
-      `/userdata?dir=${encodeURIComponent(dir)}&recurse=true&split=false&full_info=true`
+      `/userdata?dir=${encodeURIComponent(dir)}&recurse=true&split=false&full_info=true`,
+      undefined,
+      undefined,
+      404
     )
     if (resp.status === 404) return []
     if (resp.status !== 200) {
@@ -765,8 +952,29 @@ class ComfyApi extends EventTarget {
     return (await axios.get(this.internalURL('/logs'))).data
   }
 
+  async getRawLogs(): Promise<LogsRawResponse> {
+    return (await axios.get(this.internalURL('/logs/raw'))).data
+  }
+
+  async subscribeLogs(enabled: boolean): Promise<void> {
+    return await axios.patch(this.internalURL('/logs/subscribe'), {
+      enabled,
+      clientId: this.clientId
+    })
+  }
+
   async getFolderPaths(): Promise<Record<string, string[]>> {
     return (await axios.get(this.internalURL('/folder_paths'))).data
+  }
+
+  /**
+   * Gets the custom nodes i18n data from the server.
+   *
+   * @returns The custom nodes i18n data
+   */
+  async getCustomNodesI18n(): Promise<Record<string, any>> {
+    return {}
+    // return (await axios.get(this.apiURL('/i18n'))).data
   }
 }
 

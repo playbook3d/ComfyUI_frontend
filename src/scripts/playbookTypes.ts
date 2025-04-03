@@ -7,6 +7,8 @@ export interface WorkflowWindowMessageData {
     | 'ComfyGraphSetupComplete'
     | 'WrapperOriginSetOnComfyInstance'
     | 'SendWrapperOriginToComfyWindow'
+    | 'ComfyWindowInitialized'
+    | 'SendWrapperOriginToComfyWindow'
     | 'SendWorkflowDataToPlaybookWrapper'
   data?: ComfyWorkflowJSON
 }

@@ -1,6 +1,11 @@
 <template>
-  <div class="comfy-vue-node-search-container">
-    <div class="comfy-vue-node-preview-container" v-if="enableNodePreview">
+  <div
+    class="comfy-vue-node-search-container flex justify-center items-center w-full min-w-96"
+  >
+    <div
+      class="comfy-vue-node-preview-container absolute left-[-350px] top-[50px]"
+      v-if="enableNodePreview"
+    >
       <NodePreview
         :nodeDef="hoveredSuggestion"
         :key="hoveredSuggestion?.name || ''"
@@ -11,10 +16,16 @@
     <Button
       icon="pi pi-filter"
       severity="secondary"
-      class="_filter-button"
+      class="filter-button z-10"
       @click="nodeSearchFilterVisible = true"
     />
-    <Dialog v-model:visible="nodeSearchFilterVisible" class="_dialog">
+    <Dialog
+      v-model:visible="nodeSearchFilterVisible"
+      class="min-w-96"
+      dismissable-mask
+      modal
+      @hide="reFocusInput"
+    >
       <template #header>
         <h3>Add node filter condition</h3>
       </template>
@@ -24,8 +35,8 @@
     </Dialog>
 
     <AutoCompletePlus
-      :model-value="props.filters"
-      class="comfy-vue-node-search-box"
+      :model-value="filters"
+      class="comfy-vue-node-search-box z-10 flex-grow"
       scrollHeight="40vh"
       :placeholder="placeholder"
       :input-id="inputId"
@@ -49,7 +60,9 @@
       <!-- FilterAndValue -->
       <template v-slot:chip="{ value }">
         <SearchFilterChip
-          @remove="onRemoveFilter($event, value)"
+          v-if="Array.isArray(value) && value.length === 2"
+          :key="`${value[0].id}-${value[1]}`"
+          @remove="onRemoveFilter($event, value as FilterAndValue)"
           :text="value[1]"
           :badge="value[0].invokeSequence.toUpperCase()"
           :badge-class="value[0].invokeSequence + '-badge'"
@@ -60,21 +73,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import AutoCompletePlus from '@/components/primevueOverride/AutoCompletePlus.vue'
-import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
+import { computed, nextTick, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+import NodePreview from '@/components/node/NodePreview.vue'
+import AutoCompletePlus from '@/components/primevueOverride/AutoCompletePlus.vue'
 import NodeSearchFilter from '@/components/searchbox/NodeSearchFilter.vue'
 import NodeSearchItem from '@/components/searchbox/NodeSearchItem.vue'
 import { type FilterAndValue } from '@/services/nodeSearchService'
-import NodePreview from '@/components/node/NodePreview.vue'
 import {
   ComfyNodeDefImpl,
   useNodeDefStore,
   useNodeFrequencyStore
 } from '@/stores/nodeDefStore'
 import { useSettingStore } from '@/stores/settingStore'
-import { useI18n } from 'vue-i18n'
+
 import SearchFilterChip from '../common/SearchFilterChip.vue'
 
 const settingStore = useSettingStore()
@@ -84,15 +99,10 @@ const enableNodePreview = computed(() =>
   settingStore.get('Comfy.NodeSearchBoxImpl.NodePreview')
 )
 
-const props = withDefaults(
-  defineProps<{
-    filters: FilterAndValue[]
-    searchLimit?: number
-  }>(),
-  {
-    searchLimit: 64
-  }
-)
+const { filters, searchLimit = 64 } = defineProps<{
+  filters: FilterAndValue[]
+  searchLimit?: number
+}>()
 
 const nodeSearchFilterVisible = ref(false)
 const inputId = `comfy-vue-node-search-box-input-${Math.random()}`
@@ -100,30 +110,31 @@ const suggestions = ref<ComfyNodeDefImpl[]>([])
 const hoveredSuggestion = ref<ComfyNodeDefImpl | null>(null)
 const currentQuery = ref('')
 const placeholder = computed(() => {
-  return props.filters.length === 0 ? t('searchNodes') + '...' : ''
+  return filters.length === 0 ? t('g.searchNodes') + '...' : ''
 })
 
 const nodeDefStore = useNodeDefStore()
 const nodeFrequencyStore = useNodeFrequencyStore()
 const search = (query: string) => {
-  const queryIsEmpty = query === '' && props.filters.length === 0
+  const queryIsEmpty = query === '' && filters.length === 0
   currentQuery.value = query
   suggestions.value = queryIsEmpty
     ? nodeFrequencyStore.topNodeDefs
     : [
-        ...nodeDefStore.nodeSearchService.searchNode(query, props.filters, {
-          limit: props.searchLimit
+        ...nodeDefStore.nodeSearchService.searchNode(query, filters, {
+          limit: searchLimit
         })
       ]
 }
 
 const emit = defineEmits(['addFilter', 'removeFilter', 'addNode'])
 
+let inputElement: HTMLInputElement | null = null
 const reFocusInput = () => {
-  const inputElement = document.getElementById(inputId) as HTMLInputElement
+  inputElement ??= document.getElementById(inputId) as HTMLInputElement
   if (inputElement) {
     inputElement.blur()
-    inputElement.focus()
+    nextTick(() => inputElement?.focus())
   }
 }
 
@@ -131,7 +142,6 @@ onMounted(reFocusInput)
 const onAddFilter = (filterAndValue: FilterAndValue) => {
   nodeSearchFilterVisible.value = false
   emit('addFilter', filterAndValue)
-  reFocusInput()
 }
 const onRemoveFilter = (event: Event, filterAndValue: FilterAndValue) => {
   event.stopPropagation()
@@ -148,31 +158,3 @@ const setHoverSuggestion = (index: number) => {
   hoveredSuggestion.value = value
 }
 </script>
-
-<style scoped>
-.comfy-vue-node-search-container {
-  @apply flex justify-center items-center w-full min-w-96;
-}
-
-.comfy-vue-node-search-container * {
-  pointer-events: auto;
-}
-
-.comfy-vue-node-preview-container {
-  position: absolute;
-  left: -350px;
-  top: 50px;
-}
-
-.comfy-vue-node-search-box {
-  @apply z-10 flex-grow;
-}
-
-._filter-button {
-  z-index: 10;
-}
-
-._dialog {
-  @apply min-w-96;
-}
-</style>

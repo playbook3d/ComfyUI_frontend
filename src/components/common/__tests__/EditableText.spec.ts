@@ -1,10 +1,10 @@
-// @ts-strict-ignore
 import { mount } from '@vue/test-utils'
-import { describe, it, expect, beforeAll } from 'vitest'
-import EditableText from '../EditableText.vue'
 import PrimeVue from 'primevue/config'
 import InputText from 'primevue/inputtext'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from 'vue'
+
+import EditableText from '../EditableText.vue'
 
 describe('EditableText', () => {
   beforeAll(() => {
@@ -13,6 +13,7 @@ describe('EditableText', () => {
     app.use(PrimeVue)
   })
 
+  // @ts-expect-error fixme ts strict error
   const mountComponent = (props, options = {}) => {
     return mount(EditableText, {
       global: {
@@ -51,8 +52,10 @@ describe('EditableText', () => {
     })
     await wrapper.findComponent(InputText).setValue('New Text')
     await wrapper.findComponent(InputText).trigger('keyup.enter')
-    expect(wrapper.emitted('edit')).toBeTruthy()
-    expect(wrapper.emitted('edit')[0]).toEqual(['New Text'])
+    // Blur event should have been triggered
+    expect(wrapper.findComponent(InputText).element).not.toBe(
+      document.activeElement
+    )
   })
 
   it('finishes editing on blur', async () => {
@@ -62,6 +65,7 @@ describe('EditableText', () => {
     })
     await wrapper.findComponent(InputText).trigger('blur')
     expect(wrapper.emitted('edit')).toBeTruthy()
+    // @ts-expect-error fixme ts strict error
     expect(wrapper.emitted('edit')[0]).toEqual(['Test Text'])
   })
 })

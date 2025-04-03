@@ -13,19 +13,19 @@
 </template>
 
 <script setup lang="ts">
-import TreeExplorerTreeNode from '@/components/common/TreeExplorerTreeNode.vue'
 import Button from 'primevue/button'
-import { useWorkflowBookmarkStore } from '@/stores/workflowStore'
-import { ComfyWorkflow } from '@/scripts/workflows'
-import type { RenderedTreeExplorerNode } from '@/types/treeExplorerTypes'
 import { computed } from 'vue'
 
-const props = defineProps<{
+import TreeExplorerTreeNode from '@/components/common/TreeExplorerTreeNode.vue'
+import { ComfyWorkflow, useWorkflowBookmarkStore } from '@/stores/workflowStore'
+import type { RenderedTreeExplorerNode } from '@/types/treeExplorerTypes'
+
+const { node } = defineProps<{
   node: RenderedTreeExplorerNode<ComfyWorkflow>
 }>()
 
 const workflowBookmarkStore = useWorkflowBookmarkStore()
-const isBookmarked = computed(() =>
-  workflowBookmarkStore.isBookmarked(props.node.data.path)
+const isBookmarked = computed(
+  () => node.data && workflowBookmarkStore.isBookmarked(node.data.path)
 )
 </script>

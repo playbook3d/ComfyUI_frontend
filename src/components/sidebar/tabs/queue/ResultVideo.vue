@@ -1,14 +1,15 @@
 <template>
   <video controls width="100%" height="100%">
     <source :src="url" :type="htmlVideoType" />
-    {{ $t('videoFailedToLoad') }}
+    {{ $t('g.videoFailedToLoad') }}
   </video>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import { ResultItemImpl } from '@/stores/queueStore'
 import { useSettingStore } from '@/stores/settingStore'
-import { computed } from 'vue'
 
 const props = defineProps<{
   result: ResultItemImpl

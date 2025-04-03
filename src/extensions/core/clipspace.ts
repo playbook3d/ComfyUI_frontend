@@ -1,6 +1,6 @@
 import { app } from '../../scripts/app'
-import { ComfyDialog, $el } from '../../scripts/ui'
 import { ComfyApp } from '../../scripts/app'
+import { $el, ComfyDialog } from '../../scripts/ui'
 
 export class ClipspaceDialog extends ComfyDialog {
   static items: Array<
@@ -178,7 +178,6 @@ export class ClipspaceDialog extends ComfyDialog {
   }
 
   show() {
-    const img_preview = document.getElementById('clipspace_preview')
     ClipspaceDialog.invalidate()
 
     this.element.style.display = 'block'
@@ -188,7 +187,6 @@ export class ClipspaceDialog extends ComfyDialog {
 app.registerExtension({
   name: 'Comfy.Clipspace',
   init(app) {
-    // @ts-expect-error Move to ComfyApp
     app.openClipspace = function () {
       if (!ClipspaceDialog.instance) {
         ClipspaceDialog.instance = new ClipspaceDialog()

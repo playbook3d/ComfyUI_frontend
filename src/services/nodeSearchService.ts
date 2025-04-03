@@ -1,7 +1,7 @@
-// @ts-strict-ignore
-import { ComfyNodeDefImpl } from '@/stores/nodeDefStore'
-import Fuse, { IFuseOptions, FuseSearchOptions } from 'fuse.js'
+import Fuse, { FuseSearchOptions, IFuseOptions } from 'fuse.js'
 import _ from 'lodash'
+
+import { ComfyNodeDefImpl } from '@/stores/nodeDefStore'
 
 export type SearchAuxScore = number[]
 
@@ -10,8 +10,8 @@ interface ExtraSearchOptions {
 }
 
 export class FuseSearch<T> {
-  private fuse: Fuse<T>
-  private readonly keys: string[]
+  public readonly fuse: Fuse<T>
+  public readonly keys: string[]
   public readonly data: T[]
   public readonly advancedScoring: boolean
 
@@ -22,6 +22,7 @@ export class FuseSearch<T> {
     advancedScoring: boolean = false
   ) {
     this.data = data
+    // @ts-expect-error fixme ts strict error
     this.keys = (options.keys ?? []) as string[]
     this.advancedScoring = advancedScoring
     const index =
@@ -43,6 +44,7 @@ export class FuseSearch<T> {
     const aux = fuseResult
       .map((x) => ({
         item: x.item,
+        // @ts-expect-error fixme ts strict error
         scores: this.calcAuxScores(query.toLocaleLowerCase(), x.item, x.score)
       }))
       .sort((a, b) => this.compareAux(a.scores, b.scores))
@@ -53,6 +55,7 @@ export class FuseSearch<T> {
   public calcAuxScores(query: string, entry: T, score: number): SearchAuxScore {
     let values: string[] = []
     if (!this.keys.length) values = [entry as string]
+    // @ts-expect-error fixme ts strict error
     else values = this.keys.map((x) => entry[x])
     const scores = values.map((x) => this.calcAuxSingle(query, x, score))
     let result = scores.sort(this.compareAux)[0]
@@ -61,7 +64,9 @@ export class FuseSearch<T> {
       x.toLocaleLowerCase().includes('deprecated')
     )
     result[0] += deprecated && result[0] != 0 ? 5 : 0
+    // @ts-expect-error fixme ts strict error
     if (entry['postProcessSearchScores']) {
+      // @ts-expect-error fixme ts strict error
       result = entry['postProcessSearchScores'](result) as SearchAuxScore
     }
     return result
@@ -130,31 +135,40 @@ export class FuseSearch<T> {
 
 export type FilterAndValue<T = string> = [NodeFilter<T>, T]
 
-export abstract class NodeFilter<FilterOptionT = string> {
-  public abstract readonly id: string
-  public abstract readonly name: string
-  public abstract readonly invokeSequence: string
-  public abstract readonly longInvokeSequence: string
+export class NodeFilter<FilterOptionT = string> {
   public readonly fuseSearch: FuseSearch<FilterOptionT>
 
   constructor(
+    public readonly id: string,
+    public readonly name: string,
+    public readonly invokeSequence: string,
+    public readonly longInvokeSequence: string,
+    public readonly nodeOptions:
+      | FilterOptionT[]
+      | ((node: ComfyNodeDefImpl) => FilterOptionT[]),
     nodeDefs: ComfyNodeDefImpl[],
     options?: IFuseOptions<FilterOptionT>
   ) {
     this.fuseSearch = new FuseSearch(this.getAllNodeOptions(nodeDefs), options)
   }
 
-  private getAllNodeOptions(nodeDefs: ComfyNodeDefImpl[]): FilterOptionT[] {
+  public getNodeOptions(node: ComfyNodeDefImpl): FilterOptionT[] {
+    return this.nodeOptions instanceof Function
+      ? this.nodeOptions(node)
+      : this.nodeOptions
+  }
+
+  public getAllNodeOptions(nodeDefs: ComfyNodeDefImpl[]): FilterOptionT[] {
+    // @ts-expect-error fixme ts strict error
     return [
       ...new Set(
+        // @ts-expect-error fixme ts strict error
         nodeDefs.reduce((acc, nodeDef) => {
           return [...acc, ...this.getNodeOptions(nodeDef)]
         }, [])
       )
     ]
   }
-
-  public abstract getNodeOptions(node: ComfyNodeDefImpl): FilterOptionT[]
 
   public matches(
     node: ComfyNodeDefImpl,
@@ -170,50 +184,6 @@ export abstract class NodeFilter<FilterOptionT = string> {
       options.includes(value) ||
       (matchWildcards && _.some(options, (option) => option === '*'))
     )
-  }
-}
-
-export class InputTypeFilter extends NodeFilter<string> {
-  public readonly id: string = 'input'
-  public readonly name = 'Input Type'
-  public readonly invokeSequence = 'i'
-  public readonly longInvokeSequence = 'input'
-
-  public override getNodeOptions(node: ComfyNodeDefImpl): string[] {
-    return node.input.all.map((input) => input.type)
-  }
-}
-
-export class OutputTypeFilter extends NodeFilter<string> {
-  public readonly id: string = 'output'
-  public readonly name = 'Output Type'
-  public readonly invokeSequence = 'o'
-  public readonly longInvokeSequence = 'output'
-
-  public override getNodeOptions(node: ComfyNodeDefImpl): string[] {
-    return node.output.all.map((output) => output.type)
-  }
-}
-
-export class NodeSourceFilter extends NodeFilter<string> {
-  public readonly id: string = 'source'
-  public readonly name = 'Source'
-  public readonly invokeSequence = 's'
-  public readonly longInvokeSequence = 'source'
-
-  public override getNodeOptions(node: ComfyNodeDefImpl): string[] {
-    return [node.nodeSource.displayText]
-  }
-}
-
-export class NodeCategoryFilter extends NodeFilter<string> {
-  public readonly id: string = 'category'
-  public readonly name = 'Category'
-  public readonly invokeSequence = 'c'
-  public readonly longInvokeSequence = 'category'
-
-  public override getNodeOptions(node: ComfyNodeDefImpl): string[] {
-    return [node.category]
   }
 }
 
@@ -241,15 +211,52 @@ export class NodeSearchService {
       shouldSort: true
     }
 
-    this.nodeFilters = [
-      new InputTypeFilter(data, filterSearchOptions),
-      new OutputTypeFilter(data, filterSearchOptions),
-      new NodeCategoryFilter(data, filterSearchOptions)
-    ]
+    const inputTypeFilter = new NodeFilter<string>(
+      /* id */ 'input',
+      /* name */ 'Input Type',
+      /* invokeSequence */ 'i',
+      /* longInvokeSequence */ 'input',
+      (node) => Object.values(node.inputs).map((input) => input.type),
+      data,
+      filterSearchOptions
+    )
 
-    if (data[0].python_module !== undefined) {
-      this.nodeFilters.push(new NodeSourceFilter(data, filterSearchOptions))
-    }
+    const outputTypeFilter = new NodeFilter<string>(
+      /* id */ 'output',
+      /* name */ 'Output Type',
+      /* invokeSequence */ 'o',
+      /* longInvokeSequence */ 'output',
+      (node) => node.outputs.map((output) => output.type),
+      data,
+      filterSearchOptions
+    )
+
+    const nodeCategoryFilter = new NodeFilter<string>(
+      /* id */ 'category',
+      /* name */ 'Category',
+      /* invokeSequence */ 'c',
+      /* longInvokeSequence */ 'category',
+      (node) => [node.category],
+      data,
+      filterSearchOptions
+    )
+
+    const nodeSourceFilter = new NodeFilter<string>(
+      /* id */ 'source',
+      /* name */ 'Source',
+      /* invokeSequence */ 's',
+      /* longInvokeSequence */ 'source',
+      (node) => [node.nodeSource.displayText],
+      data,
+      filterSearchOptions
+    )
+
+    this.nodeFilters = [
+      inputTypeFilter,
+      outputTypeFilter,
+      nodeCategoryFilter,
+      nodeSourceFilter
+    ]
   }
 
   public endsWithFilterStartSequence(query: string): boolean {

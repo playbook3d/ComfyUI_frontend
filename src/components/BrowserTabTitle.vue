@@ -5,11 +5,12 @@
 </template>
 
 <script setup lang="ts">
+import { useTitle } from '@vueuse/core'
+import { computed } from 'vue'
+
 import { useExecutionStore } from '@/stores/executionStore'
 import { useSettingStore } from '@/stores/settingStore'
 import { useWorkflowStore } from '@/stores/workflowStore'
-import { useTitle } from '@vueuse/core'
-import { computed } from 'vue'
 
 const DEFAULT_TITLE = 'ComfyUI'
 const TITLE_SUFFIX = ' - ComfyUI'
@@ -26,10 +27,13 @@ const betaMenuEnabled = computed(
 
 const workflowStore = useWorkflowStore()
 const isUnsavedText = computed(() =>
-  workflowStore.activeWorkflow?.unsaved ? ' *' : ''
+  workflowStore.activeWorkflow?.isModified ||
+  !workflowStore.activeWorkflow?.isPersisted
+    ? ' *'
+    : ''
 )
 const workflowNameText = computed(() => {
-  const workflowName = workflowStore.activeWorkflow?.name
+  const workflowName = workflowStore.activeWorkflow?.filename
   return workflowName
     ? isUnsavedText.value + workflowName + TITLE_SUFFIX
     : DEFAULT_TITLE

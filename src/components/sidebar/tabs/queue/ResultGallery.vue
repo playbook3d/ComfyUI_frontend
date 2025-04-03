@@ -16,6 +16,12 @@
         onMousedown: onMaskMouseDown,
         onMouseup: onMaskMouseUp,
         'data-mask': true
+      },
+      prevButton: {
+        style: 'position: fixed !important'
+      },
+      nextButton: {
+        style: 'position: fixed !important'
       }
     }"
   >
@@ -24,6 +30,7 @@
         :key="item.url"
         :src="item.url"
         :contain="false"
+        :alt="item.filename"
         class="galleria-image"
         v-if="item.isImage"
       />
@@ -33,10 +40,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
 import Galleria from 'primevue/galleria'
-import { ResultItemImpl } from '@/stores/queueStore'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+
 import ComfyImage from '@/components/common/ComfyImage.vue'
+import { ResultItemImpl } from '@/stores/queueStore'
+
 import ResultVideo from './ResultVideo.vue'
 
 const galleryVisible = ref(false)

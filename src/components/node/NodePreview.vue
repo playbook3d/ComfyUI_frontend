@@ -80,37 +80,32 @@ https://github.com/Nuked88/ComfyUI-N-Sidebar/blob/7ae7da4a9761009fb6629bc04c6830
 </template>
 
 <script setup lang="ts">
-import { ComfyNodeDefImpl, useNodeDefStore } from '@/stores/nodeDefStore'
-import {
-  getColorPalette,
-  defaultColorPalette
-} from '@/extensions/core/colorPalette'
 import _ from 'lodash'
+import { computed } from 'vue'
 
-const props = defineProps({
-  nodeDef: {
-    type: ComfyNodeDefImpl,
-    required: true
-  }
-})
+import type { ComfyNodeDef as ComfyNodeDefV2 } from '@/schemas/nodeDef/nodeDefSchemaV2'
+import { useWidgetStore } from '@/stores/widgetStore'
+import { useColorPaletteStore } from '@/stores/workspace/colorPaletteStore'
 
-// Node preview currently is recreated every time something is hovered.
-// So not reactive to the color palette changes after setup is fine.
-// If later we want NodePreview to be shown more persistently, then we should
-// make the getColorPalette() call reactive.
-const colors = getColorPalette()?.colors?.litegraph_base
-const litegraphColors = colors ?? defaultColorPalette.colors.litegraph_base
+const props = defineProps<{
+  nodeDef: ComfyNodeDefV2
+}>()
 
-const nodeDefStore = useNodeDefStore()
+const colorPaletteStore = useColorPaletteStore()
+const litegraphColors = computed(
+  () => colorPaletteStore.completedActivePalette.colors.litegraph_base
+)
+
+const widgetStore = useWidgetStore()
 
 const nodeDef = props.nodeDef
-const allInputDefs = nodeDef.input.all
-const allOutputDefs = nodeDef.output.all
+const allInputDefs = Object.values(nodeDef.inputs)
+const allOutputDefs = nodeDef.outputs
 const slotInputDefs = allInputDefs.filter(
-  (input) => !nodeDefStore.inputIsWidget(input)
+  (input) => !widgetStore.inputIsWidget(input)
 )
 const widgetInputDefs = allInputDefs.filter((input) =>
-  nodeDefStore.inputIsWidget(input)
+  widgetStore.inputIsWidget(input)
 )
 const truncateDefaultValue = (value: any, charLimit: number = 32): string => {
   let stringValue: string
@@ -242,7 +237,7 @@ const truncateDefaultValue = (value: any, charLimit: number = 32): string => {
 }
 
 ._sb_col {
-  border: 0px solid #000;
+  border: 0 solid #000;
   display: flex;
   align-items: flex-end;
   flex-direction: row-reverse;

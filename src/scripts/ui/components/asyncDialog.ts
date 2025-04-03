@@ -1,13 +1,14 @@
-// @ts-strict-ignore
-import { ComfyDialog } from '../dialog'
 import { $el } from '../../ui'
+import { ComfyDialog } from '../dialog'
 
 export class ComfyAsyncDialog extends ComfyDialog<HTMLDialogElement> {
+  // @ts-expect-error fixme ts strict error
   #resolve: (value: any) => void
 
   constructor(actions?: Array<string | { value?: any; text: string }>) {
     super(
       'dialog.comfy-dialog.comfyui-dialog',
+      // @ts-expect-error fixme ts strict error
       actions?.map((opt) => {
         if (typeof opt === 'string') {
           opt = { text: opt }
@@ -52,7 +53,15 @@ export class ComfyAsyncDialog extends ComfyDialog<HTMLDialogElement> {
     super.close()
   }
 
-  static async prompt({ title = null, message, actions }) {
+  static async prompt({
+    title = null,
+    message,
+    actions
+  }: {
+    title: string | null
+    message: string
+    actions: Array<string | { value?: any; text: string }>
+  }) {
     const dialog = new ComfyAsyncDialog(actions)
     const content = [$el('span', message)]
     if (title) {

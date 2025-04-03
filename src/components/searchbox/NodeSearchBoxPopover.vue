@@ -33,32 +33,42 @@
 </template>
 
 <script setup lang="ts">
-import { app } from '@/scripts/app'
-import { computed, onMounted, onUnmounted, ref, toRaw, watchEffect } from 'vue'
-import NodeSearchBox from './NodeSearchBox.vue'
-import Dialog from 'primevue/dialog'
-import { ConnectingLink } from '@comfyorg/litegraph'
-import { FilterAndValue } from '@/services/nodeSearchService'
-import { ComfyNodeDefImpl, useNodeDefStore } from '@/stores/nodeDefStore'
-import { ConnectingLinkImpl } from '@/types/litegraphTypes'
-import { useSettingStore } from '@/stores/settingStore'
-import { LinkReleaseTriggerAction } from '@/types/searchBoxTypes'
-import { useCanvasStore } from '@/stores/graphStore'
-import { LiteGraphCanvasEvent } from '@comfyorg/litegraph'
 import { LiteGraph } from '@comfyorg/litegraph'
+import type {
+  ConnectingLink,
+  LiteGraphCanvasEvent,
+  Vector2
+} from '@comfyorg/litegraph'
+import type { OriginalEvent } from '@comfyorg/litegraph/dist/types/events'
+import { useEventListener } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import Dialog from 'primevue/dialog'
+import { computed, ref, toRaw, watchEffect } from 'vue'
+
+import { useLitegraphService } from '@/services/litegraphService'
+import { FilterAndValue } from '@/services/nodeSearchService'
+import { useCanvasStore } from '@/stores/graphStore'
+import { ComfyNodeDefImpl, useNodeDefStore } from '@/stores/nodeDefStore'
+import { useSettingStore } from '@/stores/settingStore'
+import { useSearchBoxStore } from '@/stores/workspace/searchBoxStore'
+import { ConnectingLinkImpl } from '@/types/litegraphTypes'
+import { LinkReleaseTriggerAction } from '@/types/searchBoxTypes'
+
+import NodeSearchBox from './NodeSearchBox.vue'
 
 const settingStore = useSettingStore()
+const litegraphService = useLitegraphService()
 
-const visible = ref(false)
+const { visible } = storeToRefs(useSearchBoxStore())
 const dismissable = ref(true)
 const triggerEvent = ref<LiteGraphCanvasEvent | null>(null)
-const getNewNodeLocation = (): [number, number] => {
-  if (triggerEvent.value === null) {
-    return [100, 100]
+const getNewNodeLocation = (): Vector2 => {
+  if (!triggerEvent.value) {
+    return litegraphService.getCanvasCenter()
   }
 
-  const originalEvent = triggerEvent.value.detail.originalEvent
-  // @ts-expect-error LiteGraph types are not typed
+  const originalEvent = (triggerEvent.value.detail as OriginalEvent)
+    .originalEvent
   return [originalEvent.canvasX, originalEvent.canvasY]
 }
 const nodeFilters = ref<FilterAndValue[]>([])
@@ -78,10 +88,13 @@ const closeDialog = () => {
 }
 
 const addNode = (nodeDef: ComfyNodeDefImpl) => {
-  const node = app.addNodeOnGraph(nodeDef, { pos: getNewNodeLocation() })
+  const node = litegraphService.addNodeOnGraph(nodeDef, {
+    pos: getNewNodeLocation()
+  })
 
-  const eventDetail = triggerEvent.value.detail
-  if (eventDetail.subType === 'empty-release') {
+  const eventDetail = triggerEvent.value?.detail
+  if (eventDetail && eventDetail.subType === 'empty-release') {
+    // @ts-expect-error fixme ts strict error
     eventDetail.linkReleaseContext.links.forEach((link: ConnectingLink) => {
       ConnectingLinkImpl.createFromPlainObject(link).connectTo(node)
     })
@@ -99,8 +112,9 @@ const newSearchBoxEnabled = computed(
   () => settingStore.get('Comfy.NodeSearchBoxImpl') === 'default'
 )
 const showSearchBox = (e: LiteGraphCanvasEvent) => {
+  const detail = e.detail as OriginalEvent
   if (newSearchBoxEnabled.value) {
-    if (e.detail.originalEvent?.pointerType === 'touch') {
+    if (detail.originalEvent?.pointerType === 'touch') {
       setTimeout(() => {
         showNewSearchBox(e)
       }, 128)
@@ -108,13 +122,14 @@ const showSearchBox = (e: LiteGraphCanvasEvent) => {
       showNewSearchBox(e)
     }
   } else {
-    canvasStore.canvas.showSearchBox(e.detail.originalEvent as MouseEvent)
+    // @ts-expect-error fixme ts strict error
+    canvasStore.canvas.showSearchBox(detail.originalEvent)
   }
 }
 
 const nodeDefStore = useNodeDefStore()
 const showNewSearchBox = (e: LiteGraphCanvasEvent) => {
-  if (e.detail.linkReleaseContext) {
+  if (e.detail.subType === 'empty-release') {
     const links = e.detail.linkReleaseContext.links
     if (links.length === 0) {
       console.warn('Empty release with no links! This should never happen')
@@ -124,7 +139,9 @@ const showNewSearchBox = (e: LiteGraphCanvasEvent) => {
     const filter = nodeDefStore.nodeSearchService.getFilterById(
       firstLink.releaseSlotType
     )
-    const dataType = firstLink.type
+    // @ts-expect-error fixme ts strict error
+    const dataType = firstLink.type.toString()
+    // @ts-expect-error fixme ts strict error
     addFilter([filter, dataType])
   }
 
@@ -139,6 +156,10 @@ const showNewSearchBox = (e: LiteGraphCanvasEvent) => {
 }
 
 const showContextMenu = (e: LiteGraphCanvasEvent) => {
+  if (e.detail.subType !== 'empty-release') {
+    return
+  }
+
   const links = e.detail.linkReleaseContext.links
   if (links.length === 0) {
     console.warn('Empty release with no links! This should never happen')
@@ -146,15 +167,24 @@ const showContextMenu = (e: LiteGraphCanvasEvent) => {
   }
 
   const firstLink = ConnectingLinkImpl.createFromPlainObject(links[0])
-  const mouseEvent = e.detail.originalEvent as MouseEvent
+  const mouseEvent = e.detail.originalEvent
   const commonOptions = {
     e: mouseEvent,
     allow_searchbox: true,
     showSearchBox: () => showSearchBox(e)
   }
   const connectionOptions = firstLink.output
-    ? { nodeFrom: firstLink.node, slotFrom: firstLink.output }
-    : { nodeTo: firstLink.node, slotTo: firstLink.input }
+    ? {
+        nodeFrom: firstLink.node,
+        slotFrom: firstLink.output,
+        afterRerouteId: firstLink.afterRerouteId
+      }
+    : {
+        nodeTo: firstLink.node,
+        slotTo: firstLink.input,
+        afterRerouteId: firstLink.afterRerouteId
+      }
+  // @ts-expect-error fixme ts strict error
   canvasStore.canvas.showConnectionMenu({
     ...connectionOptions,
     ...commonOptions
@@ -177,8 +207,7 @@ const canvasEventHandler = (e: LiteGraphCanvasEvent) => {
     handleCanvasEmptyRelease(e)
   } else if (e.detail.subType === 'group-double-click') {
     const group = e.detail.group
-    const [x, y] = group.pos
-    // @ts-expect-error LiteGraphCanvasEvent is not typed
+    const [_, y] = group.pos
     const relativeY = e.detail.originalEvent.canvasY - y
     // Show search box if the click is NOT on the title bar
     if (relativeY > group.titleHeight) {
@@ -196,8 +225,8 @@ const linkReleaseActionShift = computed(() => {
 })
 
 const handleCanvasEmptyRelease = (e: LiteGraphCanvasEvent) => {
-  const originalEvent = e.detail.originalEvent as MouseEvent
-  const shiftPressed = originalEvent.shiftKey
+  const detail = e.detail as OriginalEvent
+  const shiftPressed = detail.originalEvent.shiftKey
 
   const action = shiftPressed
     ? linkReleaseActionShift.value
@@ -215,13 +244,7 @@ const handleCanvasEmptyRelease = (e: LiteGraphCanvasEvent) => {
   }
 }
 
-onMounted(() => {
-  document.addEventListener('litegraph:canvas', canvasEventHandler)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('litegraph:canvas', canvasEventHandler)
-})
+useEventListener(document, 'litegraph:canvas', canvasEventHandler)
 </script>
 
 <style>
@@ -236,7 +259,7 @@ onUnmounted(() => {
 }
 @media all and (max-width: 768px) {
   .invisible-dialog-root {
-    margin-left: 0px;
+    margin-left: 0;
   }
 }
 

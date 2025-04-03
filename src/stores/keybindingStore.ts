@@ -1,30 +1,29 @@
+import _ from 'lodash'
 import { defineStore } from 'pinia'
-import { computed, Ref, ref, toRaw } from 'vue'
-import { Keybinding, KeyCombo } from '@/types/keyBindingTypes'
-import { useSettingStore } from './settingStore'
-import { CORE_KEYBINDINGS } from './coreKeybindings'
-import type { ComfyExtension } from '@/types/comfy'
+import { Ref, computed, ref, toRaw } from 'vue'
+
+import { RESERVED_BY_TEXT_INPUT } from '@/constants/reservedKeyCombos'
+import { KeyCombo, Keybinding } from '@/schemas/keyBindingSchema'
 
 export class KeybindingImpl implements Keybinding {
   commandId: string
   combo: KeyComboImpl
-  targetSelector?: string
+  targetElementId?: string
 
   constructor(obj: Keybinding) {
     this.commandId = obj.commandId
     this.combo = new KeyComboImpl(obj.combo)
-    this.targetSelector = obj.targetSelector
+    this.targetElementId = obj.targetElementId
   }
 
-  equals(other: any): boolean {
-    if (toRaw(other) instanceof KeybindingImpl) {
-      return (
-        this.commandId === other.commandId &&
-        this.combo.equals(other.combo) &&
-        this.targetSelector === other.targetSelector
-      )
-    }
-    return false
+  equals(other: unknown): boolean {
+    const raw = toRaw(other)
+
+    return raw instanceof KeybindingImpl
+      ? this.commandId === raw.commandId &&
+          this.combo.equals(raw.combo) &&
+          this.targetElementId === raw.targetElementId
+      : false
   }
 }
 
@@ -51,30 +50,19 @@ export class KeyComboImpl implements KeyCombo {
     })
   }
 
-  equals(other: any): boolean {
-    if (toRaw(other) instanceof KeyComboImpl) {
-      return (
-        this.key === other.key &&
-        this.ctrl === other.ctrl &&
-        this.alt === other.alt &&
-        this.shift === other.shift
-      )
-    }
-    return false
+  equals(other: unknown): boolean {
+    const raw = toRaw(other)
+
+    return raw instanceof KeyComboImpl
+      ? this.key.toUpperCase() === raw.key.toUpperCase() &&
+          this.ctrl === raw.ctrl &&
+          this.alt === raw.alt &&
+          this.shift === raw.shift
+      : false
   }
 
   serialize(): string {
-    return `${this.key}:${this.ctrl}:${this.alt}:${this.shift}`
-  }
-
-  deserialize(serialized: string): KeyComboImpl {
-    const [key, ctrl, alt, shift] = serialized.split(':')
-    return new KeyComboImpl({
-      key,
-      ctrl: ctrl === 'true',
-      alt: alt === 'true',
-      shift: shift === 'true'
-    })
+    return `${this.key.toUpperCase()}:${this.ctrl}:${this.alt}:${this.shift}`
   }
 
   toString(): string {
@@ -87,6 +75,23 @@ export class KeyComboImpl implements KeyCombo {
 
   get isModifier(): boolean {
     return ['Control', 'Meta', 'Alt', 'Shift'].includes(this.key)
+  }
+
+  get modifierCount(): number {
+    const modifiers = [this.ctrl, this.alt, this.shift]
+    return modifiers.reduce((acc, cur) => acc + Number(cur), 0)
+  }
+
+  get isShiftOnly(): boolean {
+    return this.shift && this.modifierCount === 1
+  }
+
+  get isReservedByTextInput(): boolean {
+    return (
+      !this.hasModifier ||
+      this.isShiftOnly ||
+      RESERVED_BY_TEXT_INPUT.has(this.toString())
+    )
   }
 
   getKeySequences(): string[] {
@@ -119,10 +124,23 @@ export const useKeybindingStore = defineStore('keybinding', () => {
    */
   const userUnsetKeybindings = ref<Record<string, KeybindingImpl>>({})
 
+  /**
+   * Get user-defined keybindings.
+   */
+  function getUserKeybindings() {
+    return userKeybindings.value
+  }
+
+  /**
+   * Get user-defined keybindings that unset default keybindings.
+   */
+  function getUserUnsetKeybindings() {
+    return userUnsetKeybindings.value
+  }
+
   const keybindingByKeyCombo = computed<Record<string, KeybindingImpl>>(() => {
     const result: Record<string, KeybindingImpl> = {
-      ...defaultKeybindings.value,
-      ...userKeybindings.value
+      ...defaultKeybindings.value
     }
 
     for (const keybinding of Object.values(userUnsetKeybindings.value)) {
@@ -131,7 +149,11 @@ export const useKeybindingStore = defineStore('keybinding', () => {
         delete result[serializedCombo]
       }
     }
-    return result
+
+    return {
+      ...result,
+      ...userKeybindings.value
+    }
   })
 
   const keybindings = computed<KeybindingImpl[]>(() =>
@@ -142,20 +164,9 @@ export const useKeybindingStore = defineStore('keybinding', () => {
     return keybindingByKeyCombo.value[combo.serialize()]
   }
 
-  function createKeybindingsByCommandId(keybindings: KeybindingImpl[]) {
-    const result: Record<string, KeybindingImpl[]> = {}
-    for (const keybinding of keybindings) {
-      if (!(keybinding.commandId in result)) {
-        result[keybinding.commandId] = []
-      }
-      result[keybinding.commandId].push(keybinding)
-    }
-    return result
-  }
-
   const keybindingsByCommandId = computed<Record<string, KeybindingImpl[]>>(
     () => {
-      return createKeybindingsByCommandId(keybindings.value)
+      return _.groupBy(keybindings.value, 'commandId')
     }
   )
 
@@ -166,7 +177,7 @@ export const useKeybindingStore = defineStore('keybinding', () => {
   const defaultKeybindingsByCommandId = computed<
     Record<string, KeybindingImpl[]>
   >(() => {
-    return createKeybindingsByCommandId(Object.values(defaultKeybindings.value))
+    return _.groupBy(Object.values(defaultKeybindings.value), 'commandId')
   })
 
   function getKeybindingByCommandId(commandId: string) {
@@ -218,7 +229,10 @@ export const useKeybindingStore = defineStore('keybinding', () => {
   function unsetKeybinding(keybinding: KeybindingImpl) {
     const serializedCombo = keybinding.combo.serialize()
     if (!(serializedCombo in keybindingByKeyCombo.value)) {
-      throw new Error(`Keybinding on ${keybinding.combo} does not exist`)
+      console.warn(
+        `Trying to unset non-exist keybinding: ${JSON.stringify(keybinding)}`
+      )
+      return
     }
 
     if (userKeybindings.value[serializedCombo]?.equals(keybinding)) {
@@ -231,7 +245,7 @@ export const useKeybindingStore = defineStore('keybinding', () => {
       return
     }
 
-    throw new Error(`NOT_REACHED`)
+    console.warn(`Unset unknown keybinding: ${JSON.stringify(keybinding)}`)
   }
 
   /**
@@ -249,54 +263,6 @@ export const useKeybindingStore = defineStore('keybinding', () => {
     }
     addUserKeybinding(keybinding)
     return true
-  }
-
-  function loadUserKeybindings() {
-    const settingStore = useSettingStore()
-    // Unset bindings first as new bindings might conflict with default bindings.
-    const unsetBindings = settingStore.get('Comfy.Keybinding.UnsetBindings')
-    for (const keybinding of unsetBindings) {
-      unsetKeybinding(new KeybindingImpl(keybinding))
-    }
-    const newBindings = settingStore.get('Comfy.Keybinding.NewBindings')
-    for (const keybinding of newBindings) {
-      addUserKeybinding(new KeybindingImpl(keybinding))
-    }
-  }
-
-  function loadCoreKeybindings() {
-    for (const keybinding of CORE_KEYBINDINGS) {
-      addDefaultKeybinding(new KeybindingImpl(keybinding))
-    }
-  }
-
-  function loadExtensionKeybindings(extension: ComfyExtension) {
-    if (extension.keybindings) {
-      for (const keybinding of extension.keybindings) {
-        try {
-          addDefaultKeybinding(new KeybindingImpl(keybinding))
-        } catch (error) {
-          console.warn(
-            `Failed to load keybinding for extension ${extension.name}`,
-            error
-          )
-        }
-      }
-    }
-  }
-
-  async function persistUserKeybindings() {
-    const settingStore = useSettingStore()
-    // TODO(https://github.com/Comfy-Org/ComfyUI_frontend/issues/1079):
-    // Allow setting multiple values at once in settingStore
-    await settingStore.set(
-      'Comfy.Keybinding.NewBindings',
-      Object.values(userKeybindings.value)
-    )
-    await settingStore.set(
-      'Comfy.Keybinding.UnsetBindings',
-      Object.values(userUnsetKeybindings.value)
-    )
   }
 
   function resetKeybindings() {
@@ -318,6 +284,8 @@ export const useKeybindingStore = defineStore('keybinding', () => {
 
   return {
     keybindings,
+    getUserKeybindings,
+    getUserUnsetKeybindings,
     getKeybinding,
     getKeybindingsByCommandId,
     getKeybindingByCommandId,
@@ -325,10 +293,6 @@ export const useKeybindingStore = defineStore('keybinding', () => {
     addUserKeybinding,
     unsetKeybinding,
     updateKeybindingOnCommand,
-    loadUserKeybindings,
-    loadCoreKeybindings,
-    loadExtensionKeybindings,
-    persistUserKeybindings,
     resetKeybindings,
     isCommandKeybindingModified
   }
