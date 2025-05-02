@@ -57,7 +57,10 @@ import { useExtensionStore } from '@/stores/extensionStore'
 import { KeyComboImpl, useKeybindingStore } from '@/stores/keybindingStore'
 import { useCommandStore } from '@/stores/commandStore'
 import { shallowReactive } from 'vue'
-import { WorkflowWindowMessageData } from './playbookTypes'
+import {
+  ComfyWorkflowNodeData,
+  WorkflowWindowMessageData
+} from './playbookTypes'
 
 export const ANIM_PREVIEW_WIDGET = '$$comfy_animation_preview'
 
@@ -204,7 +207,16 @@ export class ComfyApp {
             'Comfy Window Received: SendWorkflowDataToComfyWindow',
             eventMessageData
           )
-          this.loadGraphData(eventMessageData.data as ComfyWorkflowJSON, true)
+          await this.loadGraphData(
+            eventMessageData.data as ComfyWorkflowJSON,
+            true
+          )
+
+          // Once graph is loaded, subscribe a selection change listener.
+          // This listener will broadcast selection changes to Playbook wrapper.
+          this.canvas.onSelectionChange = (nodes) => {
+            this.sendNodeSelectionToPlaybookWrapper(nodes)
+          }
           break
 
         case 'RequestWorkflowDataFromComfyWindow':
@@ -450,6 +462,45 @@ export class ComfyApp {
 
     const messageData: WorkflowWindowMessageData = {
       message: 'WrapperOriginSetOnComfyInstance'
+    }
+
+    window.top.postMessage(messageData, this.playbookWrapperOrigin)
+  }
+
+  /**
+   * Send message with selected nodes data to Playbook wrapper.
+   */
+  async sendNodeSelectionToPlaybookWrapper(selectedNodes) {
+    console.log(
+      'Comfy Window Sending: sendNodeSelectionToPlaybookWrapper: target origin: ',
+      selectedNodes
+    )
+
+    const selectedNodesArray = Object.values(selectedNodes)
+
+    // Reduce node data to structure expected by Playbook wrapper.
+    const restructuredNodesData = selectedNodesArray.map((node: any) => {
+      const nodeData: ComfyWorkflowNodeData = {
+        id: node.id,
+        type: node.type,
+        widgets_values: node.widgets_values,
+        widgets: node.widgets,
+        title: node.title,
+        inputs: node.inputs,
+        outputs: node.outputs,
+        properties: node.properties,
+        pos: node.pos,
+        size: node.size,
+        flags: node.flags
+      }
+
+      return nodeData
+    })
+
+    // Serializing data to prevent errors messaging objects with callbacks.
+    const messageData: WorkflowWindowMessageData = {
+      message: 'SendSelectedNodesToPlaybookWrapper',
+      data: JSON.stringify(restructuredNodesData)
     }
 
     window.top.postMessage(messageData, this.playbookWrapperOrigin)
