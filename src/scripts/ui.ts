@@ -433,7 +433,9 @@ export class ComfyUI {
       [$el('div'), $el('div'), $el('div')]
     ) as HTMLDivElement
 
-    this.menuContainer = $el('div.comfy-menu', { parent: containerElement }, [
+    // The propsOrChildren prop has been set to null to remove menu panel
+    // for use in the Playbook wrapper (previous value was '{ parent: containerElement }').
+    this.menuContainer = $el('div.comfy-menu', null, [
       $el(
         'div.drag-handle.comfy-menu-header',
         {
