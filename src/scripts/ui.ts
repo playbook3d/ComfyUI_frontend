@@ -434,26 +434,38 @@ export class ComfyUI {
       }
     })
 
-    // The propsOrChildren prop has been set to "{}" to remove menu panel
+    this.menuHamburger = $el(
+      'div.comfy-menu-hamburger',
+      {
+        parent: containerElement,
+        onclick: () => {
+          this.menuContainer.style.display = 'block'
+          this.menuHamburger.style.display = 'none'
+        }
+      },
+      [$el('div'), $el('div'), $el('div')]
+    ) as HTMLDivElement
+
+    // The propsOrChildren prop has been set to null to remove menu panel
     // for use in the Playbook wrapper (previous value was '{ parent: containerElement }').
-    this.menuContainer = $el(
-      'div.comfy-menu.no-drag',
-      {},
-      [
-        $el(
-          'div.drag-handle.comfy-menu-header',
-          {
-            style: {
-              overflow: 'hidden',
-              position: 'relative',
-              width: '100%',
-              cursor: 'default'
-            }
-          },
-          [
-            $el('span.drag-handle'),
-            $el('span.comfy-menu-queue-size', {
-              $: (q) => (this.queueSize = q)
+    this.menuContainer = $el('div.comfy-menu', null, [
+      $el(
+        'div.drag-handle.comfy-menu-header',
+        {
+          style: {
+            overflow: 'hidden',
+            position: 'relative',
+            width: '100%',
+            cursor: 'default'
+          }
+        },
+        [
+          $el('span.drag-handle'),
+          $el('span.comfy-menu-queue-size', { $: (q) => (this.queueSize = q) }),
+          $el('div.comfy-menu-actions', [
+            $el('button.comfy-settings-btn', {
+              textContent: '⚙️',
+              onclick: showSettingsDialog
             }),
             $el('div.comfy-menu-actions', [
               $el('button.comfy-settings-btn', {
