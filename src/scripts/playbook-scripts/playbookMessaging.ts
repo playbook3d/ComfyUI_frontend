@@ -40,23 +40,42 @@ export function notifyPlaybookWrapperNewWorkflowLoaded(wrapperOrigin: string) {
  * Send message with selected nodes data to Playbook wrapper.
  */
 export function sendNodeSelectionToPlaybookWrapper(
-  selectedNodes: ComfyWorkflowNodeData[],
+  selectedNodes: any,
   wrapperOrigin: string
 ) {
+  console.log(
+    'Comfy Window Sending: sendNodeSelectionToPlaybookWrapper: target origin: ',
+    selectedNodes
+  )
+
+  const selectedNodesArray = Object.values(selectedNodes)
+
+  // Reduce node data to structure expected by Playbook wrapper.
+  const restructuredNodesData = selectedNodesArray.map((node: any) => {
+    const nodeData: ComfyWorkflowNodeData = {
+      id: node.id,
+      type: node.type,
+      widgets_values: node.widgets_values,
+      widgets: node.widgets,
+      title: node.title,
+      inputs: node.inputs,
+      outputs: node.outputs,
+      properties: node.properties,
+      pos: node.pos,
+      size: node.size,
+      flags: node.flags
+    }
+
+    return nodeData
+  })
+
   // Serializing data to prevent errors messaging objects with callbacks.
   const messageData: WorkflowWindowMessageData = {
     message: 'SendSelectedNodesToPlaybookWrapper',
-    data: JSON.stringify(selectedNodes)
+    data: JSON.stringify(restructuredNodesData)
   }
 
-  console.log(
-    'Comfy Window Sending: SendNodeSelectionToPlaybookWrapper: ',
-    messageData
-  )
-
-  if (window.top) {
-    window.top.postMessage(messageData, wrapperOrigin)
-  }
+  window.top.postMessage(messageData, wrapperOrigin)
 }
 
 /**
@@ -74,25 +93,40 @@ export async function sendWorkflowDataToPlaybookWrapper(wrapperOrigin: string) {
     messageData
   )
 
-  if (window.top) {
-    window.top.postMessage(messageData, wrapperOrigin)
-  }
+  window.top.postMessage(messageData, wrapperOrigin)
 }
 
 /**
- * Send message on selected nodes deletion.
+ * Send node definition data from node_definition.json to wrapping iFrame layer.
  */
-export async function sendNodesDeletedToPlaybookWrapper(wrapperOrigin: string) {
-  const messageData: WorkflowWindowMessageData = {
-    message: 'SendNodesDeletedToPlaybookWrapper',
-  }
+export async function sendNodeDefinitionDataToPlaybookWrapper(
+  wrapperOrigin: string
+) {
+  const filePath = '../node_definition.json'
 
-  console.log(
-    'Comfy Window Sending: SendNodesDeletedToPlaybookWrapper: ',
-    messageData
-  )
+  fs.readFile(filePath, 'utf8', (err, jsonData) => {
+    if (err) {
+      console.error('Error reading file: ', err)
+      return
+    }
 
-  if (window.top) {
-    window.top.postMessage(messageData, wrapperOrigin)
-  }
+    try {
+      // const data = JSON.parse(jsonString);
+      // Now you can use `data` as a normal JavaScript object
+
+      const messageData: WorkflowWindowMessageData = {
+        message: 'SendNodeDefinitionDataToPlaybookWrapper',
+        data: jsonData
+      }
+
+      console.log(
+        'Comfy Window Sending: SendWorkflowDataToPlaybookWrapper: ',
+        messageData
+      )
+
+      window.top.postMessage(messageData, wrapperOrigin)
+    } catch (err) {
+      console.error('Error parsing JSON: ', err)
+    }
+  })
 }
