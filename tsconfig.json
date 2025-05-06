@@ -41,6 +41,7 @@
     "src/**/*.vue",
     "src/types/**/*.d.ts",
     "tests-ui/**/*",
-    "global.d.ts"
+    "global.d.ts",
+    "src/scripts/playbook-scripts/.ts"
   ]
 }

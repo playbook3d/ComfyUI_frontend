@@ -60,7 +60,8 @@ import { shallowReactive } from 'vue'
 import {
   ComfyWorkflowNodeData,
   WorkflowWindowMessageData
-} from './playbookTypes'
+} from './playbook-scripts/playbookTypes'
+import { notifyPlaybookWrapperNewWorkflowLoaded } from './playbook-scripts/notifyPlaybookWrapperNewWorkflowLoaded'
 
 export const ANIM_PREVIEW_WIDGET = '$$comfy_animation_preview'
 
@@ -2938,6 +2939,7 @@ export class ComfyApp {
             false,
             fileName
           )
+          notifyPlaybookWrapperNewWorkflowLoaded(this.playbookWrapperOrigin)
         }
       }
       reader.readAsText(file)
