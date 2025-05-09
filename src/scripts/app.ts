@@ -156,6 +156,7 @@ export class ComfyApp {
 
   // Playbook Fields
   playbookWrapperOrigin: string
+  serializedNodesDefinition: string
   // ------------- |
 
   /**
@@ -225,6 +226,15 @@ export class ComfyApp {
             'Comfy Window Received: RequestWorkflowDataFromComfyWindow'
           )
           this.sendWorkflowDataToPlaybookWrapper()
+          break
+
+        case 'SendModalAppIDToComfyWindow':
+          console.log(
+            'Comfy Window Received: SendModalAppIDToComfyWindow',
+            eventMessageData
+          )
+          this.serializedNodesDefinition = eventMessageData.data
+          await this.registerNodes()
           break
 
         default:
@@ -2087,7 +2097,7 @@ export class ComfyApp {
           )
         }
       },
-      500
+      100
     )
   }
 

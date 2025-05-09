@@ -290,9 +290,12 @@ class ComfyApi extends EventTarget {
   async getNodeDefs({ validate = false }: { validate?: boolean } = {}): Promise<
     Record<string, ComfyNodeDef>
   > {
-    // const resp = await this.fetchApi('/object_info', { cache: 'no-store' })
-    const objectInfoUnsafe = nodes_definition
-    // const objectInfoUnsafe = await resp.json()
+    if (!window.__COMFYAPP || !window.__COMFYAPP.serializedNodesDefinition)
+      return
+    const objectInfoUnsafe = JSON.parse(
+      window.__COMFYAPP.serializedNodesDefinition
+    )
+
     if (!validate) {
       return objectInfoUnsafe
     }
