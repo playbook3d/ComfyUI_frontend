@@ -1428,6 +1428,20 @@ export class ComfyApp {
     this.canvasEl.addEventListener(
       'dragover',
       (e) => {
+        // Disable dropEffect (green plus icon) for JSON files.
+        const items = e.dataTransfer.items
+        if (items) {
+          for (let i = 0; i < items.length; i++) {
+            if (
+              items[i].kind === 'file' &&
+              items[i].type === 'application/json'
+            ) {
+              console.log(`File type: ${items[i].type}`)
+              e.dataTransfer.dropEffect = 'none'
+            }
+          }
+        }
+
         this.canvas.adjustMouseEvent(e)
         const node = this.graph.getNodeOnPos(e.canvasX, e.canvasY)
         if (node) {
@@ -2500,6 +2514,8 @@ export class ComfyApp {
       file.type === 'application/json' ||
       file.name?.endsWith('.json')
     ) {
+      // Playbook Edit: Disabling import of ComfyUI workflow JSON files.
+      return
       const reader = new FileReader()
       reader.onload = async () => {
         const readerResult = reader.result as string
