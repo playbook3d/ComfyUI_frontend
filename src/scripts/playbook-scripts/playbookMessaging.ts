@@ -95,38 +95,3 @@ export async function sendWorkflowDataToPlaybookWrapper(wrapperOrigin: string) {
 
   window.top.postMessage(messageData, wrapperOrigin)
 }
-
-/**
- * Send node definition data from node_definition.json to wrapping iFrame layer.
- */
-export async function sendNodeDefinitionDataToPlaybookWrapper(
-  wrapperOrigin: string
-) {
-  const filePath = '../node_definition.json'
-
-  fs.readFile(filePath, 'utf8', (err, jsonData) => {
-    if (err) {
-      console.error('Error reading file: ', err)
-      return
-    }
-
-    try {
-      // const data = JSON.parse(jsonString);
-      // Now you can use `data` as a normal JavaScript object
-
-      const messageData: WorkflowWindowMessageData = {
-        message: 'SendNodeDefinitionDataToPlaybookWrapper',
-        data: jsonData
-      }
-
-      console.log(
-        'Comfy Window Sending: SendWorkflowDataToPlaybookWrapper: ',
-        messageData
-      )
-
-      window.top.postMessage(messageData, wrapperOrigin)
-    } catch (err) {
-      console.error('Error parsing JSON: ', err)
-    }
-  })
-}

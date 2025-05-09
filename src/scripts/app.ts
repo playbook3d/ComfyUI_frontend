@@ -444,6 +444,13 @@ export class ComfyApp {
             'Comfy Window Received: ExportWorkflowJSONFromComfyWindow'
           )
           useCommandStore().execute('Comfy.ExportWorkflow')
+        case 'SendModalAppIDToComfyWindow':
+          console.log(
+            'Comfy Window Received: SendModalAppIDToComfyWindow',
+            eventMessageData
+          )
+          this.serializedNodesDefinition = eventMessageData.data
+          await this.registerNodes()
           break
 
         case 'SendNodesDefinitionToComfyWindow':
@@ -1877,7 +1884,7 @@ export class ComfyApp {
           )
         }
       },
-      500
+      100
     )
   }
 
