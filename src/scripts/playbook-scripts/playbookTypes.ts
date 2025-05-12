@@ -12,6 +12,7 @@ export interface WorkflowWindowMessageData {
     | 'NewWorkflowLoadedInComfyWindow'
     | 'ClearWorkflowInComfyWindow'
     | 'ExportWorkflowJSONFromComfyWindow'
+    | 'SendModalAppIDToComfyWindow'
   data?: any
 }
 
