@@ -188,7 +188,7 @@ export class ComfyApp {
     this.bypassBgColor = '#FF00FF'
 
     /*
-     *  Subscribe listener to receive messaging from iFrame wrapper layer.
+     *  Subscribe listener to receive messaging from Playbook wrapper.
      */
     window.addEventListener('message', async (event) => {
       const eventMessageData: WorkflowWindowMessageData = event.data
@@ -225,6 +225,25 @@ export class ComfyApp {
             'Comfy Window Received: RequestWorkflowDataFromComfyWindow'
           )
           this.sendWorkflowDataToPlaybookWrapper()
+          break
+
+        // Clear graph. This functionality is identical to that triggered
+        // when "Clear" is clicked on the ConfyUI menu.
+        case 'ClearWorkflowInComfyWindow':
+          console.log('Comfy Window Received: ClearWorkflowInComfyWindow')
+          this.clean()
+          this.graph.clear()
+          this.resetView()
+          api.dispatchEvent(new CustomEvent('graphCleared'))
+          break
+
+        // Export the workflow as JSON. This functionality is identical to that
+        // triggered when "Save" is clicked on the ConfyUI menu.
+        case 'ExportWorkflowJSONFromComfyWindow':
+          console.log(
+            'Comfy Window Received: ExportWorkflowJSONFromComfyWindow'
+          )
+          useCommandStore().execute('Comfy.ExportWorkflow')
           break
 
         default:
