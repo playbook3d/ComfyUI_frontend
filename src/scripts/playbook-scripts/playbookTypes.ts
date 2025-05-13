@@ -10,6 +10,9 @@ export interface WorkflowWindowMessageData {
     | 'SendWorkflowDataToPlaybookWrapper'
     | 'SendSelectedNodesToPlaybookWrapper'
     | 'NewWorkflowLoadedInComfyWindow'
+    | 'ClearWorkflowInComfyWindow'
+    | 'ExportWorkflowJSONFromComfyWindow'
+    | 'SendModalAppIDToComfyWindow'
   data?: any
 }
 
