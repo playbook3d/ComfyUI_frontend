@@ -709,7 +709,7 @@ export class ComfyApi extends EventTarget {
     Pending: PendingTaskItem[]
   }> {
     try {
-      const res = await this.fetchApi('/queue')
+      const res = await this.fetchApi('/queue', {queue_running: [], queue_pending: []})
       const data = await res.json()
       return {
         // Running action uses a different endpoint for cancelling
@@ -737,7 +737,7 @@ export class ComfyApi extends EventTarget {
     max_items: number = 200
   ): Promise<{ History: HistoryTaskItem[] }> {
     try {
-      const res = await this.fetchApi(`/history?max_items=${max_items}`)
+      const res = await this.fetchApi(`/history?max_items=${max_items}`, {})
       const json: Promise<HistoryTaskItem[]> = await res.json()
       return {
         History: Object.values(json).map((item) => ({
@@ -844,7 +844,7 @@ export class ComfyApi extends EventTarget {
    */
   async getSettings(): Promise<Settings> {
 
-    const resp = await this.fetchApi('/settings')
+    const resp = await this.fetchApi('/settings', {})
 
     if (resp.status == 401) {
       throw new UnauthorizedError(resp.statusText)
@@ -964,7 +964,7 @@ export class ComfyApi extends EventTarget {
 
   async listUserDataFullInfo(dir: string): Promise<UserDataFullInfo[]> {
     const resp = await this.fetchApi(
-      `/userdata?dir=${encodeURIComponent(dir)}&recurse=true&split=false&full_info=true`
+      `/userdata?dir=${encodeURIComponent(dir)}&recurse=true&split=false&full_info=true`, []
     )
     if (resp.status === 404) return []
     if (resp.status !== 200) {
@@ -1000,7 +1000,8 @@ export class ComfyApi extends EventTarget {
    * @returns The custom nodes i18n data
    */
   async getCustomNodesI18n(): Promise<Record<string, any>> {
-    return (await axios.get(this.apiURL('/i18n'))).data
+    return await this.fetchApi('/i18n', {})
+    // return (await axios.get(this.apiURL('/i18n'))).data
   }
 }
 
