@@ -2,7 +2,6 @@ import {
   ComfyWorkflowNodeData,
   WorkflowWindowMessageData
 } from './playbookTypes'
-import fs from 'fs'
 
 /**
  * Send message with workflow data to wrapping iFrame layer.
@@ -17,7 +16,24 @@ export function notifyWrapperOriginSetOnComfyInstance(wrapperOrigin: string) {
     message: 'WrapperOriginSetOnComfyInstance'
   }
 
-  window.top.postMessage(messageData, wrapperOrigin)
+  if (window.top) {
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
+}
+
+export function notifyPlaybookWrapperNewWorkflowLoaded(wrapperOrigin: string) {
+  const messageData: WorkflowWindowMessageData = {
+    message: 'NewWorkflowLoadedInComfyWindow'
+  }
+
+  console.log(
+    'Comfy Window Sending: NewWorkflowLoadedInComfyWindow: ',
+    messageData
+  )
+
+  if (window.top) {
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
 }
 
 /**
@@ -59,7 +75,9 @@ export function sendNodeSelectionToPlaybookWrapper(
     data: JSON.stringify(restructuredNodesData)
   }
 
-  window.top.postMessage(messageData, wrapperOrigin)
+  if (window.top) {
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
 }
 
 /**
@@ -77,5 +95,7 @@ export async function sendWorkflowDataToPlaybookWrapper(wrapperOrigin: string) {
     messageData
   )
 
-  window.top.postMessage(messageData, wrapperOrigin)
+  if (window.top) {
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
 }
