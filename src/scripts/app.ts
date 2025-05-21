@@ -46,10 +46,7 @@ import { useExtensionStore } from '@/stores/extensionStore'
 import { useFirebaseAuthStore } from '@/stores/firebaseAuthStore'
 import { KeyComboImpl, useKeybindingStore } from '@/stores/keybindingStore'
 import { useCommandStore } from '@/stores/commandStore'
-import {
-  ComfyWorkflowNodeData,
-  WorkflowWindowMessageData
-} from './playbook-scripts/playbookTypes'
+import { WorkflowWindowMessageData } from './playbook-scripts/playbookTypes'
 import { useModelStore } from '@/stores/modelStore'
 import { SYSTEM_NODE_DEFS, useNodeDefStore } from '@/stores/nodeDefStore'
 import { useSettingStore } from '@/stores/settingStore'
@@ -87,7 +84,7 @@ import { $el, ComfyUI } from './ui'
 import { ComfyAppMenu } from './ui/menu/index'
 import { clone } from './utils'
 import { type ComfyWidgetConstructor } from './widgets'
-import { notifyPlaybookWrapperNewWorkflowLoaded } from './playbook-scripts/playbookMessaging'
+import { notifyPlaybookWrapperNewWorkflowLoaded, notifyWrapperOriginSetOnComfyInstance, sendNodeSelectionToPlaybookWrapper, sendWorkflowDataToPlaybookWrapper } from './playbook-scripts/playbookMessaging'
 
 export const ANIM_PREVIEW_WIDGET = '$$comfy_animation_preview'
 
@@ -293,7 +290,7 @@ export class ComfyApp {
             event.origin
           )
           this.playbookWrapperOrigin = event.origin
-          this.notifyWrapperOriginSetOnComfyInstance()
+          notifyWrapperOriginSetOnComfyInstance(this.playbookWrapperOrigin)
           break
 
         case 'SendWorkflowDataToComfyWindow':
@@ -309,7 +306,9 @@ export class ComfyApp {
           // Once graph is loaded, subscribe a selection change listener.
           // This listener will broadcast selection changes to Playbook wrapper.
           this.canvas.onSelectionChange = (nodes) => {
-            this.sendNodeSelectionToPlaybookWrapper(nodes)
+            if (this.playbookWrapperOrigin) {
+              sendNodeSelectionToPlaybookWrapper(nodes, this.playbookWrapperOrigin)
+            }
           }
           break
 
@@ -317,7 +316,9 @@ export class ComfyApp {
           console.log(
             'Comfy Window Received: RequestWorkflowDataFromComfyWindow'
           )
-          this.sendWorkflowDataToPlaybookWrapper()
+          if (this.playbookWrapperOrigin) {
+            sendWorkflowDataToPlaybookWrapper(this.playbookWrapperOrigin)
+          }
           break
 
         // Clear graph. This functionality is identical to that triggered
@@ -326,7 +327,7 @@ export class ComfyApp {
           console.log('Comfy Window Received: ClearWorkflowInComfyWindow')
           this.clean()
           this.graph.clear()
-          this.resetView()
+          useLitegraphService().resetView()
           api.dispatchCustomEvent('graphCleared')
           break
 
@@ -532,86 +533,6 @@ export class ComfyApp {
       }
 
       app.graph.setDirtyCanvas(true)
-    }
-  }
-
-  /**
-   * Send message with workflow data to wrapping iFrame layer.
-   */
-  public async sendWorkflowDataToPlaybookWrapper() {
-    const graphData = await this.graphToPrompt()
-
-    const messageData: WorkflowWindowMessageData = {
-      message: 'SendWorkflowDataToPlaybookWrapper',
-      data: graphData
-    }
-
-    console.log(
-      'Comfy Window Sending: SendWorkflowDataToPlaybookWrapper: ',
-      messageData
-    )
-
-    if (window.top && this.playbookWrapperOrigin) {
-      window.top.postMessage(messageData, this.playbookWrapperOrigin)
-    }
-  }
-
-  /**
-   * Send message with workflow data to wrapping iFrame layer.
-   */
-  async notifyWrapperOriginSetOnComfyInstance() {
-    console.log(
-      'Comfy Window Sending: WrapperOriginSetOnComfyInstance: target origin: ',
-      this.playbookWrapperOrigin
-    )
-
-    const messageData: WorkflowWindowMessageData = {
-      message: 'WrapperOriginSetOnComfyInstance'
-    }
-
-    if (window.top && this.playbookWrapperOrigin) {
-      window.top.postMessage(messageData, this.playbookWrapperOrigin)
-    }
-  }
-
-  /**
-   * Send message with selected nodes data to Playbook wrapper.
-   */
-  async sendNodeSelectionToPlaybookWrapper(selectedNodes: any) {
-    console.log(
-      'Comfy Window Sending: sendNodeSelectionToPlaybookWrapper: target origin: ',
-      selectedNodes
-    )
-
-    const selectedNodesArray = Object.values(selectedNodes)
-
-    // Reduce node data to structure expected by Playbook wrapper.
-    const restructuredNodesData = selectedNodesArray.map((node: any) => {
-      const nodeData: ComfyWorkflowNodeData = {
-        id: node.id,
-        type: node.type,
-        widgets_values: node.widgets_values,
-        widgets: node.widgets,
-        title: node.title,
-        inputs: node.inputs,
-        outputs: node.outputs,
-        properties: node.properties,
-        pos: node.pos,
-        size: node.size,
-        flags: node.flags
-      }
-
-      return nodeData
-    })
-
-    // Serializing data to prevent errors messaging objects with callbacks.
-    const messageData: WorkflowWindowMessageData = {
-      message: 'SendSelectedNodesToPlaybookWrapper',
-      data: JSON.stringify(restructuredNodesData)
-    }
-
-    if (window.top && this.playbookWrapperOrigin) {
-      window.top.postMessage(messageData, this.playbookWrapperOrigin)
     }
   }
 
