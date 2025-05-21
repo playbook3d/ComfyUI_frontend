@@ -99,7 +99,7 @@ import {
   ComfyWorkflowNodeData,
   WorkflowWindowMessageData
 } from './playbook-scripts/playbookTypes'
-import { notifyPlaybookWrapperNewWorkflowLoaded } from './playbook-scripts/notifyPlaybookWrapperNewWorkflowLoaded'
+import { notifyPlaybookWrapperNewWorkflowLoaded, notifyWrapperOriginSetOnComfyInstance, sendNodeSelectionToPlaybookWrapper, sendWorkflowDataToPlaybookWrapper } from './playbook-scripts/playbookMessaging'
 
 export const ANIM_PREVIEW_WIDGET = '$$comfy_animation_preview'
 
@@ -414,7 +414,9 @@ export class ComfyApp {
           // Once graph is loaded, subscribe a selection change listener.
           // This listener will broadcast selection changes to Playbook wrapper.
           this.canvas.onSelectionChange = (nodes) => {
-            this.sendNodeSelectionToPlaybookWrapper(nodes)
+            if (this.playbookWrapperOrigin) {
+              sendNodeSelectionToPlaybookWrapper(nodes, this.playbookWrapperOrigin)
+            }
           }
           break
 
@@ -1379,6 +1381,7 @@ export class ComfyApp {
   }
 
   /**
+  /*
    * Adds a handler allowing drag+drop of files onto the window to load workflows
    */
   #addDropHandler() {
