@@ -1,5 +1,5 @@
-// @ts-strict-ignore
-import { LiteGraph, LGraphCanvas } from '@comfyorg/litegraph'
+import { LGraphCanvas, LiteGraph, isComboWidget } from '@comfyorg/litegraph'
+
 import { app } from '../../scripts/app'
 
 // Adds filtering to combo context menus
@@ -30,17 +30,18 @@ const ext = {
         // We must request an animation frame for the current node of the active canvas to update.
         requestAnimationFrame(() => {
           const currentNode = LGraphCanvas.active_canvas.current_node
-          const clickedComboValue = currentNode.widgets
+          const clickedComboValue = currentNode?.widgets
             ?.filter(
               (w) =>
-                w.type === 'combo' && w.options.values.length === values.length
+                isComboWidget(w) && w.options.values?.length === values.length
             )
             .find((w) =>
-              w.options.values.every((v, i) => v === values[i])
+              // @ts-expect-error Poorly typed; filter above "should" mitigate exceptions
+              w.options.values?.every((v, i) => v === values[i])
             )?.value
 
           let selectedIndex = clickedComboValue
-            ? values.findIndex((v) => v === clickedComboValue)
+            ? values.findIndex((v: string) => v === clickedComboValue)
             : 0
           if (selectedIndex < 0) {
             selectedIndex = 0
@@ -122,7 +123,7 @@ const ext = {
             // When filtering, recompute which items are visible for arrow up/down and maintain selection.
             displayedItems = items.filter((item) => {
               const isVisible =
-                !term || item.textContent.toLocaleLowerCase().includes(term)
+                !term || item.textContent?.toLocaleLowerCase().includes(term)
               item.style.display = isVisible ? 'block' : 'none'
               return isVisible
             })

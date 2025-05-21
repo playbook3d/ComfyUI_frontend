@@ -16,6 +16,9 @@ dist-ssr
 .vscode/*
 *.code-workspace
 !.vscode/extensions.json
+!.vscode/tailwind.json
+!.vscode/settings.json.default
+!.vscode/launch.json.default
 .idea
 .DS_Store
 *.suo
@@ -35,8 +38,23 @@ tests-ui/workflows/examples
 /playwright-report/
 /blob-report/
 /playwright/.cache/
-browser_tests/*/*-win32.png
+browser_tests/**/*-win32.png
 
 .env
 
 dist.zip
+
+/temp/
+
+# Generated JSON Schemas
+/schemas/
+
+# Workflow templates assets
+# Hosted on https://github.com/Comfy-Org/workflow_templates
+/public/templates/
+
+# Temporary repository directory
+templates_repo/
+
+# Vite’s timestamped config modules
+vite.config.mts.timestamp-*.mjs

@@ -2,47 +2,58 @@
   <div ref="container" class="model-lib-node-container h-full w-full">
     <TreeExplorerTreeNode :node="node">
       <template #before-label>
-        <span
-          v-if="modelDef && modelDef.image"
-          class="model-lib-model-icon-container"
-        >
+        <span v-if="modelPreviewUrl" class="model-lib-model-icon-container">
           <span
             class="model-lib-model-icon"
-            :style="{ backgroundImage: `url(${modelDef.image})` }"
-          >
-          </span>
+            :style="{ backgroundImage: `url(${modelPreviewUrl})` }"
+          />
         </span>
       </template>
     </TreeExplorerTreeNode>
 
     <teleport v-if="showPreview" to="#model-library-model-preview-container">
       <div class="model-lib-model-preview" :style="modelPreviewStyle">
-        <ModelPreview ref="previewRef" :modelDef="modelDef"></ModelPreview>
+        <ModelPreview ref="previewRef" :model-def="modelDef" />
       </div>
     </teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import TreeExplorerTreeNode from '@/components/common/TreeExplorerTreeNode.vue'
-import ModelPreview from './ModelPreview.vue'
-import { ComfyModelDef } from '@/stores/modelStore'
-import { RenderedTreeExplorerNode } from '@/types/treeExplorerTypes'
 import {
-  computed,
   CSSProperties,
+  computed,
   nextTick,
   onMounted,
   onUnmounted,
   ref
 } from 'vue'
+
+import TreeExplorerTreeNode from '@/components/common/TreeExplorerTreeNode.vue'
+import { ComfyModelDef } from '@/stores/modelStore'
 import { useSettingStore } from '@/stores/settingStore'
+import { RenderedTreeExplorerNode } from '@/types/treeExplorerTypes'
+
+import ModelPreview from './ModelPreview.vue'
 
 const props = defineProps<{
   node: RenderedTreeExplorerNode<ComfyModelDef>
 }>()
 
-const modelDef = computed(() => props.node.data)
+// Note: The leaf node should always have a model definition on node.data.
+const modelDef = computed<ComfyModelDef>(() => props.node.data!)
+
+const modelPreviewUrl = computed(() => {
+  if (modelDef.value.image) {
+    return modelDef.value.image
+  }
+  const folder = modelDef.value.directory
+  const path_index = modelDef.value.path_index
+  const extension = modelDef.value.file_name.split('.').pop()
+  const filename = modelDef.value.file_name.replace(`.${extension}`, '.webp')
+  const encodedFilename = encodeURIComponent(filename).replace(/%2F/g, '/')
+  return `/api/experiment/models/preview/${folder}/${path_index}/${encodedFilename}`
+})
 
 const previewRef = ref<InstanceType<typeof ModelPreview> | null>(null)
 const modelPreviewStyle = ref<CSSProperties>({
@@ -57,10 +68,9 @@ const sidebarLocation = computed<'left' | 'right'>(() =>
 )
 
 const handleModelHover = async () => {
-  if (modelDef.value.is_fake_object) {
-    return
-  }
   const hoverTarget = modelContentElement.value
+  if (!hoverTarget) return
+
   const targetRect = hoverTarget.getBoundingClientRect()
 
   const previewHeight = previewRef.value?.$el.offsetHeight || 0
@@ -76,18 +86,17 @@ const handleModelHover = async () => {
     modelPreviewStyle.value.left = `${targetRect.left - 400}px`
   }
 
-  modelDef.value.load()
+  await modelDef.value.load()
 }
 
-const container = ref<HTMLElement | null>(null)
-const modelContentElement = ref<HTMLElement | null>(null)
+const container = ref<HTMLElement | undefined>()
+const modelContentElement = ref<HTMLElement | undefined>()
 const isHovered = ref(false)
 
 const showPreview = computed(() => {
   return (
     isHovered.value &&
     modelDef.value &&
-    !modelDef.value.is_fake_object &&
     modelDef.value.has_loaded_metadata &&
     (modelDef.value.author ||
       modelDef.value.simplified_file_name != modelDef.value.title ||
@@ -99,23 +108,19 @@ const showPreview = computed(() => {
 })
 
 const handleMouseEnter = async () => {
-  if (modelDef.value.is_fake_object) {
-    return
-  }
   isHovered.value = true
   await nextTick()
-  handleModelHover()
+  await handleModelHover()
 }
 const handleMouseLeave = () => {
   isHovered.value = false
 }
-onMounted(() => {
-  modelContentElement.value = container.value?.closest('.p-tree-node-content')
+onMounted(async () => {
+  modelContentElement.value =
+    container.value?.closest('.p-tree-node-content') ?? undefined
   modelContentElement.value?.addEventListener('mouseenter', handleMouseEnter)
   modelContentElement.value?.addEventListener('mouseleave', handleMouseLeave)
-  if (!modelDef.value.is_fake_object) {
-    modelDef.value.load()
-  }
+  await modelDef.value.load()
 })
 
 onUnmounted(() => {
@@ -131,16 +136,17 @@ onUnmounted(() => {
   left: 0;
   height: 1.5rem;
   vertical-align: top;
-  width: 0px;
+  width: 0;
 }
 .model-lib-model-icon {
   background-size: cover;
   background-position: center;
   display: inline-block;
   position: relative;
-  left: -2.5rem;
-  height: 2rem;
-  width: 2rem;
+  left: -2.2rem;
+  top: -0.1rem;
+  height: 1.7rem;
+  width: 1.7rem;
   vertical-align: top;
 }
 </style>

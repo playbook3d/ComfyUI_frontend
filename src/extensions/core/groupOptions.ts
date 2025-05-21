@@ -1,66 +1,20 @@
-// @ts-strict-ignore
 import { LGraphGroup } from '@comfyorg/litegraph'
-import { app } from '../../scripts/app'
-import { LGraphCanvas, LiteGraph } from '@comfyorg/litegraph'
+import { LGraphCanvas } from '@comfyorg/litegraph'
+import type { LGraphNode } from '@comfyorg/litegraph'
+import type { Positionable } from '@comfyorg/litegraph/dist/interfaces'
 
-function setNodeMode(node, mode) {
+import { useSettingStore } from '@/stores/settingStore'
+
+import { app } from '../../scripts/app'
+
+function setNodeMode(node: LGraphNode, mode: number) {
   node.mode = mode
-  node.graph.change()
+  node.graph?.change()
 }
 
-function addNodesToGroup(group, nodes = []) {
-  var x1, y1, x2, y2
-  var nx1, ny1, nx2, ny2
-  var node
-
-  x1 = y1 = x2 = y2 = -1
-  nx1 = ny1 = nx2 = ny2 = -1
-
-  for (var n of [group.nodes, nodes]) {
-    for (var i in n) {
-      node = n[i]
-
-      nx1 = node.pos[0]
-      ny1 = node.pos[1]
-      nx2 = node.pos[0] + node.size[0]
-      ny2 = node.pos[1] + node.size[1]
-
-      if (node.type != 'Reroute') {
-        ny1 -= LiteGraph.NODE_TITLE_HEIGHT
-      }
-
-      if (node.flags?.collapsed) {
-        ny2 = ny1 + LiteGraph.NODE_TITLE_HEIGHT
-
-        if (node?._collapsed_width) {
-          nx2 = nx1 + Math.round(node._collapsed_width)
-        }
-      }
-
-      if (x1 == -1 || nx1 < x1) {
-        x1 = nx1
-      }
-
-      if (y1 == -1 || ny1 < y1) {
-        y1 = ny1
-      }
-
-      if (x2 == -1 || nx2 > x2) {
-        x2 = nx2
-      }
-
-      if (y2 == -1 || ny2 > y2) {
-        y2 = ny2
-      }
-    }
-  }
-
-  var padding = 10
-
-  y1 = y1 - Math.round(group.font_size * 1.4)
-
-  group.pos = [x1 - padding, y1 - padding]
-  group.size = [x2 - x1 + padding * 2, y2 - y1 + padding * 2]
+function addNodesToGroup(group: LGraphGroup, items: Iterable<Positionable>) {
+  const padding = useSettingStore().get('Comfy.GroupSelectedNodes.Padding')
+  group.resizeTo([...group.children, ...items], padding)
 }
 
 app.registerExtension({
@@ -68,23 +22,30 @@ app.registerExtension({
   setup() {
     const orig = LGraphCanvas.prototype.getCanvasMenuOptions
     // graph_mouse
-    LGraphCanvas.prototype.getCanvasMenuOptions = function () {
+    LGraphCanvas.prototype.getCanvasMenuOptions = function (
+      this: LGraphCanvas
+    ) {
+      // @ts-expect-error fixme ts strict error
       const options = orig.apply(this, arguments)
+      // @ts-expect-error fixme ts strict error
       const group = this.graph.getGroupOnPos(
         this.graph_mouse[0],
         this.graph_mouse[1]
       )
       if (!group) {
-        options.push({
-          content: 'Add Group For Selected Nodes',
-          disabled: !Object.keys(app.canvas.selected_nodes || {}).length,
-          callback: () => {
-            const group = new LGraphGroup()
-            addNodesToGroup(group, this.selected_nodes)
-            app.canvas.graph.add(group)
-            this.graph.change()
-          }
-        })
+        if (this.selectedItems.size > 0) {
+          options.push({
+            content: 'Add Group For Selected Nodes',
+            callback: () => {
+              const group = new LGraphGroup()
+              addNodesToGroup(group, this.selectedItems)
+              // @ts-expect-error fixme ts strict error
+              this.graph.add(group)
+              // @ts-expect-error fixme ts strict error
+              this.graph.change()
+            }
+          })
+        }
 
         return options
       }
@@ -95,9 +56,10 @@ app.registerExtension({
 
       options.push({
         content: 'Add Selected Nodes To Group',
-        disabled: !Object.keys(app.canvas.selected_nodes || {}).length,
+        disabled: !this.selectedItems?.size,
         callback: () => {
-          addNodesToGroup(group, this.selected_nodes)
+          addNodesToGroup(group, this.selectedItems)
+          // @ts-expect-error fixme ts strict error
           this.graph.change()
         }
       })
@@ -107,6 +69,7 @@ app.registerExtension({
         return options
       } else {
         // Add a separator between the default options and the group options
+        // @ts-expect-error fixme ts strict error
         options.push(null)
       }
 
@@ -122,7 +85,12 @@ app.registerExtension({
       options.push({
         content: 'Fit Group To Nodes',
         callback: () => {
-          addNodesToGroup(group)
+          group.recomputeInsideNodes()
+          const padding = useSettingStore().get(
+            'Comfy.GroupSelectedNodes.Padding'
+          )
+          group.resizeTo(group.children, padding)
+          // @ts-expect-error fixme ts strict error
           this.graph.change()
         }
       })
@@ -131,6 +99,7 @@ app.registerExtension({
         content: 'Select Nodes',
         callback: () => {
           this.selectNodes(nodesInGroup)
+          // @ts-expect-error fixme ts strict error
           this.graph.change()
           this.canvas.focus()
         }

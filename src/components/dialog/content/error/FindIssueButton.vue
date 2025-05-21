@@ -1,16 +1,15 @@
 <template>
   <Button
-    @click="openGitHubIssues"
-    :label="$t('findIssues')"
+    :label="$t('g.findIssues')"
     severity="secondary"
     icon="pi pi-github"
-  >
-  </Button>
+    @click="openGitHubIssues"
+  />
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import Button from 'primevue/button'
+import { computed } from 'vue'
 
 const props = defineProps<{
   errorMessage: string

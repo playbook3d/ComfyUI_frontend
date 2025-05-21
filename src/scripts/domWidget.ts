@@ -1,418 +1,339 @@
-// @ts-strict-ignore
-import { app, ANIM_PREVIEW_WIDGET } from './app'
-import { LGraphCanvas, LGraphNode, LiteGraph } from '@comfyorg/litegraph'
-import type { Vector4 } from '@comfyorg/litegraph'
+import { LGraphNode, LegacyWidget, LiteGraph } from '@comfyorg/litegraph'
+import type {
+  IBaseWidget,
+  IWidgetOptions
+} from '@comfyorg/litegraph/dist/types/widgets'
+import _ from 'lodash'
+import { type Component, toRaw } from 'vue'
 
-const SIZE = Symbol()
+import { useChainCallback } from '@/composables/functional/useChainCallback'
+import type { InputSpec } from '@/schemas/nodeDef/nodeDefSchemaV2'
+import { useDomWidgetStore } from '@/stores/domWidgetStore'
+import { generateUUID } from '@/utils/formatUtil'
 
-interface Rect {
-  height: number
-  width: number
-  x: number
-  y: number
-}
-
-export interface DOMWidget<T = HTMLElement> {
+export interface BaseDOMWidget<V extends object | string>
+  extends IBaseWidget<V, string, DOMWidgetOptions<V>> {
+  // ICustomWidget properties
   type: string
-  name: string
-  computedHeight?: number
-  element?: T
-  options: any
-  value?: any
-  y?: number
-  callback?: (value: any) => void
-  draw?: (
+  options: DOMWidgetOptions<V>
+  value: V
+  callback?: (value: V) => void
+
+  // BaseDOMWidget properties
+  /** The unique ID of the widget. */
+  readonly id: string
+  /** The node that the widget belongs to. */
+  readonly node: LGraphNode
+  /** Whether the widget is visible. */
+  isVisible(): boolean
+  /** The margin of the widget. */
+  margin: number
+}
+
+/**
+ * A DOM widget that wraps a custom HTML element as a litegraph widget.
+ */
+export interface DOMWidget<T extends HTMLElement, V extends object | string>
+  extends BaseDOMWidget<V> {
+  element: T
+  /**
+   * @deprecated Legacy property used by some extensions for customtext
+   * (textarea) widgets. Use {@link element} instead as it provides the same
+   * functionality and works for all DOMWidget types.
+   */
+  inputEl?: T
+}
+
+/**
+ * A DOM widget that wraps a Vue component as a litegraph widget.
+ */
+export interface ComponentWidget<
+  V extends object | string,
+  P = Record<string, unknown>
+> extends BaseDOMWidget<V> {
+  readonly component: Component
+  readonly inputSpec: InputSpec
+  readonly props?: P
+}
+
+export interface DOMWidgetOptions<V extends object | string>
+  extends IWidgetOptions {
+  /**
+   * Whether to render a placeholder rectangle when zoomed out.
+   */
+  hideOnZoom?: boolean
+  selectOn?: string[]
+  onHide?: (widget: BaseDOMWidget<V>) => void
+  getValue?: () => V
+  setValue?: (value: V) => void
+  getMinHeight?: () => number
+  getMaxHeight?: () => number
+  getHeight?: () => string | number
+  onDraw?: (widget: BaseDOMWidget<V>) => void
+  margin?: number
+  /**
+   * @deprecated Use `afterResize` instead. This callback is a legacy API
+   * that fires before resize happens, but it is no longer supported. Now it
+   * fires after resize happens.
+   * The resize logic has been upstreamed to litegraph in
+   * https://github.com/Comfy-Org/ComfyUI_frontend/pull/2557
+   */
+  beforeResize?: (this: BaseDOMWidget<V>, node: LGraphNode) => void
+  afterResize?: (this: BaseDOMWidget<V>, node: LGraphNode) => void
+}
+
+export const isDOMWidget = <T extends HTMLElement, V extends object | string>(
+  widget: IBaseWidget
+): widget is DOMWidget<T, V> => 'element' in widget && !!widget.element
+
+export const isComponentWidget = <V extends object | string>(
+  widget: IBaseWidget
+): widget is ComponentWidget<V> => 'component' in widget && !!widget.component
+
+abstract class BaseDOMWidgetImpl<V extends object | string>
+  extends LegacyWidget<IBaseWidget<V, string, DOMWidgetOptions<V>>>
+  implements BaseDOMWidget<V>
+{
+  static readonly DEFAULT_MARGIN = 10
+  declare readonly name: string
+  declare readonly options: DOMWidgetOptions<V>
+  declare callback?: (value: V) => void
+
+  readonly id: string
+
+  constructor(obj: {
+    node: LGraphNode
+    name: string
+    type: string
+    options: DOMWidgetOptions<V>
+  }) {
+    const { node, name, type, options } = obj
+    super({ y: 0, name, type, options }, node)
+
+    this.id = generateUUID()
+  }
+
+  override get value(): V {
+    return this.options.getValue?.() ?? ('' as V)
+  }
+
+  override set value(v: V) {
+    this.options.setValue?.(v)
+    this.callback?.(this.value)
+  }
+
+  get margin(): number {
+    return this.options.margin ?? BaseDOMWidgetImpl.DEFAULT_MARGIN
+  }
+
+  isVisible(): boolean {
+    return !['hidden'].includes(this.type) && this.node.isWidgetVisible(this)
+  }
+
+  override draw(
     ctx: CanvasRenderingContext2D,
-    node: LGraphNode,
-    widgetWidth: number,
+    _node: LGraphNode,
+    widget_width: number,
     y: number,
-    widgetHeight: number
-  ) => void
-  onRemove?: () => void
+    widget_height: number,
+    lowQuality?: boolean
+  ): void {
+    if (this.options.hideOnZoom && lowQuality && this.isVisible()) {
+      // Draw a placeholder rectangle
+      const originalFillStyle = ctx.fillStyle
+      ctx.beginPath()
+      ctx.fillStyle = LiteGraph.WIDGET_BGCOLOR
+      ctx.rect(
+        this.margin,
+        y + this.margin,
+        widget_width - this.margin * 2,
+        (this.computedHeight ?? widget_height) - 2 * this.margin
+      )
+      ctx.fill()
+      ctx.fillStyle = originalFillStyle
+    }
+    this.options.onDraw?.(this)
+  }
+
+  override onRemove(): void {
+    useDomWidgetStore().unregisterWidget(this.id)
+  }
 }
 
-function intersect(a: Rect, b: Rect): Vector4 | null {
-  const x = Math.max(a.x, b.x)
-  const num1 = Math.min(a.x + a.width, b.x + b.width)
-  const y = Math.max(a.y, b.y)
-  const num2 = Math.min(a.y + a.height, b.y + b.height)
-  if (num1 >= x && num2 >= y) return [x, y, num1 - x, num2 - y]
-  else return null
-}
+export class DOMWidgetImpl<T extends HTMLElement, V extends object | string>
+  extends BaseDOMWidgetImpl<V>
+  implements DOMWidget<T, V>
+{
+  override readonly element: T
 
-function getClipPath(
-  node: LGraphNode,
-  element: HTMLElement,
-  canvasRect: DOMRect
-): string {
-  const selectedNode: LGraphNode = Object.values(
-    app.canvas.selected_nodes
-  )[0] as LGraphNode
-  if (selectedNode && selectedNode !== node) {
-    const elRect = element.getBoundingClientRect()
-    const MARGIN = 7
-    const scale = app.canvas.ds.scale
+  constructor(obj: {
+    node: LGraphNode
+    name: string
+    type: string
+    element: T
+    options: DOMWidgetOptions<V>
+  }) {
+    super(obj)
+    this.element = obj.element
+  }
 
-    const bounding = selectedNode.getBounding()
-    const intersection = intersect(
-      {
-        x: elRect.x / scale - canvasRect.left,
-        y: elRect.y / scale - canvasRect.top,
-        width: elRect.width / scale,
-        height: elRect.height / scale
-      },
-      {
-        x: selectedNode.pos[0] + app.canvas.ds.offset[0] - MARGIN,
-        y:
-          selectedNode.pos[1] +
-          app.canvas.ds.offset[1] -
-          LiteGraph.NODE_TITLE_HEIGHT -
-          MARGIN,
-        width: bounding[2] + MARGIN + MARGIN,
-        height: bounding[3] + MARGIN + MARGIN
+  /** Extract DOM widget size info */
+  override computeLayoutSize(node: LGraphNode) {
+    if (this.type === 'hidden') {
+      return {
+        minHeight: 0,
+        maxHeight: 0,
+        minWidth: 0
       }
-    )
-
-    if (!intersection) {
-      return ''
     }
 
-    const clipX = canvasRect.left + intersection[0] - elRect.x / scale + 'px'
-    const clipY = canvasRect.top + intersection[1] - elRect.y / scale + 'px'
-    const clipWidth = intersection[2] + 'px'
-    const clipHeight = intersection[3] + 'px'
-    const path = `polygon(0% 0%, 0% 100%, ${clipX} 100%, ${clipX} ${clipY}, calc(${clipX} + ${clipWidth}) ${clipY}, calc(${clipX} + ${clipWidth}) calc(${clipY} + ${clipHeight}), ${clipX} calc(${clipY} + ${clipHeight}), ${clipX} 100%, 100% 100%, 100% 0%)`
-    return path
-  }
-  return ''
-}
+    const styles = getComputedStyle(this.element)
+    let minHeight =
+      this.options.getMinHeight?.() ??
+      parseInt(styles.getPropertyValue('--comfy-widget-min-height'))
+    let maxHeight =
+      this.options.getMaxHeight?.() ??
+      parseInt(styles.getPropertyValue('--comfy-widget-max-height'))
 
-function computeSize(size: [number, number]): void {
-  if (this.widgets?.[0]?.last_y == null) return
+    let prefHeight: string | number =
+      this.options.getHeight?.() ??
+      styles.getPropertyValue('--comfy-widget-height')
 
-  let y = this.widgets[0].last_y
-  let freeSpace = size[1] - y
+    if (typeof prefHeight === 'string' && prefHeight.endsWith?.('%')) {
+      prefHeight =
+        node.size[1] *
+        (parseFloat(prefHeight.substring(0, prefHeight.length - 1)) / 100)
+    } else {
+      prefHeight =
+        typeof prefHeight === 'number' ? prefHeight : parseInt(prefHeight)
 
-  let widgetHeight = 0
-  let dom = []
-  for (const w of this.widgets) {
-    if (w.type === 'converted-widget') {
-      // Ignore
-      delete w.computedHeight
-    } else if (w.computeSize) {
-      widgetHeight += w.computeSize()[1] + 4
-    } else if (w.element) {
-      // Extract DOM widget size info
-      const styles = getComputedStyle(w.element)
-      let minHeight =
-        w.options.getMinHeight?.() ??
-        parseInt(styles.getPropertyValue('--comfy-widget-min-height'))
-      let maxHeight =
-        w.options.getMaxHeight?.() ??
-        parseInt(styles.getPropertyValue('--comfy-widget-max-height'))
-
-      let prefHeight =
-        w.options.getHeight?.() ??
-        styles.getPropertyValue('--comfy-widget-height')
-      if (prefHeight.endsWith?.('%')) {
-        prefHeight =
-          size[1] *
-          (parseFloat(prefHeight.substring(0, prefHeight.length - 1)) / 100)
-      } else {
-        prefHeight = parseInt(prefHeight)
-        if (isNaN(minHeight)) {
-          minHeight = prefHeight
-        }
-      }
       if (isNaN(minHeight)) {
-        minHeight = 50
-      }
-      if (!isNaN(maxHeight)) {
-        if (!isNaN(prefHeight)) {
-          prefHeight = Math.min(prefHeight, maxHeight)
-        } else {
-          prefHeight = maxHeight
-        }
-      }
-      dom.push({
-        minHeight,
-        prefHeight,
-        w
-      })
-    } else {
-      widgetHeight += LiteGraph.NODE_WIDGET_HEIGHT + 4
-    }
-  }
-
-  freeSpace -= widgetHeight
-
-  // Calculate sizes with all widgets at their min height
-  const prefGrow = [] // Nodes that want to grow to their prefd size
-  const canGrow = [] // Nodes that can grow to auto size
-  let growBy = 0
-  for (const d of dom) {
-    freeSpace -= d.minHeight
-    if (isNaN(d.prefHeight)) {
-      canGrow.push(d)
-      d.w.computedHeight = d.minHeight
-    } else {
-      const diff = d.prefHeight - d.minHeight
-      if (diff > 0) {
-        prefGrow.push(d)
-        growBy += diff
-        d.diff = diff
-      } else {
-        d.w.computedHeight = d.minHeight
+        minHeight = prefHeight
       }
     }
-  }
 
-  if (this.imgs && !this.widgets.find((w) => w.name === ANIM_PREVIEW_WIDGET)) {
-    // Allocate space for image
-    freeSpace -= 220
-  }
-
-  this.freeWidgetSpace = freeSpace
-
-  if (freeSpace < 0) {
-    // Not enough space for all widgets so we need to grow
-    size[1] -= freeSpace
-    this.graph.setDirtyCanvas(true)
-  } else {
-    // Share the space between each
-    const growDiff = freeSpace - growBy
-    if (growDiff > 0) {
-      // All pref sizes can be fulfilled
-      freeSpace = growDiff
-      for (const d of prefGrow) {
-        d.w.computedHeight = d.prefHeight
-      }
-    } else {
-      // We need to grow evenly
-      const shared = -growDiff / prefGrow.length
-      for (const d of prefGrow) {
-        d.w.computedHeight = d.prefHeight - shared
-      }
-      freeSpace = 0
-    }
-
-    if (freeSpace > 0 && canGrow.length) {
-      // Grow any that are auto height
-      const shared = freeSpace / canGrow.length
-      for (const d of canGrow) {
-        d.w.computedHeight += shared
-      }
-    }
-  }
-
-  // Position each of the widgets
-  for (const w of this.widgets) {
-    w.y = y
-    if (w.computedHeight) {
-      y += w.computedHeight
-    } else if (w.computeSize) {
-      y += w.computeSize()[1] + 4
-    } else {
-      y += LiteGraph.NODE_WIDGET_HEIGHT + 4
+    return {
+      minHeight: isNaN(minHeight) ? 50 : minHeight,
+      maxHeight: isNaN(maxHeight) ? undefined : maxHeight,
+      minWidth: 0
     }
   }
 }
 
-// Override the compute visible nodes function to allow us to hide/show DOM elements when the node goes offscreen
-const elementWidgets = new Set()
-//@ts-ignore
-const computeVisibleNodes = LGraphCanvas.prototype.computeVisibleNodes
-//@ts-ignore
-LGraphCanvas.prototype.computeVisibleNodes = function (): LGraphNode[] {
-  const visibleNodes = computeVisibleNodes.apply(this, arguments)
+export class ComponentWidgetImpl<
+    V extends object | string,
+    P = Record<string, unknown>
+  >
+  extends BaseDOMWidgetImpl<V>
+  implements ComponentWidget<V, P>
+{
+  readonly component: Component
+  readonly inputSpec: InputSpec
+  readonly props?: P
 
-  for (const node of app.graph.nodes) {
-    if (elementWidgets.has(node)) {
-      const hidden = visibleNodes.indexOf(node) === -1
-      for (const w of node.widgets) {
-        if (w.element) {
-          w.element.dataset.isInVisibleNodes = hidden ? 'false' : 'true'
-          const shouldOtherwiseHide = w.element.dataset.shouldHide === 'true'
-          const isCollapsed = w.element.dataset.collapsed === 'true'
-          const wasHidden = w.element.hidden
-          const actualHidden = hidden || shouldOtherwiseHide || isCollapsed
-          w.element.hidden = actualHidden
-          w.element.style.display = actualHidden ? 'none' : null
-          if (actualHidden && !wasHidden) {
-            w.options.onHide?.(w)
-          }
-        }
-      }
+  constructor(obj: {
+    node: LGraphNode
+    name: string
+    component: Component
+    inputSpec: InputSpec
+    props?: P
+    options: DOMWidgetOptions<V>
+  }) {
+    super({
+      ...obj,
+      type: 'custom'
+    })
+    this.component = obj.component
+    this.inputSpec = obj.inputSpec
+    this.props = obj.props
+  }
+
+  override computeLayoutSize() {
+    const minHeight = this.options.getMinHeight?.() ?? 50
+    const maxHeight = this.options.getMaxHeight?.()
+    return {
+      minHeight,
+      maxHeight,
+      minWidth: 0
     }
   }
 
-  return visibleNodes
+  override serializeValue(): V {
+    return toRaw(this.value)
+  }
 }
 
-let enableDomClipping = true
+export const addWidget = <W extends BaseDOMWidget<object | string>>(
+  node: LGraphNode,
+  widget: W
+) => {
+  node.addCustomWidget(widget)
 
-export function addDomClippingSetting(): void {
-  app.ui.settings.addSetting({
-    id: 'Comfy.DOMClippingEnabled',
-    category: ['Comfy', 'Node', 'DOMClippingEnabled'],
-    name: 'Enable DOM element clipping (enabling may reduce performance)',
-    type: 'boolean',
-    defaultValue: enableDomClipping,
-    onChange(value) {
-      enableDomClipping = !!value
-    }
+  if (node.graph) {
+    useDomWidgetStore().registerWidget(widget)
+  }
+
+  node.onAdded = useChainCallback(node.onAdded, () => {
+    useDomWidgetStore().registerWidget(widget)
+  })
+
+  node.onRemoved = useChainCallback(node.onRemoved, () => {
+    widget.onRemove?.()
+  })
+
+  node.onResize = useChainCallback(node.onResize, () => {
+    widget.options.beforeResize?.call(widget, node)
+    widget.options.afterResize?.call(widget, node)
   })
 }
 
-LGraphNode.prototype.addDOMWidget = function (
+LGraphNode.prototype.addDOMWidget = function <
+  T extends HTMLElement,
+  V extends object | string
+>(
+  this: LGraphNode,
   name: string,
   type: string,
-  element: HTMLElement,
-  options: Record<string, any>
-): DOMWidget {
-  options = { hideOnZoom: true, selectOn: ['focus', 'click'], ...options }
-
-  if (!element.parentElement) {
-    app.canvasContainer.append(element)
-  }
-  element.hidden = true
-  element.style.display = 'none'
-
-  let mouseDownHandler
-  if (element.blur) {
-    mouseDownHandler = (event) => {
-      if (!element.contains(event.target)) {
-        element.blur()
-      }
-    }
-    document.addEventListener('mousedown', mouseDownHandler)
-  }
-
-  const { nodeData } = this.constructor
-  const tooltip = (nodeData?.input.required?.[name] ??
-    nodeData?.input.optional?.[name])?.[1]?.tooltip
-  if (tooltip && !element.title) {
-    element.title = tooltip
-  }
-
-  const widget: DOMWidget = {
-    type,
+  element: T,
+  options: DOMWidgetOptions<V> = {}
+): DOMWidget<T, V> {
+  const widget = new DOMWidgetImpl({
+    node: this,
     name,
-    get value() {
-      return options.getValue?.() ?? undefined
-    },
-    set value(v) {
-      options.setValue?.(v)
-      widget.callback?.(widget.value)
-    },
-    draw: function (
-      ctx: CanvasRenderingContext2D,
-      node: LGraphNode,
-      widgetWidth: number,
-      y: number,
-      widgetHeight: number
-    ) {
-      if (widget.computedHeight == null) {
-        computeSize.call(node, node.size)
-      }
-
-      const hidden =
-        (!!options.hideOnZoom && app.canvas.ds.scale < 0.5) ||
-        widget.computedHeight <= 0 ||
-        widget.type === 'converted-widget' ||
-        widget.type === 'hidden'
-      element.dataset.shouldHide = hidden ? 'true' : 'false'
-      const isInVisibleNodes = element.dataset.isInVisibleNodes === 'true'
-      const isCollapsed = element.dataset.collapsed === 'true'
-      const actualHidden = hidden || !isInVisibleNodes || isCollapsed
-      const wasHidden = element.hidden
-      element.hidden = actualHidden
-      element.style.display = actualHidden ? 'none' : null
-      if (actualHidden && !wasHidden) {
-        widget.options.onHide?.(widget)
-      }
-      if (actualHidden) {
-        return
-      }
-
-      const margin = 10
-      const elRect = ctx.canvas.getBoundingClientRect()
-      const transform = new DOMMatrix()
-        .scaleSelf(
-          elRect.width / ctx.canvas.width,
-          elRect.height / ctx.canvas.height
-        )
-        .multiplySelf(ctx.getTransform())
-        .translateSelf(margin, margin + y)
-
-      const scale = new DOMMatrix().scaleSelf(transform.a, transform.d)
-
-      Object.assign(element.style, {
-        transformOrigin: '0 0',
-        transform: scale,
-        left: `${transform.a + transform.e}px`,
-        top: `${transform.d + transform.f}px`,
-        width: `${widgetWidth - margin * 2}px`,
-        height: `${(widget.computedHeight ?? 50) - margin * 2}px`,
-        position: 'absolute',
-        zIndex: app.graph.nodes.indexOf(node),
-        pointerEvents: app.canvas.read_only ? 'none' : 'auto'
-      })
-
-      if (enableDomClipping) {
-        element.style.clipPath = getClipPath(node, element, elRect)
-        element.style.willChange = 'clip-path'
-      }
-
-      this.options.onDraw?.(widget)
-    },
+    type,
     element,
-    options,
-    onRemove() {
-      if (mouseDownHandler) {
-        document.removeEventListener('mousedown', mouseDownHandler)
-      }
-      element.remove()
+    options: { hideOnZoom: true, ...options }
+  })
+  // Note: Before `LGraphNode.configure` is called, `this.id` is always `-1`.
+  addWidget(this, widget as unknown as BaseDOMWidget<object | string>)
+
+  // Workaround for https://github.com/Comfy-Org/ComfyUI_frontend/issues/2493
+  // Some custom nodes are explicitly expecting getter and setter of `value`
+  // property to be on instance instead of prototype.
+  Object.defineProperty(widget, 'value', {
+    get(this: DOMWidgetImpl<T, V>): V {
+      return this.options.getValue?.() ?? ('' as V)
+    },
+    set(this: DOMWidgetImpl<T, V>, v: V) {
+      this.options.setValue?.(v)
+      this.callback?.(this.value)
     }
-  }
-
-  for (const evt of options.selectOn) {
-    element.addEventListener(evt, () => {
-      app.canvas.selectNode(this)
-      app.canvas.bringToFront(this)
-    })
-  }
-
-  this.addCustomWidget(widget)
-  elementWidgets.add(this)
-
-  const collapse = this.collapse
-  this.collapse = function () {
-    collapse.apply(this, arguments)
-    if (this.flags?.collapsed) {
-      element.hidden = true
-      element.style.display = 'none'
-    }
-    element.dataset.collapsed = this.flags?.collapsed ? 'true' : 'false'
-  }
-
-  const onRemoved = this.onRemoved
-  this.onRemoved = function () {
-    element.remove()
-    elementWidgets.delete(this)
-    onRemoved?.apply(this, arguments)
-  }
-
-  if (!this[SIZE]) {
-    this[SIZE] = true
-    const onResize = this.onResize
-    this.onResize = function (size) {
-      options.beforeResize?.call(widget, this)
-      computeSize.call(this, size)
-      onResize?.apply(this, arguments)
-      options.afterResize?.call(widget, this)
-    }
-  }
+  })
 
   return widget
+}
+
+/**
+ * Prunes widgets that are no longer in the graph.
+ * @param nodes The nodes to prune widgets for.
+ */
+export const pruneWidgets = (nodes: LGraphNode[]) => {
+  const nodeSet = new Set(nodes)
+  const domWidgetStore = useDomWidgetStore()
+  for (const widgetState of domWidgetStore.widgetStates.values()) {
+    const widget = widgetState.widget
+    if (!nodeSet.has(widget.node as LGraphNode)) {
+      domWidgetStore.unregisterWidget(widget.id)
+    }
+  }
 }
