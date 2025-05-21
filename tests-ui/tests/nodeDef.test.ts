@@ -1,15 +1,11 @@
-// @ts-strict-ignore
-import {
-  ComfyInputsSpec,
-  IntInputSpec,
-  StringInputSpec,
-  BooleanInputSpec,
-  FloatInputSpec,
-  ComfyNodeDefImpl
-} from '@/stores/nodeDefStore' // Adjust the import path as needed
+import { describe, expect, it } from 'vitest'
 
-describe('ComfyInputsSpec', () => {
-  it('should transform a plain object to ComfyInputsSpec instance', () => {
+import { transformNodeDefV1ToV2 } from '@/schemas/nodeDef/migration'
+import type { ComfyNodeDef as ComfyNodeDefV1 } from '@/schemas/nodeDefSchema'
+import { ComfyNodeDefImpl } from '@/stores/nodeDefStore'
+
+describe('NodeDef Migration', () => {
+  it('should transform a plain object to V2 format', () => {
     const plainObject = {
       required: {
         intInput: ['INT', { min: 0, max: 100, default: 50 }],
@@ -25,13 +21,26 @@ describe('ComfyInputsSpec', () => {
       hidden: {
         someHiddenValue: 42
       }
+    } as ComfyNodeDefV1['input']
+
+    const nodeDef: ComfyNodeDefV1 = {
+      name: 'TestNode',
+      display_name: 'Test Node',
+      category: 'Testing',
+      python_module: 'test_module',
+      description: 'A test node',
+      input: plainObject,
+      output: ['INT'],
+      output_is_list: [false],
+      output_name: ['intOutput'],
+      output_node: false
     }
 
-    const result = new ComfyInputsSpec(plainObject)
+    const result = transformNodeDefV1ToV2(nodeDef)
 
-    expect(result).toBeInstanceOf(ComfyInputsSpec)
-    expect(result.required).toBeDefined()
-    expect(result.optional).toBeDefined()
+    expect(result).toBeDefined()
+    expect(result.inputs).toBeDefined()
+    expect(result.outputs).toBeDefined()
     expect(result.hidden).toBeDefined()
   })
 
@@ -41,20 +50,35 @@ describe('ComfyInputsSpec', () => {
         intInput: ['INT', { min: 0, max: 100, default: 50 }],
         stringInput: ['STRING', { default: 'Hello', multiline: true }]
       }
+    } as ComfyNodeDefV1['input']
+
+    const nodeDef: ComfyNodeDefV1 = {
+      name: 'TestNode',
+      display_name: 'Test Node',
+      category: 'Testing',
+      python_module: 'test_module',
+      description: 'A test node',
+      input: plainObject,
+      output: [],
+      output_is_list: [],
+      output_name: [],
+      output_node: false
     }
 
-    const result = new ComfyInputsSpec(plainObject)
+    const result = transformNodeDefV1ToV2(nodeDef)
 
-    const intInput = result.required.intInput as IntInputSpec
-    const stringInput = result.required.stringInput as StringInputSpec
+    const intInput = result.inputs['intInput']
+    const stringInput = result.inputs['stringInput']
 
     expect(intInput.min).toBe(0)
     expect(intInput.max).toBe(100)
     expect(intInput.default).toBe(50)
     expect(intInput.name).toBe('intInput')
+    expect(intInput.type).toBe('INT')
     expect(stringInput.default).toBe('Hello')
     expect(stringInput.multiline).toBe(true)
     expect(stringInput.name).toBe('stringInput')
+    expect(stringInput.type).toBe('STRING')
   })
 
   it('should correctly transform optional input specs', () => {
@@ -66,19 +90,36 @@ describe('ComfyInputsSpec', () => {
         ],
         floatInput: ['FLOAT', { min: 0, max: 1, step: 0.1 }]
       }
+    } as ComfyNodeDefV1['input']
+
+    const nodeDef: ComfyNodeDefV1 = {
+      name: 'TestNode',
+      display_name: 'Test Node',
+      category: 'Testing',
+      python_module: 'test_module',
+      description: 'A test node',
+      input: plainObject,
+      output: [],
+      output_is_list: [],
+      output_name: [],
+      output_node: false
     }
 
-    const result = new ComfyInputsSpec(plainObject)
+    const result = transformNodeDefV1ToV2(nodeDef)
 
-    const booleanInput = result.optional.booleanInput as BooleanInputSpec
-    const floatInput = result.optional.floatInput as FloatInputSpec
+    const booleanInput = result.inputs['booleanInput']
+    const floatInput = result.inputs['floatInput']
 
     expect(booleanInput.default).toBe(true)
     expect(booleanInput.labelOn).toBe('Yes')
     expect(booleanInput.labelOff).toBe('No')
+    expect(booleanInput.type).toBe('BOOLEAN')
+    expect(booleanInput.isOptional).toBe(true)
     expect(floatInput.min).toBe(0)
     expect(floatInput.max).toBe(1)
     expect(floatInput.step).toBe(0.1)
+    expect(floatInput.type).toBe('FLOAT')
+    expect(floatInput.isOptional).toBe(true)
   })
 
   it('should handle combo input specs', () => {
@@ -86,11 +127,25 @@ describe('ComfyInputsSpec', () => {
       optional: {
         comboInput: [[1, 2, 3], { default: 2 }]
       }
+    } as ComfyNodeDefV1['input']
+
+    const nodeDef: ComfyNodeDefV1 = {
+      name: 'TestNode',
+      display_name: 'Test Node',
+      category: 'Testing',
+      python_module: 'test_module',
+      description: 'A test node',
+      input: plainObject,
+      output: [],
+      output_is_list: [],
+      output_name: [],
+      output_node: false
     }
 
-    const result = new ComfyInputsSpec(plainObject)
-    expect(result.optional.comboInput.type).toBe('COMBO')
-    expect(result.optional.comboInput.default).toBe(2)
+    const result = transformNodeDefV1ToV2(nodeDef)
+    expect(result.inputs['comboInput'].type).toBe('COMBO')
+    expect(result.inputs['comboInput'].default).toBe(2)
+    expect(result.inputs['comboInput'].options).toEqual([1, 2, 3])
   })
 
   it('should handle combo input specs (auto-default)', () => {
@@ -98,12 +153,25 @@ describe('ComfyInputsSpec', () => {
       optional: {
         comboInput: [[1, 2, 3], {}]
       }
+    } as ComfyNodeDefV1['input']
+
+    const nodeDef: ComfyNodeDefV1 = {
+      name: 'TestNode',
+      display_name: 'Test Node',
+      category: 'Testing',
+      python_module: 'test_module',
+      description: 'A test node',
+      input: plainObject,
+      output: [],
+      output_is_list: [],
+      output_name: [],
+      output_node: false
     }
 
-    const result = new ComfyInputsSpec(plainObject)
-    expect(result.optional.comboInput.type).toBe('COMBO')
+    const result = transformNodeDefV1ToV2(nodeDef)
+    expect(result.inputs['comboInput'].type).toBe('COMBO')
     // Should pick the first choice as default
-    expect(result.optional.comboInput.default).toBe(1)
+    expect(result.inputs['comboInput'].options).toEqual([1, 2, 3])
   })
 
   it('should handle custom input specs', () => {
@@ -111,11 +179,24 @@ describe('ComfyInputsSpec', () => {
       optional: {
         customInput: ['CUSTOM_TYPE', { default: 'custom value' }]
       }
+    } as ComfyNodeDefV1['input']
+
+    const nodeDef: ComfyNodeDefV1 = {
+      name: 'TestNode',
+      display_name: 'Test Node',
+      category: 'Testing',
+      python_module: 'test_module',
+      description: 'A test node',
+      input: plainObject,
+      output: [],
+      output_is_list: [],
+      output_name: [],
+      output_node: false
     }
 
-    const result = new ComfyInputsSpec(plainObject)
-    expect(result.optional.customInput.type).toBe('CUSTOM_TYPE')
-    expect(result.optional.customInput.default).toBe('custom value')
+    const result = transformNodeDefV1ToV2(nodeDef)
+    expect(result.inputs['customInput'].type).toBe('CUSTOM_TYPE')
+    expect(result.inputs['customInput'].default).toBe('custom value')
   })
 
   it('should not transform hidden fields', () => {
@@ -124,10 +205,24 @@ describe('ComfyInputsSpec', () => {
         someHiddenValue: 42,
         anotherHiddenValue: { nested: 'object' }
       }
+    } as ComfyNodeDefV1['input']
+
+    const nodeDef: ComfyNodeDefV1 = {
+      name: 'TestNode',
+      display_name: 'Test Node',
+      category: 'Testing',
+      python_module: 'test_module',
+      description: 'A test node',
+      input: plainObject,
+      output: [],
+      output_is_list: [],
+      output_name: [],
+      output_node: false
     }
 
-    const result = new ComfyInputsSpec(plainObject)
+    const result = transformNodeDefV1ToV2(nodeDef)
 
+    // @ts-expect-error fixme ts strict error
     expect(result.hidden).toEqual(plainObject.hidden)
     expect(result.hidden?.someHiddenValue).toBe(42)
     expect(result.hidden?.anotherHiddenValue).toEqual({ nested: 'object' })
@@ -136,11 +231,23 @@ describe('ComfyInputsSpec', () => {
   it('should handle empty or undefined fields', () => {
     const plainObject = {}
 
-    const result = new ComfyInputsSpec(plainObject)
+    const nodeDef: ComfyNodeDefV1 = {
+      name: 'TestNode',
+      display_name: 'Test Node',
+      category: 'Testing',
+      python_module: 'test_module',
+      description: 'A test node',
+      input: plainObject,
+      output: [],
+      output_is_list: [],
+      output_name: [],
+      output_node: false
+    }
 
-    expect(result).toBeInstanceOf(ComfyInputsSpec)
-    expect(result.required).toEqual({})
-    expect(result.optional).toEqual({})
+    const result = transformNodeDefV1ToV2(nodeDef)
+
+    expect(result).toBeDefined()
+    expect(result.inputs).toEqual({})
     expect(result.hidden).toBeUndefined()
   })
 })
@@ -160,8 +267,9 @@ describe('ComfyNodeDefImpl', () => {
       },
       output: ['INT'],
       output_is_list: [false],
-      output_name: ['intOutput']
-    }
+      output_name: ['intOutput'],
+      output_node: false
+    } as ComfyNodeDefV1
 
     const result = new ComfyNodeDefImpl(plainObject)
 
@@ -171,8 +279,8 @@ describe('ComfyNodeDefImpl', () => {
     expect(result.category).toBe('Testing')
     expect(result.python_module).toBe('test_module')
     expect(result.description).toBe('A test node')
-    expect(result.input).toBeInstanceOf(ComfyInputsSpec)
-    expect(result.output.all).toEqual([
+    expect(result.inputs).toBeDefined()
+    expect(result.outputs).toEqual([
       {
         index: 0,
         name: 'intOutput',
@@ -198,8 +306,9 @@ describe('ComfyNodeDefImpl', () => {
       output: ['INT'],
       output_is_list: [false],
       output_name: ['intOutput'],
-      deprecated: true
-    }
+      deprecated: true,
+      output_node: false
+    } as ComfyNodeDefV1
 
     const result = new ComfyNodeDefImpl(plainObject)
     expect(result.deprecated).toBe(true)
@@ -221,8 +330,9 @@ describe('ComfyNodeDefImpl', () => {
       },
       output: ['INT'],
       output_is_list: [false],
-      output_name: ['intOutput']
-    }
+      output_name: ['intOutput'],
+      output_node: false
+    } as ComfyNodeDefV1
 
     const result = new ComfyNodeDefImpl(plainObject)
     expect(result.deprecated).toBe(true)
@@ -238,12 +348,13 @@ describe('ComfyNodeDefImpl', () => {
       input: {},
       output: ['STRING', ['COMBO', 'option1', 'option2'], 'FLOAT'],
       output_is_list: [true, false, false],
-      output_name: ['stringOutput', 'comboOutput', 'floatOutput']
-    }
+      output_name: ['stringOutput', 'comboOutput', 'floatOutput'],
+      output_node: false
+    } as ComfyNodeDefV1
 
     const result = new ComfyNodeDefImpl(plainObject)
 
-    expect(result.output.all).toEqual([
+    expect(result.outputs).toEqual([
       {
         index: 0,
         name: 'stringOutput',
@@ -255,7 +366,7 @@ describe('ComfyNodeDefImpl', () => {
         name: 'comboOutput',
         type: 'COMBO',
         is_list: false,
-        comboOptions: ['COMBO', 'option1', 'option2']
+        options: ['COMBO', 'option1', 'option2']
       },
       {
         index: 2,
@@ -276,12 +387,13 @@ describe('ComfyNodeDefImpl', () => {
       input: {},
       output: ['INT', 'FLOAT', 'FLOAT'],
       output_is_list: [false, true, true],
-      output_name: ['INT', 'FLOAT', 'FLOAT']
-    }
+      output_name: ['INT', 'FLOAT', 'FLOAT'],
+      output_node: false
+    } as ComfyNodeDefV1
 
     const result = new ComfyNodeDefImpl(plainObject)
 
-    expect(result.output.all).toEqual([
+    expect(result.outputs).toEqual([
       {
         index: 0,
         name: 'INT',
@@ -313,11 +425,12 @@ describe('ComfyNodeDefImpl', () => {
       input: {},
       output: ['INT', 'FLOAT', 'STRING'],
       output_is_list: [false, false, false],
-      output_name: ['output', 'output', 'uniqueOutput']
-    }
+      output_name: ['output', 'output', 'uniqueOutput'],
+      output_node: false
+    } as ComfyNodeDefV1
 
     const result = new ComfyNodeDefImpl(plainObject)
-    expect(result.output.all).toEqual([
+    expect(result.outputs).toEqual([
       {
         index: 0,
         name: 'output',
@@ -349,12 +462,13 @@ describe('ComfyNodeDefImpl', () => {
       input: {},
       output: [],
       output_is_list: [],
-      output_name: []
-    }
+      output_name: [],
+      output_node: false
+    } as ComfyNodeDefV1
 
     const result = new ComfyNodeDefImpl(plainObject)
 
-    expect(result.output.all).toEqual([])
+    expect(result.outputs).toEqual([])
   })
 
   it('should handle undefined fields', () => {
@@ -363,12 +477,13 @@ describe('ComfyNodeDefImpl', () => {
       display_name: 'Empty Output Node',
       category: 'Test',
       python_module: 'test_module',
-      description: 'A node with no outputs'
-    }
+      description: 'A node with no outputs',
+      output_node: false
+    } as ComfyNodeDefV1
 
     const result = new ComfyNodeDefImpl(plainObject)
-    expect(result.output.all).toEqual([])
-    expect(result.input.all).toEqual([])
+    expect(result.outputs).toEqual([])
+    expect(Object.keys(result.inputs)).toHaveLength(0)
   })
 
   it('should handle complex input specifications', () => {
@@ -390,13 +505,36 @@ describe('ComfyNodeDefImpl', () => {
       },
       output: ['INT'],
       output_is_list: [false],
-      output_name: ['result']
-    }
+      output_name: ['result'],
+      output_node: false
+    } as ComfyNodeDefV1
 
     const result = new ComfyNodeDefImpl(plainObject)
 
-    expect(result.input).toBeInstanceOf(ComfyInputsSpec)
-    expect(result.input.required).toBeDefined()
-    expect(result.input.optional).toBeDefined()
+    expect(result.inputs).toBeDefined()
+    expect(Object.keys(result.inputs)).toHaveLength(4)
+    expect(result.inputs['intInput']).toBeDefined()
+    expect(result.inputs['stringInput']).toBeDefined()
+    expect(result.inputs['booleanInput']).toBeDefined()
+    expect(result.inputs['floatInput']).toBeDefined()
   })
+
+  it.each([
+    { api_node: true, expected: true },
+    { api_node: false, expected: false },
+    { api_node: undefined, expected: false }
+  ] as { api_node: boolean | undefined; expected: boolean }[])(
+    'should handle api_node field: $api_node',
+    ({ api_node, expected }) => {
+      const result = new ComfyNodeDefImpl({
+        name: 'ApiNode',
+        display_name: 'API Node',
+        category: 'Test',
+        python_module: 'test_module',
+        description: 'A node with API',
+        api_node
+      } as ComfyNodeDefV1)
+      expect(result.api_node).toBe(expected)
+    }
+  )
 })

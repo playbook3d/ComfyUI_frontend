@@ -9,31 +9,63 @@ export class Topbar {
       .allInnerTexts()
   }
 
+  async getActiveTabName(): Promise<string> {
+    return this.page
+      .locator('.workflow-tabs .p-togglebutton-checked')
+      .innerText()
+  }
+
   async openSubmenuMobile() {
     await this.page.locator('.p-menubar-mobile .p-menubar-button').click()
   }
 
-  async getMenuItem(itemLabel: string): Promise<Locator> {
+  getMenuItem(itemLabel: string): Locator {
     return this.page.locator(`.p-menubar-item-label:text-is("${itemLabel}")`)
   }
 
-  async getWorkflowTab(tabName: string): Promise<Locator> {
+  getWorkflowTab(tabName: string): Locator {
     return this.page
       .locator(`.workflow-tabs .workflow-label:has-text("${tabName}")`)
       .locator('..')
   }
 
   async closeWorkflowTab(tabName: string) {
-    const tab = await this.getWorkflowTab(tabName)
+    const tab = this.getWorkflowTab(tabName)
     await tab.locator('.close-button').click({ force: true })
   }
 
-  async saveWorkflow(workflowName: string) {
-    await this.triggerTopbarCommand(['Workflow', 'Save'])
-    await this.page.locator('.p-dialog-content input').fill(workflowName)
+  getSaveDialog(): Locator {
+    return this.page.locator('.p-dialog-content input')
+  }
+
+  saveWorkflow(workflowName: string): Promise<void> {
+    return this._saveWorkflow(workflowName, 'Save')
+  }
+
+  saveWorkflowAs(workflowName: string): Promise<void> {
+    return this._saveWorkflow(workflowName, 'Save As')
+  }
+
+  exportWorkflow(workflowName: string): Promise<void> {
+    return this._saveWorkflow(workflowName, 'Export')
+  }
+
+  async _saveWorkflow(
+    workflowName: string,
+    command: 'Save' | 'Save As' | 'Export'
+  ) {
+    await this.triggerTopbarCommand(['Workflow', command])
+    await this.getSaveDialog().fill(workflowName)
     await this.page.keyboard.press('Enter')
+
+    // Wait for workflow service to finish saving
+    await this.page.waitForFunction(
+      () => !window['app'].extensionManager.workflow.isBusy,
+      undefined,
+      { timeout: 3000 }
+    )
     // Wait for the dialog to close.
-    await this.page.waitForTimeout(300)
+    await this.getSaveDialog().waitFor({ state: 'hidden', timeout: 500 })
   }
 
   async triggerTopbarCommand(path: string[]) {

@@ -1,9 +1,14 @@
-import type { BottomPanelExtension } from '@/types/extensionTypes'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+
+import {
+  useCommandTerminalTab,
+  useLogsTerminalTab
+} from '@/composables/bottomPanelTabs/useTerminalTabs'
 import { useCommandStore } from '@/stores/commandStore'
-import { useIntegratedTerminalTab } from '@/hooks/bottomPanelTabs/integratedTerminalTab'
 import { ComfyExtension } from '@/types/comfy'
+import type { BottomPanelExtension } from '@/types/extensionTypes'
+import { isElectron } from '@/utils/envUtil'
 
 export const useBottomPanelStore = defineStore('bottomPanel', () => {
   const bottomPanelVisible = ref(false)
@@ -16,7 +21,7 @@ export const useBottomPanelStore = defineStore('bottomPanel', () => {
   }
 
   const bottomPanelTabs = ref<BottomPanelExtension[]>([])
-  const activeBottomPanelTabId = ref<string | null>(null)
+  const activeBottomPanelTabId = ref<string>('')
   const activeBottomPanelTab = computed<BottomPanelExtension | null>(() => {
     return (
       bottomPanelTabs.value.find(
@@ -43,13 +48,17 @@ export const useBottomPanelStore = defineStore('bottomPanel', () => {
     useCommandStore().registerCommand({
       id: `Workspace.ToggleBottomPanelTab.${tab.id}`,
       icon: 'pi pi-list',
-      label: tab.title,
-      function: () => toggleBottomPanelTab(tab.id)
+      label: `Toggle ${tab.title} Bottom Panel`,
+      function: () => toggleBottomPanelTab(tab.id),
+      source: 'System'
     })
   }
 
   const registerCoreBottomPanelTabs = () => {
-    registerBottomPanelTab(useIntegratedTerminalTab())
+    registerBottomPanelTab(useLogsTerminalTab())
+    if (isElectron()) {
+      registerBottomPanelTab(useCommandTerminalTab())
+    }
   }
 
   const registerExtensionBottomPanelTabs = (extension: ComfyExtension) => {

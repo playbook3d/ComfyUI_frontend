@@ -10,13 +10,19 @@
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted } from 'vue'
+
 import { useSettingStore } from '@/stores/settingStore'
-import { onMounted, onBeforeUnmount } from 'vue'
+import { useWorkflowStore } from '@/stores/workflowStore'
 
 const settingStore = useSettingStore()
+const workflowStore = useWorkflowStore()
 
 const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-  if (settingStore.get('Comfy.Window.UnloadConfirmation')) {
+  if (
+    settingStore.get('Comfy.Window.UnloadConfirmation') &&
+    workflowStore.modifiedWorkflows.length > 0
+  ) {
     event.preventDefault()
     return true
   }
