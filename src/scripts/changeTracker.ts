@@ -11,6 +11,7 @@ import { ComfyWorkflow, useWorkflowStore } from '@/stores/workflowStore'
 import { api } from './api'
 import type { ComfyApp } from './app'
 import { app } from './app'
+import { sendWorkflowDataToPlaybookWrapper } from './playbook-scripts/playbookMessaging'
 
 function clone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj))
@@ -83,8 +84,9 @@ export class ChangeTracker {
     api.dispatchCustomEvent('graphChanged', this.activeState)
 
     // Send updated workflow data to Playbook wrapper if graph changed.
-    if (window.__COMFYAPP)
-      window.__COMFYAPP.sendWorkflowDataToPlaybookWrapper()
+    if (window.__COMFYAPP && window.__COMFYAPP.playbookWrapperOrigin) {
+      sendWorkflowDataToPlaybookWrapper(window.__COMFYAPP.playbookWrapperOrigin)
+    }
 
     // Get the workflow from the store as ChangeTracker is raw object, i.e.
     // `this.workflow` is not reactive.
