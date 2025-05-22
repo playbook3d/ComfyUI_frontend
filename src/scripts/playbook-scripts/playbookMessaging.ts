@@ -44,7 +44,7 @@ export function sendNodeSelectionToPlaybookWrapper(
   wrapperOrigin: string
 ) {
   console.log(
-    'Comfy Window Sending: sendNodeSelectionToPlaybookWrapper: target origin: ',
+    'Comfy Window Sending: SendNodeSelectionToPlaybookWrapper: ',
     selectedNodes
   )
 
@@ -92,6 +92,24 @@ export async function sendWorkflowDataToPlaybookWrapper(wrapperOrigin: string) {
 
   console.log(
     'Comfy Window Sending: SendWorkflowDataToPlaybookWrapper: ',
+    messageData
+  )
+
+  if (window.top) {
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
+}
+
+/**
+ * Send message on selected nodes deletion.
+ */
+export async function sendNodesDeletedToPlaybookWrapper(wrapperOrigin: string) {
+  const messageData: WorkflowWindowMessageData = {
+    message: 'SendNodesDeletedToPlaybookWrapper',
+  }
+
+  console.log(
+    'Comfy Window Sending: SendNodesDeletedToPlaybookWrapper: ',
     messageData
   )
 
