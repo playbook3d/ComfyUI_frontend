@@ -1295,7 +1295,9 @@ export class ComfyApp {
     })
 
     // Send updated workflow data to Playbook wrapper if graph changed.
-    if (window.__COMFYAPP) window.__COMFYAPP.sendWorkflowDataToPlaybookWrapper()
+    if (window.__COMFYAPP && this.playbookWrapperOrigin) {
+      sendWorkflowDataToPlaybookWrapper(this.playbookWrapperOrigin)
+    }
   }
 
   async graphToPrompt(
