@@ -14,6 +14,8 @@ export interface WorkflowWindowMessageData {
     | 'SendNodesDeletedToPlaybookWrapper'
     | 'SendNodeDefinitionDataToPlaybookWrapper'
     | 'SendModalAppIDToComfyWindow'
+    | 'SendNodesDefinitionToComfyWindow'
+    | 'SendNodesDeletedToPlaybookWrapper'
   data?: any
 }
 
