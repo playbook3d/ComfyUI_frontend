@@ -12,10 +12,11 @@
       <BottomPanel />
     </template>
     <template #graph-canvas-panel>
-      <SecondRowWorkflowTabs
+      <!-- [Playbook Edit] Hiding for Playbook customization -->
+      <!-- <SecondRowWorkflowTabs
         v-if="workflowTabsPosition === 'Topbar (2nd-row)'"
         class="pointer-events-auto"
-      />
+      /> -->
       <GraphCanvasMenu v-if="canvasMenuEnabled" class="pointer-events-auto" />
     </template>
   </LiteGraphCanvasSplitterOverlay>
@@ -58,7 +59,8 @@ import SelectionToolbox from '@/components/graph/SelectionToolbox.vue'
 import TitleEditor from '@/components/graph/TitleEditor.vue'
 import NodeSearchboxPopover from '@/components/searchbox/NodeSearchBoxPopover.vue'
 import SideToolbar from '@/components/sidebar/SideToolbar.vue'
-import SecondRowWorkflowTabs from '@/components/topbar/SecondRowWorkflowTabs.vue'
+// [Playbook Edit] Hiding for Playbook customization
+// import SecondRowWorkflowTabs from '@/components/topbar/SecondRowWorkflowTabs.vue'
 import { useChainCallback } from '@/composables/functional/useChainCallback'
 import { useNodeBadge } from '@/composables/node/useNodeBadge'
 import { useCanvasDrop } from '@/composables/useCanvasDrop'
@@ -68,7 +70,7 @@ import { useGlobalLitegraph } from '@/composables/useGlobalLitegraph'
 import { useLitegraphSettings } from '@/composables/useLitegraphSettings'
 import { usePaste } from '@/composables/usePaste'
 import { useWorkflowAutoSave } from '@/composables/useWorkflowAutoSave'
-import { useWorkflowPersistence } from '@/composables/useWorkflowPersistence'
+// import { useWorkflowPersistence } from '@/composables/useWorkflowPersistence'
 import { CORE_SETTINGS } from '@/constants/coreSettings'
 import { i18n, t } from '@/i18n'
 import type { NodeId } from '@/schemas/comfyWorkflowSchema'
@@ -100,9 +102,10 @@ const toastStore = useToastStore()
 const betaMenuEnabled = computed(
   () => settingStore.get('Comfy.UseNewMenu') !== 'Disabled'
 )
-const workflowTabsPosition = computed(() =>
-  settingStore.get('Comfy.Workflow.WorkflowTabsPosition')
-)
+// [Playbook Edit] Hiding for Playbook customization
+// const workflowTabsPosition = computed(() =>
+//   settingStore.get('Comfy.Workflow.WorkflowTabsPosition')
+// )
 const canvasMenuEnabled = computed(() =>
   settingStore.get('Comfy.Graph.CanvasMenu')
 )
@@ -249,7 +252,7 @@ const loadCustomNodesI18n = async () => {
 }
 
 const comfyAppReady = ref(false)
-const workflowPersistence = useWorkflowPersistence()
+// const workflowPersistence = useWorkflowPersistence()
 // @ts-expect-error fixme ts strict error
 useCanvasDrop(canvasRef)
 useLitegraphSettings()
@@ -308,8 +311,8 @@ onMounted(async () => {
   )
 
   // Restore workflow and workflow tabs state from storage
-  await workflowPersistence.restorePreviousWorkflow()
-  workflowPersistence.restoreWorkflowTabsState()
+  // await workflowPersistence.restorePreviousWorkflow()
+  // workflowPersistence.restoreWorkflowTabsState()
 
   // Start watching for locale change after the initial value is loaded.
   watch(

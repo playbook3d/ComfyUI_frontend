@@ -1,19 +1,21 @@
 <template>
   <div class="comfyui-body grid h-full w-full overflow-hidden">
-    <div id="comfyui-body-top" class="comfyui-body-top">
+    <!-- [Playbook Edit] Commenting these components out for Playbook customisation. -->
+    <!-- <div id="comfyui-body-top" class="comfyui-body-top">
       <TopMenubar v-if="useNewMenu === 'Top'" />
-    </div>
-    <div id="comfyui-body-bottom" class="comfyui-body-bottom">
+    </div> -->
+    <!-- <div id="comfyui-body-bottom" class="comfyui-body-bottom">
       <TopMenubar v-if="useNewMenu === 'Bottom'" />
-    </div>
-    <div id="comfyui-body-left" class="comfyui-body-left" />
-    <div id="comfyui-body-right" class="comfyui-body-right" />
+    </div> -->
+    <!-- <div id="comfyui-body-left" class="comfyui-body-left" /> -->
+    <!-- <div id="comfyui-body-right" class="comfyui-body-right" /> -->
     <div id="graph-canvas-container" class="graph-canvas-container">
       <GraphCanvas @ready="onGraphReady" />
     </div>
   </div>
 
-  <GlobalToast />
+  <!-- [Playbook Edit] Hide error toast. -->
+  <!-- <GlobalToast /> -->
   <RerouteMigrationToast />
   <UnloadWindowConfirmDialog v-if="!isElectron()" />
   <MenuHamburger />
@@ -29,9 +31,9 @@ import { useI18n } from 'vue-i18n'
 import MenuHamburger from '@/components/MenuHamburger.vue'
 import UnloadWindowConfirmDialog from '@/components/dialog/UnloadWindowConfirmDialog.vue'
 import GraphCanvas from '@/components/graph/GraphCanvas.vue'
-import GlobalToast from '@/components/toast/GlobalToast.vue'
 import RerouteMigrationToast from '@/components/toast/RerouteMigrationToast.vue'
-import TopMenubar from '@/components/topbar/TopMenubar.vue'
+// import GlobalToast from '@/components/toast/GlobalToast.vue'
+// import TopMenubar from '@/components/topbar/TopMenubar.vue'
 import { useBrowserTabTitle } from '@/composables/useBrowserTabTitle'
 import { useCoreCommands } from '@/composables/useCoreCommands'
 import { useErrorHandling } from '@/composables/useErrorHandling'

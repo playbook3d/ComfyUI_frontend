@@ -834,14 +834,15 @@ export class ComfyApp {
    * Set up the app on the page
    */
   async setup(canvasEl: HTMLCanvasElement) {
-    // @ts-expect-error fixme ts strict error
-    this.bodyTop = document.getElementById('comfyui-body-top')
-    // @ts-expect-error fixme ts strict error
-    this.bodyLeft = document.getElementById('comfyui-body-left')
-    // @ts-expect-error fixme ts strict error
-    this.bodyRight = document.getElementById('comfyui-body-right')
-    // @ts-expect-error fixme ts strict error
-    this.bodyBottom = document.getElementById('comfyui-body-bottom')
+    // [Playbook Edit]
+    // //@ts-expect-error fixme ts strict error
+    // this.bodyTop = document.getElementById('comfyui-body-top')
+    // //@ts-expect-error fixme ts strict error
+    // this.bodyLeft = document.getElementById('comfyui-body-left')
+    // //@ts-expect-error fixme ts strict error
+    // this.bodyRight = document.getElementById('comfyui-body-right')
+    // //@ts-expect-error fixme ts strict error
+    // this.bodyBottom = document.getElementById('comfyui-body-bottom')
     // @ts-expect-error fixme ts strict error
     this.canvasContainer = document.getElementById('graph-canvas-container')
 
@@ -878,11 +879,12 @@ export class ComfyApp {
     // Ensure the canvas fills the window
     this.resizeCanvas()
     window.addEventListener('resize', () => this.resizeCanvas())
-    const ro = new ResizeObserver(() => this.resizeCanvas())
-    ro.observe(this.bodyTop)
-    ro.observe(this.bodyLeft)
-    ro.observe(this.bodyRight)
-    ro.observe(this.bodyBottom)
+    // [Playbook Edit]
+    // const ro = new ResizeObserver(() => this.resizeCanvas())
+    // ro.observe(this.bodyTop)
+    // ro.observe(this.bodyLeft)
+    // ro.observe(this.bodyRight)
+    // ro.observe(this.bodyBottom)
 
     await useExtensionService().invokeExtensionsAsync('init')
     await this.registerNodes()
