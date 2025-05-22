@@ -2,7 +2,6 @@ import {
   ComfyWorkflowNodeData,
   WorkflowWindowMessageData
 } from './playbookTypes'
-import fs from 'fs'
 
 /**
  * Send message with workflow data to wrapping iFrame layer.
