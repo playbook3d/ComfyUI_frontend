@@ -99,7 +99,12 @@ import {
   ComfyWorkflowNodeData,
   WorkflowWindowMessageData
 } from './playbook-scripts/playbookTypes'
-import { notifyPlaybookWrapperNewWorkflowLoaded, notifyWrapperOriginSetOnComfyInstance, sendNodeSelectionToPlaybookWrapper, sendWorkflowDataToPlaybookWrapper } from './playbook-scripts/playbookMessaging'
+import {
+  notifyPlaybookWrapperNewWorkflowLoaded,
+  notifyWrapperOriginSetOnComfyInstance,
+  sendNodeSelectionToPlaybookWrapper,
+  sendWorkflowDataToPlaybookWrapper,
+} from './playbook-scripts/playbookMessaging'
 
 export const ANIM_PREVIEW_WIDGET = '$$comfy_animation_preview'
 
