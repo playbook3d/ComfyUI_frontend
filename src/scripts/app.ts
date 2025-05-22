@@ -339,9 +339,9 @@ export class ComfyApp {
           useCommandStore().execute('Comfy.ExportWorkflow')
           break
 
-        case 'SendModalAppIDToComfyWindow':
+        case 'SendNodesDefinitionToComfyWindow':
           console.log(
-            'Comfy Window Received: SendModalAppIDToComfyWindow',
+            'Comfy Window Received: SendNodesDefinitionToComfyWindow',
             eventMessageData
           )
           this.serializedNodesDefinition = eventMessageData.data
