@@ -84,7 +84,12 @@ import { $el, ComfyUI } from './ui'
 import { ComfyAppMenu } from './ui/menu/index'
 import { clone } from './utils'
 import { type ComfyWidgetConstructor } from './widgets'
-import { notifyPlaybookWrapperNewWorkflowLoaded, notifyWrapperOriginSetOnComfyInstance, sendNodeSelectionToPlaybookWrapper, sendWorkflowDataToPlaybookWrapper } from './playbook-scripts/playbookMessaging'
+import {
+  notifyPlaybookWrapperNewWorkflowLoaded,
+  notifyWrapperOriginSetOnComfyInstance,
+  sendNodeSelectionToPlaybookWrapper,
+  sendWorkflowDataToPlaybookWrapper,
+} from './playbook-scripts/playbookMessaging'
 
 export const ANIM_PREVIEW_WIDGET = '$$comfy_animation_preview'
 
