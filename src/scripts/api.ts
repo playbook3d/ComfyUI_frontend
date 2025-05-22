@@ -709,6 +709,7 @@ export class ComfyApi extends EventTarget {
     Pending: PendingTaskItem[]
   }> {
     try {
+      // Playbook edits to mock API calls - empty data objects.
       const res = await this.fetchApi('/queue', {queue_running: [], queue_pending: []})
       const data = await res.json()
       return {
@@ -737,6 +738,7 @@ export class ComfyApi extends EventTarget {
     max_items: number = 200
   ): Promise<{ History: HistoryTaskItem[] }> {
     try {
+      // Playbook edits to mock API calls - empty data to return {}.
       const res = await this.fetchApi(`/history?max_items=${max_items}`, {})
       const json: Promise<HistoryTaskItem[]> = await res.json()
       return {
@@ -843,7 +845,7 @@ export class ComfyApi extends EventTarget {
    * @returns { Promise<string, unknown> } A dictionary of id -> value
    */
   async getSettings(): Promise<Settings> {
-
+    // Playbook Edits to mock API calls - empty data to return {}.
     const resp = await this.fetchApi('/settings', {})
 
     if (resp.status == 401) {
@@ -963,6 +965,7 @@ export class ComfyApi extends EventTarget {
   }
 
   async listUserDataFullInfo(dir: string): Promise<UserDataFullInfo[]> {
+    // Playbook Edits to mock API calls - empty data to return [].
     const resp = await this.fetchApi(
       `/userdata?dir=${encodeURIComponent(dir)}&recurse=true&split=false&full_info=true`, []
     )
@@ -1000,6 +1003,7 @@ export class ComfyApi extends EventTarget {
    * @returns The custom nodes i18n data
    */
   async getCustomNodesI18n(): Promise<Record<string, any>> {
+    // Playbook Edits to mock API calls.
     return await this.fetchApi('/i18n', {})
     // return (await axios.get(this.apiURL('/i18n'))).data
   }
