@@ -7,6 +7,7 @@ import { type UserConfig, defineConfig } from 'vite'
 import { createHtmlPlugin } from 'vite-plugin-html'
 import type { UserConfigExport } from 'vitest/config'
 import vueDevTools from 'vite-plugin-vue-devtools'
+import type { UserConfigExport } from 'vitest/config'
 
 import {
   addElementVnodeExportPlugin,
