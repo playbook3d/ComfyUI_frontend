@@ -12,9 +12,11 @@ export function useWorkflowPersistence() {
   const workflowStore = useWorkflowStore()
   const settingStore = useSettingStore()
 
-  const workflowPersistenceEnabled = computed(() =>
-    settingStore.get('Comfy.Workflow.Persist')
-  )
+  const workflowPersistenceEnabled = computed(() => {
+    // [Playbook Edit]
+    // settingStore.get('Comfy.Workflow.Persist')
+    return false
+  })
 
   const persistCurrentWorkflow = () => {
     if (!workflowPersistenceEnabled.value) return
