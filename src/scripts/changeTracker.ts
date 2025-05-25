@@ -33,7 +33,7 @@ export class ChangeTracker {
   /**
    * Whether the redo/undo restoring is in progress.
    */
-  private restoringState: boolean = false
+  _restoringState: boolean = false
 
   ds?: { scale: number; offset: [number, number] }
   nodeOutputs?: Record<string, any>
@@ -56,7 +56,7 @@ export class ChangeTracker {
    */
   reset(state?: ComfyWorkflowJSON) {
     // Do not reset the state if we are restoring.
-    if (this.restoringState) return
+    if (this._restoringState) return
 
     logger.debug('Reset State')
     if (state) this.activeState = clone(state)
@@ -131,7 +131,7 @@ export class ChangeTracker {
     const prevState = source.pop()
     if (prevState) {
       target.push(this.activeState)
-      this.restoringState = true
+      this._restoringState = true
       try {
         await app.loadGraphData(prevState, false, false, this.workflow, {
           showMissingModelsDialog: false,
@@ -141,7 +141,7 @@ export class ChangeTracker {
         this.activeState = prevState
         this.updateModified()
       } finally {
-        this.restoringState = false
+        this._restoringState = false
       }
     }
   }
