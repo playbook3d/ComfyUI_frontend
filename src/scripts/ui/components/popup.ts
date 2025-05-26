@@ -1,7 +1,6 @@
-// @ts-strict-ignore
-import { prop } from '../../utils'
 import { $el } from '../../ui'
-import { applyClasses, ClassList } from '../utils'
+import { prop } from '../../utils'
+import { ClassList, applyClasses } from '../utils'
 
 export class ComfyPopup extends EventTarget {
   element = $el('div.comfyui-popup')
@@ -90,6 +89,7 @@ export class ComfyPopup extends EventTarget {
     this.dispatchEvent(new CustomEvent('change'))
   }
 
+  // @ts-expect-error fixme ts strict error
   #escHandler = (e) => {
     if (e.key === 'Escape') {
       this.open = false
@@ -98,6 +98,7 @@ export class ComfyPopup extends EventTarget {
     }
   }
 
+  // @ts-expect-error fixme ts strict error
   #clickHandler = (e) => {
     /** @type {any} */
     const target = e.target

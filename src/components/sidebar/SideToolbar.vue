@@ -1,17 +1,18 @@
 <template>
   <teleport :to="teleportTarget">
-    <nav :class="'side-tool-bar-container' + (isSmall ? ' small-sidebar' : '')">
+    <nav class="side-tool-bar-container" :class="{ 'small-sidebar': isSmall }">
       <SidebarIcon
         v-for="tab in tabs"
         :key="tab.id"
         :icon="tab.icon"
-        :iconBadge="tab.iconBadge"
+        :icon-badge="tab.iconBadge"
         :tooltip="tab.tooltip + getTabTooltipSuffix(tab)"
         :selected="tab.id === selectedTab?.id"
         :class="tab.id + '-tab-button'"
         @click="onTabClick(tab)"
       />
       <div class="side-tool-bar-end">
+        <SidebarLogoutIcon v-if="userStore.isMultiUserServer" />
         <SidebarThemeToggleIcon />
         <SidebarSettingsToggleIcon />
       </div>
@@ -26,18 +27,23 @@
 </template>
 
 <script setup lang="ts">
-import SidebarIcon from './SidebarIcon.vue'
-import SidebarThemeToggleIcon from './SidebarThemeToggleIcon.vue'
-import SidebarSettingsToggleIcon from './SidebarSettingsToggleIcon.vue'
-import ExtensionSlot from '@/components/common/ExtensionSlot.vue'
 import { computed } from 'vue'
-import { useWorkspaceStore } from '@/stores/workspaceStateStore'
-import { useSettingStore } from '@/stores/settingStore'
-import type { SidebarTabExtension } from '@/types/extensionTypes'
+
+import ExtensionSlot from '@/components/common/ExtensionSlot.vue'
 import { useKeybindingStore } from '@/stores/keybindingStore'
+import { useSettingStore } from '@/stores/settingStore'
+import { useUserStore } from '@/stores/userStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+import type { SidebarTabExtension } from '@/types/extensionTypes'
+
+import SidebarIcon from './SidebarIcon.vue'
+import SidebarLogoutIcon from './SidebarLogoutIcon.vue'
+import SidebarSettingsToggleIcon from './SidebarSettingsToggleIcon.vue'
+import SidebarThemeToggleIcon from './SidebarThemeToggleIcon.vue'
 
 const workspaceStore = useWorkspaceStore()
 const settingStore = useSettingStore()
+const userStore = useUserStore()
 
 const teleportTarget = computed(() =>
   settingStore.get('Comfy.Sidebar.Location') === 'left'
@@ -63,30 +69,26 @@ const getTabTooltipSuffix = (tab: SidebarTabExtension) => {
 }
 </script>
 
-<style>
-:root {
-  --sidebar-width: 64px;
-  --sidebar-icon-size: 1.5rem;
-}
-:root .small-sidebar {
-  --sidebar-width: 40px;
-  --sidebar-icon-size: 1rem;
-}
-</style>
-
 <style scoped>
 .side-tool-bar-container {
   display: flex;
   flex-direction: column;
   align-items: center;
 
-  pointer-events: auto;
-
   width: var(--sidebar-width);
   height: 100%;
 
-  background-color: var(--comfy-menu-bg);
+  background-color: var(--comfy-menu-secondary-bg);
   color: var(--fg-color);
+  box-shadow: var(--bar-shadow);
+
+  --sidebar-width: 4rem;
+  --sidebar-icon-size: 1.5rem;
+}
+
+.side-tool-bar-container.small-sidebar {
+  --sidebar-width: 2.5rem;
+  --sidebar-icon-size: 1rem;
 }
 
 .side-tool-bar-end {

@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [vue()],
@@ -16,5 +16,8 @@ export default defineConfig({
     alias: {
       '@': '/src'
     }
+  },
+  define: {
+    __USE_PROD_CONFIG__: process.env.USE_PROD_CONFIG === 'true'
   }
 })

@@ -1,27 +1,31 @@
 <template>
   <div ref="container" class="node-lib-node-container">
-    <TreeExplorerTreeNode
-      :node="node"
-      @item-dropped="handleItemDrop"
-    ></TreeExplorerTreeNode>
+    <TreeExplorerTreeNode :node="node" @item-dropped="handleItemDrop" />
   </div>
 </template>
 
 <script setup lang="ts">
-import TreeExplorerTreeNode from '@/components/common/TreeExplorerTreeNode.vue'
-import { ComfyNodeDefImpl } from '@/stores/nodeDefStore'
-import { useNodeBookmarkStore } from '@/stores/nodeBookmarkStore'
-import { computed, inject, onMounted, onUnmounted, Ref, ref, watch } from 'vue'
-import type { BookmarkCustomization } from '@/types/apiTypes'
-import { RenderedTreeExplorerNode } from '@/types/treeExplorerTypes'
+import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
 
-const props = defineProps<{
+import TreeExplorerTreeNode from '@/components/common/TreeExplorerTreeNode.vue'
+import type { BookmarkCustomization } from '@/schemas/apiSchema'
+import { useNodeBookmarkStore } from '@/stores/nodeBookmarkStore'
+import { ComfyNodeDefImpl } from '@/stores/nodeDefStore'
+import {
+  InjectKeyExpandedKeys,
+  type RenderedTreeExplorerNode
+} from '@/types/treeExplorerTypes'
+
+const { node } = defineProps<{
   node: RenderedTreeExplorerNode<ComfyNodeDefImpl>
 }>()
 
 const nodeBookmarkStore = useNodeBookmarkStore()
 const customization = computed<BookmarkCustomization | undefined>(() => {
-  return nodeBookmarkStore.bookmarksCustomization[props.node.data.nodePath]
+  const nodeDef = node.data
+  return nodeDef
+    ? nodeBookmarkStore.bookmarksCustomization[nodeDef.nodePath]
+    : undefined
 })
 
 const treeNodeElement = ref<HTMLElement | null>(null)
@@ -45,7 +49,7 @@ onMounted(() => {
 
 const updateIconColor = () => {
   if (iconElement.value && customization.value) {
-    iconElement.value.style.color = customization.value.color
+    iconElement.value.style.color = customization.value.color ?? ''
   }
 }
 
@@ -55,8 +59,9 @@ onUnmounted(() => {
   }
 })
 
-const expandedKeys = inject<Ref<Record<string, boolean>>>('expandedKeys')
+const expandedKeys = inject(InjectKeyExpandedKeys)
 const handleItemDrop = (node: RenderedTreeExplorerNode) => {
+  if (!expandedKeys) return
   expandedKeys.value[node.key] = true
 }
 </script>

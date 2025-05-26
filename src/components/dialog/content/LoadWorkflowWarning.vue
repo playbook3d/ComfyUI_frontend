@@ -1,58 +1,67 @@
 <template>
-  <div class="comfy-missing-nodes">
-    <h4 class="warning-title">Warning: Missing Node Types</h4>
-    <p class="warning-description">
-      When loading the graph, the following node types were not found:
-    </p>
-    <ListBox
-      :options="uniqueNodes"
-      optionLabel="label"
-      scrollHeight="100%"
-      :class="'missing-nodes-list' + (props.maximized ? ' maximized' : '')"
-      :pt="{
-        list: { class: 'border-none' }
-      }"
-    >
-      <template #option="slotProps">
-        <div class="missing-node-item">
-          <span class="node-type">{{ slotProps.option.label }}</span>
-          <span v-if="slotProps.option.hint" class="node-hint">{{
-            slotProps.option.hint
-          }}</span>
-          <Button
-            v-if="slotProps.option.action"
-            @click="slotProps.option.action.callback"
-            :label="slotProps.option.action.text"
-            class="p-button-sm p-button-outlined"
-          />
-        </div>
-      </template>
-    </ListBox>
-    <p v-if="hasAddedNodes" class="added-nodes-warning">
-      Nodes that have failed to load will show as red on the graph.
-    </p>
+  <NoResultsPlaceholder
+    class="pb-0"
+    icon="pi pi-exclamation-circle"
+    title="Missing Node Types"
+    message="When loading the graph, the following node types were not found"
+  />
+  <ListBox
+    :options="uniqueNodes"
+    option-label="label"
+    scroll-height="100%"
+    class="comfy-missing-nodes"
+    :pt="{
+      list: { class: 'border-none' }
+    }"
+  >
+    <template #option="slotProps">
+      <div class="flex align-items-center">
+        <span class="node-type">{{ slotProps.option.label }}</span>
+        <span v-if="slotProps.option.hint" class="node-hint">{{
+          slotProps.option.hint
+        }}</span>
+        <Button
+          v-if="slotProps.option.action"
+          :label="slotProps.option.action.text"
+          size="small"
+          outlined
+          @click="slotProps.option.action.callback"
+        />
+      </div>
+    </template>
+  </ListBox>
+  <div v-if="isManagerInstalled" class="flex justify-end py-3">
+    <Button label="Open Manager" size="small" outlined @click="openManager" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import ListBox from 'primevue/listbox'
 import Button from 'primevue/button'
+import ListBox from 'primevue/listbox'
+import { computed } from 'vue'
 
-interface NodeType {
-  type: string
-  hint?: string
-  action?: {
-    text: string
-    callback: () => void
-  }
-}
+import NoResultsPlaceholder from '@/components/common/NoResultsPlaceholder.vue'
+import { useDialogService } from '@/services/dialogService'
+import { useAboutPanelStore } from '@/stores/aboutPanelStore'
+import type { MissingNodeType } from '@/types/comfy'
+import { ManagerTab } from '@/types/comfyManagerTypes'
 
 const props = defineProps<{
-  missingNodeTypes: (string | NodeType)[]
-  hasAddedNodes: boolean
-  maximized: boolean
+  missingNodeTypes: MissingNodeType[]
 }>()
+
+const aboutPanelStore = useAboutPanelStore()
+
+// Determines if ComfyUI-Manager is installed by checking for its badge in the about panel
+// This allows us to conditionally show the Manager button only when the extension is available
+// TODO: Remove this check when Manager functionality is fully migrated into core
+const isManagerInstalled = computed(() => {
+  return aboutPanelStore.badges.some(
+    (badge) =>
+      badge.label.includes('ComfyUI-Manager') ||
+      badge.url.includes('ComfyUI-Manager')
+  )
+})
 
 const uniqueNodes = computed(() => {
   const seenTypes = new Set()
@@ -74,51 +83,18 @@ const uniqueNodes = computed(() => {
       return { label: node }
     })
 })
-</script>
 
-<style>
-:root {
-  --red-600: #dc3545;
+const openManager = () => {
+  useDialogService().showManagerDialog({
+    initialTab: ManagerTab.Missing
+  })
 }
-</style>
+</script>
 
 <style scoped>
 .comfy-missing-nodes {
-  font-family: monospace;
-  color: var(--red-600);
-  padding: 1.5rem;
-  background-color: var(--surface-ground);
-  border-radius: var(--border-radius);
-  box-shadow: var(--card-shadow);
-}
-
-.warning-title {
-  margin-top: 0;
-  margin-bottom: 1rem;
-}
-
-.warning-description {
-  margin-bottom: 1rem;
-}
-
-.missing-nodes-list {
   max-height: 300px;
   overflow-y: auto;
-}
-
-.missing-nodes-list.maximized {
-  max-height: unset;
-}
-
-.missing-node-item {
-  display: flex;
-  align-items: center;
-  padding: 0.5rem;
-}
-
-.node-type {
-  font-weight: 600;
-  color: var(--text-color);
 }
 
 .node-hint {
@@ -129,10 +105,5 @@ const uniqueNodes = computed(() => {
 
 :deep(.p-button) {
   margin-left: auto;
-}
-
-.added-nodes-warning {
-  margin-top: 1rem;
-  font-style: italic;
 }
 </style>

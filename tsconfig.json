@@ -8,17 +8,18 @@
     "incremental": true,
     "sourceMap": true,
     "esModuleInterop": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "resolveJsonModule": true,
 
     /* Linting */
-    "strict": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "downlevelIteration": true,
+    "noImplicitOverride": true,
 
     /* AllowJs during migration phase */
     "allowJs": true,
@@ -29,12 +30,6 @@
     "typeRoots": ["src/types", "node_modules/@types"],
     "outDir": "./dist",
     "rootDir": "./",
-
-    "plugins": [
-      {
-        "name": "typescript-strict-plugin"
-      }
-    ]
   },
   "include": [
     "src/**/*",
@@ -42,6 +37,7 @@
     "src/types/**/*.d.ts",
     "tests-ui/**/*",
     "global.d.ts",
-    "src/scripts/playbook-scripts/.ts"
-  ]
+    "src/scripts/playbook-scripts/.ts",
+    "vite.config.mts",
+  ],
 }

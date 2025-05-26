@@ -1,167 +1,118 @@
-// @ts-strict-ignore
-import {
-  NodeSearchService,
-  type SearchAuxScore
-} from '@/services/nodeSearchService'
-import {
-  type ComfyNodeDef,
-  type ComfyInputsSpec as ComfyInputsSpecSchema
-} from '@/types/apiTypes'
-import { defineStore } from 'pinia'
-import { ComfyWidgetConstructor } from '@/scripts/widgets'
-import { TreeNode } from 'primevue/treenode'
-import { buildTree } from '@/utils/treeUtil'
-import { computed, ref } from 'vue'
+import type { LGraphNode } from '@comfyorg/litegraph'
 import axios from 'axios'
-import { type NodeSource, getNodeSource } from '@/types/nodeSource'
+import _ from 'lodash'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
-export interface BaseInputSpec<T = any> {
-  name: string
-  type: string
-  tooltip?: string
-  default?: T
+import { transformNodeDefV1ToV2 } from '@/schemas/nodeDef/migration'
+import type {
+  ComfyNodeDef as ComfyNodeDefV2,
+  InputSpec as InputSpecV2,
+  OutputSpec as OutputSpecV2
+} from '@/schemas/nodeDef/nodeDefSchemaV2'
+import type {
+  ComfyInputsSpec as ComfyInputSpecV1,
+  ComfyNodeDef as ComfyNodeDefV1,
+  ComfyOutputTypesSpec as ComfyOutputSpecV1
+} from '@/schemas/nodeDefSchema'
+import { NodeSearchService } from '@/services/nodeSearchService'
+import {
+  type NodeSource,
+  NodeSourceType,
+  getNodeSource
+} from '@/types/nodeSource'
+import type { TreeNode } from '@/types/treeExplorerTypes'
+import type { FuseSearchable, SearchAuxScore } from '@/utils/fuseUtil'
+import { buildTree } from '@/utils/treeUtil'
 
-  forceInput?: boolean
-}
-
-export interface NumericInputSpec extends BaseInputSpec<number> {
-  min?: number
-  max?: number
-  step?: number
-}
-
-export interface IntInputSpec extends NumericInputSpec {
-  type: 'INT'
-}
-
-export interface FloatInputSpec extends NumericInputSpec {
-  type: 'FLOAT'
-  round?: number
-}
-
-export interface BooleanInputSpec extends BaseInputSpec<boolean> {
-  type: 'BOOLEAN'
-  labelOn?: string
-  labelOff?: string
-}
-
-export interface StringInputSpec extends BaseInputSpec<string> {
-  type: 'STRING'
-  multiline?: boolean
-  dynamicPrompts?: boolean
-}
-
-export interface ComboInputSpec extends BaseInputSpec<any> {
-  type: 'COMBO'
-  comboOptions: any[]
-  controlAfterGenerate?: boolean
-  imageUpload?: boolean
-}
-
-export class ComfyInputsSpec {
-  required: Record<string, BaseInputSpec>
-  optional: Record<string, BaseInputSpec>
-  hidden?: Record<string, any>
-
-  constructor(obj: ComfyInputsSpecSchema) {
-    this.required = ComfyInputsSpec.transformInputSpecRecord(obj.required) ?? {}
-    this.optional = ComfyInputsSpec.transformInputSpecRecord(obj.optional) ?? {}
-    this.hidden = obj.hidden
-  }
-
-  private static transformInputSpecRecord(
-    record: Record<string, any>
-  ): Record<string, BaseInputSpec> {
-    if (!record) return record
-    const result: Record<string, BaseInputSpec> = {}
-    for (const [key, value] of Object.entries(record)) {
-      result[key] = ComfyInputsSpec.transformSingleInputSpec(key, value)
-    }
-    return result
-  }
-
-  private static isInputSpec(obj: any): boolean {
-    return (
-      Array.isArray(obj) &&
-      obj.length >= 1 &&
-      (typeof obj[0] === 'string' || Array.isArray(obj[0]))
-    )
-  }
-
-  private static transformSingleInputSpec(
-    name: string,
-    value: any
-  ): BaseInputSpec {
-    if (!ComfyInputsSpec.isInputSpec(value)) return value
-
-    const [typeRaw, _spec] = value
-    const spec = _spec ?? {}
-    const type = Array.isArray(typeRaw) ? 'COMBO' : value[0]
-
-    switch (type) {
-      case 'COMBO':
-        return {
-          name,
-          type,
-          ...spec,
-          comboOptions: typeRaw,
-          default: spec.default ?? typeRaw[0]
-        } as ComboInputSpec
-      case 'INT':
-      case 'FLOAT':
-      case 'BOOLEAN':
-      case 'STRING':
-      default:
-        return { name, type, ...spec } as BaseInputSpec
-    }
-  }
-
-  get all() {
-    return [...Object.values(this.required), ...Object.values(this.optional)]
-  }
-
-  getInput(name: string): BaseInputSpec | undefined {
-    return this.required[name] ?? this.optional[name]
-  }
-}
-
-export class ComfyOutputSpec {
-  constructor(
-    public index: number,
-    // Name is not unique for output params
-    public name: string,
-    public type: string,
-    public is_list: boolean,
-    public comboOptions?: any[],
-    public tooltip?: string
-  ) {}
-}
-
-export class ComfyOutputsSpec {
-  constructor(public outputs: ComfyOutputSpec[]) {}
-
-  get all() {
-    return this.outputs
-  }
-}
-
-/**
- * Note: This class does not implement the ComfyNodeDef interface, as we are
- * using a custom output spec for output definitions.
- */
-export class ComfyNodeDefImpl {
-  name: string
-  display_name: string
+export class ComfyNodeDefImpl
+  implements ComfyNodeDefV1, ComfyNodeDefV2, FuseSearchable
+{
+  // ComfyNodeDef fields (V1)
+  readonly name: string
+  readonly display_name: string
+  /**
+   * Category is not marked as readonly as the bookmark system
+   * needs to write to it to assign a node to a custom folder.
+   */
   category: string
-  python_module: string
-  description: string
-  deprecated: boolean
-  experimental: boolean
-  input: ComfyInputsSpec
-  output: ComfyOutputsSpec
-  nodeSource: NodeSource
+  readonly python_module: string
+  readonly description: string
+  readonly deprecated: boolean
+  readonly experimental: boolean
+  readonly output_node: boolean
+  readonly api_node: boolean
+  /**
+   * @deprecated Use `inputs` instead
+   */
+  readonly input: ComfyInputSpecV1
+  /**
+   * @deprecated Use `outputs` instead
+   */
+  readonly output: ComfyOutputSpecV1
+  /**
+   * @deprecated Use `outputs[n].is_list` instead
+   */
+  readonly output_is_list?: boolean[]
+  /**
+   * @deprecated Use `outputs[n].name` instead
+   */
+  readonly output_name?: string[]
+  /**
+   * @deprecated Use `outputs[n].tooltip` instead
+   */
+  readonly output_tooltips?: string[]
 
-  constructor(obj: ComfyNodeDef) {
+  // V2 fields
+  readonly inputs: Record<string, InputSpecV2>
+  readonly outputs: OutputSpecV2[]
+  readonly hidden?: Record<string, any>
+
+  // ComfyNodeDefImpl fields
+  readonly nodeSource: NodeSource
+
+  /**
+   * @internal
+   * Migrate default input options to forceInput.
+   */
+  static #migrateDefaultInput(nodeDef: ComfyNodeDefV1): ComfyNodeDefV1 {
+    const def = _.cloneDeep(nodeDef)
+    def.input ??= {}
+    // For required inputs, now we have the input socket always present. Specifying
+    // it now has no effect.
+    for (const [name, spec] of Object.entries(def.input.required ?? {})) {
+      const inputOptions = spec[1]
+      if (inputOptions && inputOptions.defaultInput) {
+        console.warn(
+          `Use of defaultInput on required input ${nodeDef.python_module}:${nodeDef.name}:${name} is deprecated. Please drop the defaultInput option.`
+        )
+      }
+    }
+    // For optional inputs, defaultInput is used to distinguish the null state.
+    // We migrate it to forceInput. One example is the "seed_override" input usage.
+    // User can connect the socket to override the seed.
+    for (const [name, spec] of Object.entries(def.input.optional ?? {})) {
+      const inputOptions = spec[1]
+      if (inputOptions && inputOptions.defaultInput) {
+        console.warn(
+          `Use of defaultInput on optional input ${nodeDef.python_module}:${nodeDef.name}:${name} is deprecated. Please use forceInput instead.`
+        )
+        inputOptions.forceInput = true
+      }
+    }
+    return def
+  }
+
+  constructor(def: ComfyNodeDefV1) {
+    const obj = ComfyNodeDefImpl.#migrateDefaultInput(def)
+
+    /**
+     * Assign extra fields to `this` for compatibility with group node feature.
+     * TODO: Remove this once group node feature is removed.
+     */
+    Object.assign(this, obj)
+
+    // Initialize V1 fields
     this.name = obj.name
     this.display_name = obj.display_name
     this.category = obj.category
@@ -170,26 +121,22 @@ export class ComfyNodeDefImpl {
     this.deprecated = obj.deprecated ?? obj.category === ''
     this.experimental =
       obj.experimental ?? obj.category.startsWith('_for_testing')
-    this.input = new ComfyInputsSpec(obj.input ?? {})
-    this.output = ComfyNodeDefImpl.transformOutputSpec(obj)
+    this.output_node = obj.output_node
+    this.api_node = !!obj.api_node
+    this.input = obj.input ?? {}
+    this.output = obj.output ?? []
+    this.output_is_list = obj.output_is_list
+    this.output_name = obj.output_name
+    this.output_tooltips = obj.output_tooltips
+
+    // Initialize V2 fields
+    const defV2 = transformNodeDefV1ToV2(obj)
+    this.inputs = defV2.inputs
+    this.outputs = defV2.outputs
+    this.hidden = defV2.hidden
+
+    // Initialize node source
     this.nodeSource = getNodeSource(obj.python_module)
-  }
-
-  private static transformOutputSpec(obj: any): ComfyOutputsSpec {
-    const { output, output_is_list, output_name, output_tooltips } = obj
-    const result = (output ?? []).map((type: string | any[], index: number) => {
-      const typeString = Array.isArray(type) ? 'COMBO' : type
-
-      return new ComfyOutputSpec(
-        index,
-        output_name?.[index],
-        typeString,
-        output_is_list?.[index],
-        Array.isArray(type) ? type : undefined,
-        output_tooltips?.[index]
-      )
-    })
-    return new ComfyOutputsSpec(result)
   }
 
   get nodePath(): string {
@@ -205,9 +152,19 @@ export class ComfyNodeDefImpl {
     const nodeFrequency = nodeFrequencyStore.getNodeFrequencyByName(this.name)
     return [scores[0], -nodeFrequency, ...scores.slice(1)]
   }
+
+  get isCoreNode(): boolean {
+    return this.nodeSource.type === NodeSourceType.Core
+  }
+
+  get nodeLifeCycleBadgeText(): string {
+    if (this.deprecated) return '[DEPR]'
+    if (this.experimental) return '[BETA]'
+    return ''
+  }
 }
 
-export const SYSTEM_NODE_DEFS: Record<string, ComfyNodeDef> = {
+export const SYSTEM_NODE_DEFS: Record<string, ComfyNodeDefV1> = {
   PrimitiveNode: {
     name: 'PrimitiveNode',
     display_name: 'Primitive',
@@ -216,6 +173,7 @@ export const SYSTEM_NODE_DEFS: Record<string, ComfyNodeDef> = {
     output: ['*'],
     output_name: ['connect to widget input'],
     output_is_list: [false],
+    output_node: false,
     python_module: 'nodes',
     description: 'Primitive values like numbers, strings, and booleans.'
   },
@@ -223,10 +181,11 @@ export const SYSTEM_NODE_DEFS: Record<string, ComfyNodeDef> = {
     name: 'Reroute',
     display_name: 'Reroute',
     category: 'utils',
-    input: { required: { '': ['*'] }, optional: {} },
+    input: { required: { '': ['*', {}] }, optional: {} },
     output: ['*'],
     output_name: [''],
     output_is_list: [false],
+    output_node: false,
     python_module: 'nodes',
     description: 'Reroute the connection to another node.'
   },
@@ -238,8 +197,22 @@ export const SYSTEM_NODE_DEFS: Record<string, ComfyNodeDef> = {
     output: [],
     output_name: [],
     output_is_list: [],
+    output_node: false,
     python_module: 'nodes',
     description: 'Node that add notes to your project'
+  },
+  MarkdownNote: {
+    name: 'MarkdownNote',
+    display_name: 'Markdown Note',
+    category: 'utils',
+    input: { required: {}, optional: {} },
+    output: [],
+    output_name: [],
+    output_is_list: [],
+    output_node: false,
+    python_module: 'nodes',
+    description:
+      'Node that add notes to your project. Reformats text as markdown.'
   }
 }
 
@@ -259,79 +232,86 @@ export function createDummyFolderNodeDef(folderPath: string): ComfyNodeDefImpl {
     input: {},
     output: [],
     output_name: [],
-    output_is_list: []
-  } as ComfyNodeDef)
+    output_is_list: [],
+    output_node: false
+  } as ComfyNodeDefV1)
 }
 
-interface State {
-  nodeDefsByName: Record<string, ComfyNodeDefImpl>
-  nodeDefsByDisplayName: Record<string, ComfyNodeDefImpl>
-  widgets: Record<string, ComfyWidgetConstructor>
-  showDeprecated: boolean
-  showExperimental: boolean
-}
+export const useNodeDefStore = defineStore('nodeDef', () => {
+  const nodeDefsByName = ref<Record<string, ComfyNodeDefImpl>>({})
+  const nodeDefsByDisplayName = ref<Record<string, ComfyNodeDefImpl>>({})
+  const showDeprecated = ref(false)
+  const showExperimental = ref(false)
 
-export const useNodeDefStore = defineStore('nodeDef', {
-  state: (): State => ({
-    nodeDefsByName: {},
-    nodeDefsByDisplayName: {},
-    widgets: {},
-    showDeprecated: false,
-    showExperimental: false
-  }),
-  getters: {
-    nodeDefs(state) {
-      return Object.values(state.nodeDefsByName)
-    },
-    // Node defs that are not deprecated
-    visibleNodeDefs(state): ComfyNodeDefImpl[] {
-      return this.nodeDefs.filter(
-        (nodeDef: ComfyNodeDefImpl) =>
-          (state.showDeprecated || !nodeDef.deprecated) &&
-          (state.showExperimental || !nodeDef.experimental)
-      )
-    },
-    nodeSearchService() {
-      return new NodeSearchService(this.visibleNodeDefs)
-    },
-    nodeTree(): TreeNode {
-      return buildNodeDefTree(this.visibleNodeDefs)
-    }
-  },
-  actions: {
-    updateNodeDefs(nodeDefs: ComfyNodeDef[]) {
-      const newNodeDefsByName: { [key: string]: ComfyNodeDefImpl } = {}
-      const nodeDefsByDisplayName: { [key: string]: ComfyNodeDefImpl } = {}
-      for (const nodeDef of nodeDefs) {
-        const nodeDefImpl = new ComfyNodeDefImpl(nodeDef)
-        newNodeDefsByName[nodeDef.name] = nodeDefImpl
-        nodeDefsByDisplayName[nodeDef.display_name] = nodeDefImpl
+  const nodeDefs = computed(() => Object.values(nodeDefsByName.value))
+  const nodeDataTypes = computed(() => {
+    const types = new Set<string>()
+    for (const nodeDef of nodeDefs.value) {
+      for (const input of Object.values(nodeDef.inputs)) {
+        types.add(input.type)
       }
-      this.nodeDefsByName = newNodeDefsByName
-      this.nodeDefsByDisplayName = nodeDefsByDisplayName
-    },
-    addNodeDef(nodeDef: ComfyNodeDef) {
-      const nodeDefImpl = new ComfyNodeDefImpl(nodeDef)
-      this.nodeDefsByName[nodeDef.name] = nodeDefImpl
-      this.nodeDefsByDisplayName[nodeDef.display_name] = nodeDefImpl
-    },
-    updateWidgets(widgets: Record<string, ComfyWidgetConstructor>) {
-      this.widgets = widgets
-    },
-    getWidgetType(type: string, inputName: string) {
-      if (type === 'COMBO') {
-        return 'COMBO'
-      } else if (`${type}:${inputName}` in this.widgets) {
-        return `${type}:${inputName}`
-      } else if (type in this.widgets) {
-        return type
-      } else {
-        return null
+      for (const output of nodeDef.outputs) {
+        types.add(output.type)
       }
-    },
-    inputIsWidget(spec: BaseInputSpec) {
-      return this.getWidgetType(spec.type, spec.name) !== null
     }
+    return types
+  })
+  const visibleNodeDefs = computed(() =>
+    nodeDefs.value.filter(
+      (nodeDef: ComfyNodeDefImpl) =>
+        (showDeprecated.value || !nodeDef.deprecated) &&
+        (showExperimental.value || !nodeDef.experimental)
+    )
+  )
+  const nodeSearchService = computed(
+    () => new NodeSearchService(visibleNodeDefs.value)
+  )
+  const nodeTree = computed(() => buildNodeDefTree(visibleNodeDefs.value))
+
+  function updateNodeDefs(nodeDefs: ComfyNodeDefV1[]) {
+    const newNodeDefsByName: Record<string, ComfyNodeDefImpl> = {}
+    const newNodeDefsByDisplayName: Record<string, ComfyNodeDefImpl> = {}
+
+    for (const nodeDef of nodeDefs) {
+      const nodeDefImpl =
+        nodeDef instanceof ComfyNodeDefImpl
+          ? nodeDef
+          : new ComfyNodeDefImpl(nodeDef)
+
+      newNodeDefsByName[nodeDef.name] = nodeDefImpl
+      newNodeDefsByDisplayName[nodeDef.display_name] = nodeDefImpl
+    }
+
+    nodeDefsByName.value = newNodeDefsByName
+    nodeDefsByDisplayName.value = newNodeDefsByDisplayName
+  }
+  function addNodeDef(nodeDef: ComfyNodeDefV1) {
+    const nodeDefImpl = new ComfyNodeDefImpl(nodeDef)
+    nodeDefsByName.value[nodeDef.name] = nodeDefImpl
+    nodeDefsByDisplayName.value[nodeDef.display_name] = nodeDefImpl
+  }
+  function fromLGraphNode(node: LGraphNode): ComfyNodeDefImpl | null {
+    // Frontend-only nodes don't have nodeDef
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore Optional chaining used in index
+    return nodeDefsByName.value[node.constructor?.nodeData?.name] ?? null
+  }
+
+  return {
+    nodeDefsByName,
+    nodeDefsByDisplayName,
+    showDeprecated,
+    showExperimental,
+
+    nodeDefs,
+    nodeDataTypes,
+    visibleNodeDefs,
+    nodeSearchService,
+    nodeTree,
+
+    updateNodeDefs,
+    addNodeDef,
+    fromLGraphNode
   }
 })
 

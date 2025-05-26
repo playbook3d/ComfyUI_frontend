@@ -1,16 +1,19 @@
 <template>
   <div
+    v-tooltip.bottom="{
+      value: $t('menu.batchCount'),
+      showDelay: 600
+    }"
     class="batch-count"
-    :class="props.class"
-    v-tooltip.bottom="$t('menu.batchCount')"
+    :aria-label="$t('menu.batchCount')"
   >
     <InputNumber
-      class="w-14"
       v-model="batchCount"
+      class="w-14"
       :min="minQueueCount"
       :max="maxQueueCount"
       fluid
-      showButtons
+      show-buttons
       :pt="{
         incrementButton: {
           class: 'w-6',
@@ -30,19 +33,12 @@
 </template>
 
 <script lang="ts" setup>
-import { useQueueSettingsStore } from '@/stores/queueStore'
-import { useSettingStore } from '@/stores/settingStore'
 import { storeToRefs } from 'pinia'
 import InputNumber from 'primevue/inputnumber'
 import { computed } from 'vue'
 
-interface Props {
-  class?: string
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  class: ''
-})
+import { useQueueSettingsStore } from '@/stores/queueStore'
+import { useSettingStore } from '@/stores/settingStore'
 
 const queueSettingsStore = useQueueSettingsStore()
 const { batchCount } = storeToRefs(queueSettingsStore)
@@ -57,7 +53,7 @@ const handleClick = (increment: boolean) => {
   let newCount: number
   if (increment) {
     const originalCount = batchCount.value - 1
-    newCount = originalCount * 2
+    newCount = Math.min(originalCount * 2, maxQueueCount.value)
   } else {
     const originalCount = batchCount.value + 1
     newCount = Math.floor(originalCount / 2)

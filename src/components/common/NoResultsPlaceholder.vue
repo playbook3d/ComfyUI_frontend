@@ -1,16 +1,18 @@
 <template>
-  <div class="no-results-placeholder">
+  <div class="no-results-placeholder p-8 h-full" :class="props.class">
     <Card>
       <template #content>
         <div class="flex flex-col items-center">
-          <i :class="icon" style="font-size: 3rem; margin-bottom: 1rem"></i>
+          <i :class="icon" style="font-size: 3rem; margin-bottom: 1rem" />
           <h3>{{ title }}</h3>
-          <p class="whitespace-pre-line text-center">{{ message }}</p>
+          <p :class="textClass" class="whitespace-pre-line text-center">
+            {{ message }}
+          </p>
           <Button
             v-if="buttonLabel"
             :label="buttonLabel"
-            @click="$emit('action')"
             class="p-button-text"
+            @click="$emit('action')"
           />
         </div>
       </template>
@@ -19,13 +21,15 @@
 </template>
 
 <script setup lang="ts">
-import Card from 'primevue/card'
 import Button from 'primevue/button'
+import Card from 'primevue/card'
 
-defineProps<{
+const props = defineProps<{
+  class?: string
   icon?: string
   title: string
   message: string
+  textClass?: string
   buttonLabel?: string
 }>()
 
@@ -33,11 +37,6 @@ defineEmits(['action'])
 </script>
 
 <style scoped>
-.no-results-placeholder {
-  height: 100%;
-  padding: 2rem;
-}
-
 .no-results-placeholder :deep(.p-card) {
   background-color: var(--surface-ground);
   text-align: center;

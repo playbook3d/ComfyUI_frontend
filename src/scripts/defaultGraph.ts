@@ -1,4 +1,4 @@
-import type { ComfyWorkflowJSON } from '@/types/comfyWorkflow'
+import type { ComfyWorkflowJSON } from '@/schemas/comfyWorkflowSchema'
 
 export const defaultGraph: ComfyWorkflowJSON = {
   last_node_id: 9,
@@ -116,7 +116,7 @@ export const defaultGraph: ComfyWorkflowJSON = {
         { name: 'VAE', type: 'VAE', links: [8], slot_index: 2 }
       ],
       properties: {},
-      widgets_values: ['v1-5-pruned-emaonly.ckpt']
+      widgets_values: ['v1-5-pruned-emaonly-fp16.safetensors']
     }
   ],
   links: [
@@ -130,6 +130,24 @@ export const defaultGraph: ComfyWorkflowJSON = {
     [8, 4, 2, 8, 1, 'VAE'],
     [9, 8, 0, 9, 0, 'IMAGE']
   ],
+  groups: [],
+  config: {},
+  extra: {
+    ds: {
+      offset: [0, 0],
+      scale: 1
+    }
+  },
+  version: 0.4
+}
+
+export const defaultGraphJSON = JSON.stringify(defaultGraph)
+
+export const blankGraph: ComfyWorkflowJSON = {
+  last_node_id: 0,
+  last_link_id: 0,
+  nodes: [],
+  links: [],
   groups: [],
   config: {},
   extra: {},

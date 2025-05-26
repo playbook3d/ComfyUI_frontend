@@ -1,21 +1,25 @@
 <template>
   <div class="grid grid-cols-2 gap-2">
     <template v-for="col in deviceColumns" :key="col.field">
-      <div class="font-medium">{{ $t(col.header) }}</div>
-      <div>{{ formatValue(props.device[col.field], col.field) }}</div>
+      <div class="font-medium">
+        {{ col.header }}
+      </div>
+      <div>
+        {{ formatValue(props.device[col.field], col.field) }}
+      </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { DeviceStats } from '@/types/apiTypes'
-import { formatMemory } from '@/utils/formatUtil'
+import type { DeviceStats } from '@/schemas/apiSchema'
+import { formatSize } from '@/utils/formatUtil'
 
 const props = defineProps<{
   device: DeviceStats
 }>()
 
-const deviceColumns = [
+const deviceColumns: { field: keyof DeviceStats; header: string }[] = [
   { field: 'name', header: 'Name' },
   { field: 'type', header: 'Type' },
   { field: 'vram_total', header: 'VRAM Total' },
@@ -30,7 +34,7 @@ const formatValue = (value: any, field: string) => {
       field
     )
   ) {
-    return formatMemory(value)
+    return formatSize(value)
   }
   return value
 }

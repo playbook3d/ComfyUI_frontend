@@ -2,7 +2,7 @@ name: Prettier Check
 
 on:
   pull_request:
-    branches: [ main, master, dev* ]
+    branches: [ main, master, dev*, core/*, desktop/* ]
 
 jobs:
   prettier:
@@ -12,12 +12,12 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Use Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: lts/*
+        node-version: 'lts/*'
 
     - name: Install dependencies
       run: npm ci
 
     - name: Run Prettier check
-      run: npx prettier --check './**/*.{js,ts,tsx,vue}'
+      run: npm run format:check

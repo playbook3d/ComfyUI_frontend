@@ -4,12 +4,12 @@
       <template #before-label>
         <Tag
           v-if="nodeDef.experimental"
-          :value="$t('experimental')"
+          :value="$t('g.experimental')"
           severity="primary"
         />
         <Tag
           v-if="nodeDef.deprecated"
-          :value="$t('deprecated')"
+          :value="$t('g.deprecated')"
           severity="danger"
         />
       </template>
@@ -27,7 +27,7 @@
 
     <teleport v-if="isHovered" to="#node-library-node-preview-container">
       <div class="node-lib-node-preview" :style="nodePreviewStyle">
-        <NodePreview ref="previewRef" :nodeDef="nodeDef"></NodePreview>
+        <NodePreview ref="previewRef" :node-def="nodeDef" />
       </div>
     </teleport>
   </div>
@@ -36,26 +36,28 @@
 <script setup lang="ts">
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
-import TreeExplorerTreeNode from '@/components/common/TreeExplorerTreeNode.vue'
-import NodePreview from '@/components/node/NodePreview.vue'
-import { ComfyNodeDefImpl } from '@/stores/nodeDefStore'
 import {
-  computed,
   CSSProperties,
+  computed,
   nextTick,
   onMounted,
   onUnmounted,
   ref
 } from 'vue'
-import { RenderedTreeExplorerNode } from '@/types/treeExplorerTypes'
+
+import TreeExplorerTreeNode from '@/components/common/TreeExplorerTreeNode.vue'
+import NodePreview from '@/components/node/NodePreview.vue'
 import { useNodeBookmarkStore } from '@/stores/nodeBookmarkStore'
+import { ComfyNodeDefImpl } from '@/stores/nodeDefStore'
 import { useSettingStore } from '@/stores/settingStore'
+import { RenderedTreeExplorerNode } from '@/types/treeExplorerTypes'
 
 const props = defineProps<{
   node: RenderedTreeExplorerNode<ComfyNodeDefImpl>
 }>()
 
-const nodeDef = computed(() => props.node.data)
+// Note: node.data should be present for leaf nodes.
+const nodeDef = computed(() => props.node.data!)
 const nodeBookmarkStore = useNodeBookmarkStore()
 const isBookmarked = computed(() =>
   nodeBookmarkStore.isBookmarked(nodeDef.value)
@@ -65,12 +67,8 @@ const sidebarLocation = computed<'left' | 'right'>(() =>
   settingStore.get('Comfy.Sidebar.Location')
 )
 
-const emit = defineEmits<{
-  (e: 'toggle-bookmark', value: ComfyNodeDefImpl): void
-}>()
-
-const toggleBookmark = () => {
-  nodeBookmarkStore.toggleBookmark(nodeDef.value)
+const toggleBookmark = async () => {
+  await nodeBookmarkStore.toggleBookmark(nodeDef.value)
 }
 
 const previewRef = ref<InstanceType<typeof NodePreview> | null>(null)
@@ -82,6 +80,8 @@ const nodePreviewStyle = ref<CSSProperties>({
 
 const handleNodeHover = async () => {
   const hoverTarget = nodeContentElement.value
+  if (!hoverTarget) return
+
   const targetRect = hoverTarget.getBoundingClientRect()
 
   const previewHeight = previewRef.value?.$el.offsetHeight || 0
@@ -104,13 +104,14 @@ const isHovered = ref(false)
 const handleMouseEnter = async () => {
   isHovered.value = true
   await nextTick()
-  handleNodeHover()
+  await handleNodeHover()
 }
 const handleMouseLeave = () => {
   isHovered.value = false
 }
 onMounted(() => {
-  nodeContentElement.value = container.value?.closest('.p-tree-node-content')
+  nodeContentElement.value =
+    container.value?.closest('.p-tree-node-content') ?? null
   nodeContentElement.value?.addEventListener('mouseenter', handleMouseEnter)
   nodeContentElement.value?.addEventListener('mouseleave', handleMouseLeave)
 })

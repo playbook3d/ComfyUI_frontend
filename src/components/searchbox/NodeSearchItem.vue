@@ -5,19 +5,17 @@
     <div class="option-display-name font-semibold flex flex-col">
       <div>
         <span v-if="isBookmarked">
-          <i class="pi pi-bookmark-fill text-sm mr-1"></i>
+          <i class="pi pi-bookmark-fill text-sm mr-1" />
         </span>
-        <span
-          v-html="highlightQuery(nodeDef.display_name, currentQuery)"
-        ></span>
+        <span v-html="highlightQuery(nodeDef.display_name, currentQuery)" />
         <span>&nbsp;</span>
         <Tag v-if="showIdName" severity="secondary">
-          <span v-html="highlightQuery(nodeDef.name, currentQuery)"></span>
+          <span v-html="highlightQuery(nodeDef.name, currentQuery)" />
         </Tag>
       </div>
       <div
         v-if="showCategory"
-        class="option-category font-light text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap"
+        class="option-category font-light text-sm text-muted overflow-hidden text-ellipsis whitespace-nowrap"
       >
         {{ nodeDef.category.replaceAll('/', ' > ') }}
       </div>
@@ -25,12 +23,12 @@
     <div class="option-badges">
       <Tag
         v-if="nodeDef.experimental"
-        :value="$t('experimental')"
+        :value="$t('g.experimental')"
         severity="primary"
       />
       <Tag
         v-if="nodeDef.deprecated"
-        :value="$t('deprecated')"
+        :value="$t('g.deprecated')"
         severity="danger"
       />
       <Tag
@@ -49,14 +47,15 @@
 </template>
 
 <script setup lang="ts">
-import Tag from 'primevue/tag'
 import Chip from 'primevue/chip'
-import { NodeSourceType } from '@/types/nodeSource'
-import { ComfyNodeDefImpl, useNodeFrequencyStore } from '@/stores/nodeDefStore'
-import { highlightQuery } from '@/utils/formatUtil'
+import Tag from 'primevue/tag'
 import { computed } from 'vue'
-import { useSettingStore } from '@/stores/settingStore'
+
 import { useNodeBookmarkStore } from '@/stores/nodeBookmarkStore'
+import { ComfyNodeDefImpl, useNodeFrequencyStore } from '@/stores/nodeDefStore'
+import { useSettingStore } from '@/stores/settingStore'
+import { NodeSourceType } from '@/types/nodeSource'
+import { highlightQuery } from '@/utils/formatUtil'
 import { formatNumberWithSuffix } from '@/utils/formatUtil'
 
 const settingStore = useSettingStore()
@@ -91,7 +90,7 @@ const props = defineProps<{
   color: var(--p-primary-contrast-color);
   font-weight: bold;
   border-radius: 0.25rem;
-  padding: 0rem 0.125rem;
+  padding: 0 0.125rem;
   margin: -0.125rem 0.125rem;
 }
 </style>

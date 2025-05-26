@@ -1,31 +1,33 @@
 <template>
   <div class="input-slider flex flex-row items-center gap-2">
     <Slider
-      :modelValue="modelValue"
-      @update:modelValue="updateValue"
+      :model-value="modelValue"
       class="slider-part"
       :class="sliderClass"
       :min="min"
       :max="max"
       :step="step"
+      v-bind="$attrs"
+      @update:model-value="(value) => updateValue(value as number)"
     />
     <InputNumber
-      :modelValue="modelValue"
-      @update:modelValue="updateValue"
+      :model-value="modelValue"
       class="input-part"
+      :max-fraction-digits="3"
       :class="inputClass"
       :min="min"
       :max="max"
       :step="step"
-      :allowEmpty="false"
+      :allow-empty="false"
+      @update:model-value="updateValue"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import InputNumber from 'primevue/inputnumber'
 import Slider from 'primevue/slider'
+import { ref, watch } from 'vue'
 
 const props = defineProps<{
   modelValue: number
@@ -69,4 +71,8 @@ const updateValue = (newValue: number | null) => {
   localValue.value = newValue
   emit('update:modelValue', newValue)
 }
+
+defineOptions({
+  inheritAttrs: false
+})
 </script>

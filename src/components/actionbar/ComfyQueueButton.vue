@@ -1,82 +1,103 @@
 <template>
   <div class="queue-button-group flex">
     <SplitButton
+      v-tooltip.bottom="{
+        value: workspaceStore.shiftDown
+          ? $t('menu.runWorkflowFront')
+          : $t('menu.runWorkflow'),
+        showDelay: 600
+      }"
       class="comfyui-queue-button"
       :label="activeQueueModeMenuItem.label"
       severity="primary"
-      @click="queuePrompt"
+      size="small"
       :model="queueModeMenuItems"
       data-testid="queue-button"
-      v-tooltip.bottom="
-        workspaceStore.shiftDown
-          ? $t('menu.queueWorkflowFront')
-          : $t('menu.queueWorkflow')
-      "
+      @click="queuePrompt"
     >
       <template #icon>
         <i-lucide:list-start v-if="workspaceStore.shiftDown" />
-        <i v-else :class="activeQueueModeMenuItem.icon" />
+        <i-lucide:play v-else-if="queueMode === 'disabled'" />
+        <i-lucide:fast-forward v-else-if="queueMode === 'instant'" />
+        <i-lucide:step-forward v-else-if="queueMode === 'change'" />
       </template>
       <template #item="{ item }">
         <Button
-          :label="item.label"
+          v-tooltip="{
+            value: item.tooltip,
+            showDelay: 600
+          }"
+          :label="String(item.label)"
           :icon="item.icon"
           :severity="item.key === queueMode ? 'primary' : 'secondary'"
+          size="small"
           text
-          v-tooltip="item.tooltip"
         />
       </template>
     </SplitButton>
     <BatchCountEdit />
     <ButtonGroup class="execution-actions flex flex-nowrap">
       <Button
-        v-tooltip.bottom="$t('menu.interrupt')"
+        v-tooltip.bottom="{
+          value: $t('menu.interrupt'),
+          showDelay: 600
+        }"
         icon="pi pi-times"
         :severity="executingPrompt ? 'danger' : 'secondary'"
         :disabled="!executingPrompt"
         text
+        :aria-label="$t('menu.interrupt')"
         @click="() => commandStore.execute('Comfy.Interrupt')"
-      >
-      </Button>
+      />
       <Button
-        v-tooltip.bottom="$t('sideToolbar.queueTab.clearPendingTasks')"
+        v-tooltip.bottom="{
+          value: $t('sideToolbar.queueTab.clearPendingTasks'),
+          showDelay: 600
+        }"
         icon="pi pi-stop"
         :severity="hasPendingTasks ? 'danger' : 'secondary'"
         :disabled="!hasPendingTasks"
         text
-        @click="() => commandStore.execute('Comfy.ClearPendingTasks')"
+        :aria-label="$t('sideToolbar.queueTab.clearPendingTasks')"
+        @click="
+          () => {
+            if (queueCountStore.count.value > 1) {
+              commandStore.execute('Comfy.ClearPendingTasks')
+            }
+            queueMode = 'disabled'
+          }
+        "
       />
     </ButtonGroup>
   </div>
 </template>
 
 <script setup lang="ts">
-import SplitButton from 'primevue/splitbutton'
+import { storeToRefs } from 'pinia'
 import Button from 'primevue/button'
-import BatchCountEdit from './BatchCountEdit.vue'
 import ButtonGroup from 'primevue/buttongroup'
+import SplitButton from 'primevue/splitbutton'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+
+import { useCommandStore } from '@/stores/commandStore'
 import {
-  AutoQueueMode,
   useQueuePendingTaskCountStore,
   useQueueSettingsStore
 } from '@/stores/queueStore'
-import type { MenuItem } from 'primevue/menuitem'
-import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
-import { useCommandStore } from '@/stores/commandStore'
-import { useWorkspaceStore } from '@/stores/workspaceStateStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+
+import BatchCountEdit from './BatchCountEdit.vue'
 
 const workspaceStore = useWorkspaceStore()
 const queueCountStore = storeToRefs(useQueuePendingTaskCountStore())
 const { mode: queueMode } = storeToRefs(useQueueSettingsStore())
 
 const { t } = useI18n()
-const queueModeMenuItemLookup: Record<AutoQueueMode, MenuItem> = {
+const queueModeMenuItemLookup = computed(() => ({
   disabled: {
     key: 'disabled',
-    label: 'Queue',
-    icon: 'pi pi-play',
+    label: t('menu.run'),
     tooltip: t('menu.disabledTooltip'),
     command: () => {
       queueMode.value = 'disabled'
@@ -84,8 +105,7 @@ const queueModeMenuItemLookup: Record<AutoQueueMode, MenuItem> = {
   },
   instant: {
     key: 'instant',
-    label: 'Queue (Instant)',
-    icon: 'pi pi-forward',
+    label: `${t('menu.run')} (${t('menu.instant')})`,
     tooltip: t('menu.instantTooltip'),
     command: () => {
       queueMode.value = 'instant'
@@ -93,29 +113,33 @@ const queueModeMenuItemLookup: Record<AutoQueueMode, MenuItem> = {
   },
   change: {
     key: 'change',
-    label: 'Queue (Change)',
-    icon: 'pi pi-step-forward-alt',
-    tooltip: t('menu.changeTooltip'),
+    label: `${t('menu.run')} (${t('menu.onChange')})`,
+    tooltip: t('menu.onChangeTooltip'),
     command: () => {
       queueMode.value = 'change'
     }
   }
-}
+}))
 
 const activeQueueModeMenuItem = computed(
-  () => queueModeMenuItemLookup[queueMode.value]
+  () => queueModeMenuItemLookup.value[queueMode.value]
 )
 const queueModeMenuItems = computed(() =>
-  Object.values(queueModeMenuItemLookup)
+  Object.values(queueModeMenuItemLookup.value)
 )
 
 const executingPrompt = computed(() => !!queueCountStore.count.value)
-const hasPendingTasks = computed(() => queueCountStore.count.value > 1)
+const hasPendingTasks = computed(
+  () => queueCountStore.count.value > 1 || queueMode.value !== 'disabled'
+)
 
 const commandStore = useCommandStore()
-const queuePrompt = (e: MouseEvent) => {
-  const commandId = e.shiftKey ? 'Comfy.QueuePromptFront' : 'Comfy.QueuePrompt'
-  commandStore.execute(commandId)
+const queuePrompt = async (e: Event) => {
+  const commandId =
+    'shiftKey' in e && e.shiftKey
+      ? 'Comfy.QueuePromptFront'
+      : 'Comfy.QueuePrompt'
+  await commandStore.execute(commandId)
 }
 </script>
 

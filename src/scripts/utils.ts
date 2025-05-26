@@ -1,34 +1,10 @@
-// @ts-strict-ignore
+import { applyTextReplacements as _applyTextReplacements } from '@/utils/searchAndReplace'
+
 import { api } from './api'
 import type { ComfyApp } from './app'
 import { $el } from './ui'
 
-// Simple date formatter
-const parts = {
-  d: (d) => d.getDate(),
-  M: (d) => d.getMonth() + 1,
-  h: (d) => d.getHours(),
-  m: (d) => d.getMinutes(),
-  s: (d) => d.getSeconds()
-}
-const format =
-  Object.keys(parts)
-    .map((k) => k + k + '?')
-    .join('|') + '|yyy?y?'
-
-function formatDate(text: string, date: Date) {
-  return text.replace(new RegExp(format, 'g'), (text: string): string => {
-    if (text === 'yy') return (date.getFullYear() + '').substring(2)
-    if (text === 'yyyy') return date.getFullYear().toString()
-    if (text[0] in parts) {
-      const p = parts[text[0]](date)
-      return (p + '').padStart(text.length, '0')
-    }
-    return text
-  })
-}
-
-export function clone(obj) {
+export function clone<T>(obj: T): T {
   try {
     if (typeof structuredClone !== 'undefined') {
       return structuredClone(obj)
@@ -40,49 +16,12 @@ export function clone(obj) {
   return JSON.parse(JSON.stringify(obj))
 }
 
+/**
+ * @deprecated Use `applyTextReplacements` from `@/utils/searchAndReplace` instead
+ * There are external callers to this function, so we need to keep it for now
+ */
 export function applyTextReplacements(app: ComfyApp, value: string): string {
-  return value.replace(/%([^%]+)%/g, function (match, text) {
-    const split = text.split('.')
-    if (split.length !== 2) {
-      // Special handling for dates
-      if (split[0].startsWith('date:')) {
-        return formatDate(split[0].substring(5), new Date())
-      }
-
-      if (text !== 'width' && text !== 'height') {
-        // Dont warn on standard replacements
-        console.warn('Invalid replacement pattern', text)
-      }
-      return match
-    }
-
-    // Find node with matching S&R property name
-    let nodes = app.graph.nodes.filter(
-      (n) => n.properties?.['Node name for S&R'] === split[0]
-    )
-    // If we cant, see if there is a node with that title
-    if (!nodes.length) {
-      nodes = app.graph.nodes.filter((n) => n.title === split[0])
-    }
-    if (!nodes.length) {
-      console.warn('Unable to find node', split[0])
-      return match
-    }
-
-    if (nodes.length > 1) {
-      console.warn('Multiple nodes matched', split[0], 'using first match')
-    }
-
-    const node = nodes[0]
-
-    const widget = node.widgets?.find((w) => w.name === split[1])
-    if (!widget) {
-      console.warn('Unable to find widget', split[1], 'on node', split[0], node)
-      return match
-    }
-
-    return ((widget.value ?? '') + '').replaceAll(/\/|\\/g, '_')
-  })
+  return _applyTextReplacements(app.graph.nodes, value)
 }
 
 export async function addStylesheet(
@@ -110,11 +49,7 @@ export async function addStylesheet(
   })
 }
 
-/**
- * @param { string } filename
- * @param { Blob } blob
- */
-export function downloadBlob(filename, blob) {
+export function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob)
   const a = $el('a', {
     href: url,
@@ -129,6 +64,20 @@ export function downloadBlob(filename, blob) {
   }, 0)
 }
 
+export function uploadFile(accept: string) {
+  return new Promise<File>((resolve, reject) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = accept
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return reject(new Error('No file selected'))
+      resolve(file)
+    }
+    input.click()
+  })
+}
+
 export function prop<T>(
   target: object,
   name: string,
@@ -140,12 +89,15 @@ export function prop<T>(
     name: string
   ) => void
 ): T {
+  // @ts-expect-error fixme ts strict error
   let currentValue
   Object.defineProperty(target, name, {
     get() {
+      // @ts-expect-error fixme ts strict error
       return currentValue
     },
     set(newValue) {
+      // @ts-expect-error fixme ts strict error
       const prevValue = currentValue
       currentValue = newValue
       onChanged?.(currentValue, prevValue, target, name)

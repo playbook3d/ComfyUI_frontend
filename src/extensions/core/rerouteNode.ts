@@ -1,8 +1,8 @@
-// @ts-strict-ignore
 import type { IContextMenuValue } from '@comfyorg/litegraph'
+import { LGraphCanvas, LGraphNode, LiteGraph } from '@comfyorg/litegraph'
+
 import { app } from '../../scripts/app'
-import { mergeIfValid, getWidgetConfig, setWidgetConfig } from './widgetInputs'
-import { LiteGraph, LGraphCanvas, LGraphNode } from '@comfyorg/litegraph'
+import { getWidgetConfig, mergeIfValid, setWidgetConfig } from './widgetInputs'
 
 // Node that allows you to redirect connections for cleaner graphs
 
@@ -14,10 +14,11 @@ app.registerExtension({
     }
 
     class RerouteNode extends LGraphNode {
-      static category: string | undefined
+      static override category: string | undefined
       static defaultVisibility = false
 
       constructor(title?: string) {
+        // @ts-expect-error fixme ts strict error
         super(title)
         if (!this.properties) {
           this.properties = {}
@@ -30,30 +31,35 @@ app.registerExtension({
 
         this.onAfterGraphConfigured = function () {
           requestAnimationFrame(() => {
+            // @ts-expect-error fixme ts strict error
             this.onConnectionsChange(LiteGraph.INPUT, null, true, null)
           })
         }
 
-        this.onConnectionsChange = (type, index, connected, link_info) => {
-          this.applyOrientation()
+        this.onConnectionsChange = (type, _index, connected) => {
+          if (app.configuringGraph) return
 
           // Prevent multiple connections to different types when we have no input
           if (connected && type === LiteGraph.OUTPUT) {
             // Ignore wildcard nodes as these will be updated to real types
             const types = new Set(
+              // @ts-expect-error fixme ts strict error
               this.outputs[0].links
                 .map((l) => app.graph.links[l].type)
                 .filter((t) => t !== '*')
             )
             if (types.size > 1) {
               const linksToDisconnect = []
+              // @ts-expect-error fixme ts strict error
               for (let i = 0; i < this.outputs[0].links.length - 1; i++) {
+                // @ts-expect-error fixme ts strict error
                 const linkId = this.outputs[0].links[i]
                 const link = app.graph.links[linkId]
                 linksToDisconnect.push(link)
               }
               for (const link of linksToDisconnect) {
                 const node = app.graph.getNodeById(link.target_id)
+                // @ts-expect-error fixme ts strict error
                 node.disconnectInput(link.target_slot)
               }
             }
@@ -71,6 +77,7 @@ app.registerExtension({
               const link = app.graph.links[linkId]
               if (!link) return
               const node = app.graph.getNodeById(link.origin_id)
+              // @ts-expect-error fixme ts strict error
               const type = node.constructor.type
               if (type === 'Reroute') {
                 if (node === this) {
@@ -84,6 +91,7 @@ app.registerExtension({
               } else {
                 // We've found the end
                 inputNode = currentNode
+                // @ts-expect-error fixme ts strict error
                 inputType = node.outputs[link.origin_slot]?.type ?? null
                 break
               }
@@ -98,8 +106,10 @@ app.registerExtension({
           const nodes: LGraphNode[] = [this]
           let outputType = null
           while (nodes.length) {
+            // @ts-expect-error fixme ts strict error
             currentNode = nodes.pop()
             const outputs =
+              // @ts-expect-error fixme ts strict error
               (currentNode.outputs ? currentNode.outputs[0].links : []) || []
             if (outputs.length) {
               for (const linkId of outputs) {
@@ -109,25 +119,33 @@ app.registerExtension({
                 if (!link) continue
 
                 const node = app.graph.getNodeById(link.target_id)
+                // @ts-expect-error fixme ts strict error
                 const type = node.constructor.type
 
                 if (type === 'Reroute') {
                   // Follow reroute nodes
+                  // @ts-expect-error fixme ts strict error
                   nodes.push(node)
                   updateNodes.push(node)
                 } else {
                   // We've found an output
                   const nodeOutType =
+                    // @ts-expect-error fixme ts strict error
                     node.inputs &&
+                    // @ts-expect-error fixme ts strict error
                     node.inputs[link?.target_slot] &&
+                    // @ts-expect-error fixme ts strict error
                     node.inputs[link.target_slot].type
-                      ? node.inputs[link.target_slot].type
+                      ? // @ts-expect-error fixme ts strict error
+                        node.inputs[link.target_slot].type
                       : null
                   if (
                     inputType &&
+                    // @ts-expect-error fixme ts strict error
                     !LiteGraph.isValidConnection(inputType, nodeOutType)
                   ) {
                     // The output doesnt match our input so disconnect it
+                    // @ts-expect-error fixme ts strict error
                     node.disconnectInput(link.target_slot)
                   } else {
                     outputType = nodeOutType
@@ -143,20 +161,23 @@ app.registerExtension({
           const color = LGraphCanvas.link_type_colors[displayType]
 
           let widgetConfig
-          let targetWidget
           let widgetType
           // Update the types of each node
           for (const node of updateNodes) {
             // If we dont have an input type we are always wildcard but we'll show the output type
             // This lets you change the output link to a different type and all nodes will update
+            // @ts-expect-error fixme ts strict error
             node.outputs[0].type = inputType || '*'
+            // @ts-expect-error fixme ts strict error
             node.__outputType = displayType
+            // @ts-expect-error fixme ts strict error
             node.outputs[0].name = node.properties.showOutputText
               ? displayType
               : ''
-            node.size = node.computeSize()
-            node.applyOrientation()
+            // @ts-expect-error fixme ts strict error
+            node.setSize(node.computeSize())
 
+            // @ts-expect-error fixme ts strict error
             for (const l of node.outputs[0].links || []) {
               const link = app.graph.links[l]
               if (link) {
@@ -164,17 +185,13 @@ app.registerExtension({
 
                 if (app.configuringGraph) continue
                 const targetNode = app.graph.getNodeById(link.target_id)
+                // @ts-expect-error fixme ts strict error
                 const targetInput = targetNode.inputs?.[link.target_slot]
                 if (targetInput?.widget) {
                   const config = getWidgetConfig(targetInput)
                   if (!widgetConfig) {
                     widgetConfig = config[1] ?? {}
                     widgetType = config[0]
-                  }
-                  if (!targetWidget) {
-                    targetWidget = targetNode.widgets?.find(
-                      (w) => w.name === (targetInput.widget as any).name
-                    )
                   }
 
                   const merged = mergeIfValid(targetInput, [
@@ -191,18 +208,22 @@ app.registerExtension({
 
           for (const node of updateNodes) {
             if (widgetConfig && outputType) {
+              // @ts-expect-error fixme ts strict error
               node.inputs[0].widget = { name: 'value' }
-              setWidgetConfig(
-                node.inputs[0],
-                [widgetType ?? displayType, widgetConfig],
-                targetWidget
-              )
+              // @ts-expect-error fixme ts strict error
+              setWidgetConfig(node.inputs[0], [
+                // @ts-expect-error fixme ts strict error
+                widgetType ?? displayType,
+                widgetConfig
+              ])
             } else {
+              // @ts-expect-error fixme ts strict error
               setWidgetConfig(node.inputs[0], null)
             }
           }
 
           if (inputNode) {
+            // @ts-expect-error fixme ts strict error
             const link = app.graph.links[inputNode.inputs[0].link]
             if (link) {
               link.color = color
@@ -212,9 +233,12 @@ app.registerExtension({
 
         this.clone = function () {
           const cloned = RerouteNode.prototype.clone.apply(this)
+          // @ts-expect-error fixme ts strict error
           cloned.removeOutput(0)
+          // @ts-expect-error fixme ts strict error
           cloned.addOutput(this.properties.showOutputText ? '*' : '', '*')
-          cloned.size = cloned.computeSize()
+          // @ts-expect-error fixme ts strict error
+          cloned.setSize(cloned.computeSize())
           return cloned
         }
 
@@ -222,6 +246,7 @@ app.registerExtension({
         this.isVirtualNode = true
       }
 
+      // @ts-expect-error fixme ts strict error
       getExtraMenuOptions(_, options): IContextMenuValue[] {
         options.unshift(
           {
@@ -235,8 +260,7 @@ app.registerExtension({
               } else {
                 this.outputs[0].name = ''
               }
-              this.size = this.computeSize()
-              this.applyOrientation()
+              this.setSize(this.computeSize())
               app.graph.setDirtyCanvas(true, true)
             }
           },
@@ -249,36 +273,11 @@ app.registerExtension({
                 !RerouteNode.defaultVisibility
               )
             }
-          },
-          {
-            // naming is inverted with respect to LiteGraphNode.horizontal
-            // LiteGraphNode.horizontal == true means that
-            // each slot in the inputs and outputs are laid out horizontally,
-            // which is the opposite of the visual orientation of the inputs and outputs as a node
-            content:
-              'Set ' + (this.properties.horizontal ? 'Horizontal' : 'Vertical'),
-            callback: () => {
-              this.properties.horizontal = !this.properties.horizontal
-              this.applyOrientation()
-            }
           }
         )
         return []
       }
-      applyOrientation() {
-        this.horizontal = this.properties.horizontal
-        if (this.horizontal) {
-          // we correct the input position, because LiteGraphNode.horizontal
-          // doesn't account for title presence
-          // which reroute nodes don't have
-          this.inputs[0].pos = [this.size[0] / 2, 0]
-        } else {
-          delete this.inputs[0].pos
-        }
-        app.graph.setDirtyCanvas(true, true)
-      }
-
-      computeSize(): [number, number] {
+      override computeSize(): [number, number] {
         return [
           this.properties.showOutputText && this.outputs && this.outputs.length
             ? Math.max(
@@ -291,6 +290,7 @@ app.registerExtension({
         ]
       }
 
+      // @ts-expect-error fixme ts strict error
       static setDefaultTextVisibility(visible) {
         RerouteNode.defaultVisibility = visible
         if (visible) {

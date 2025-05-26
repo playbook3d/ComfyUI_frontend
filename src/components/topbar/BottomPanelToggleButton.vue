@@ -1,10 +1,11 @@
 <template>
   <Button
     v-show="bottomPanelStore.bottomPanelTabs.length > 0"
+    v-tooltip="{ value: $t('menu.toggleBottomPanel'), showDelay: 300 }"
     severity="secondary"
     text
+    :aria-label="$t('menu.toggleBottomPanel')"
     @click="bottomPanelStore.toggleBottomPanel"
-    v-tooltip="{ value: $t('menu.toggleBottomPanel'), showDelay: 300 }"
   >
     <template #icon>
       <i-material-symbols:dock-to-bottom
@@ -16,8 +17,9 @@
 </template>
 
 <script setup lang="ts">
-import { useBottomPanelStore } from '@/stores/workspace/bottomPanelStore'
 import Button from 'primevue/button'
+
+import { useBottomPanelStore } from '@/stores/workspace/bottomPanelStore'
 
 const bottomPanelStore = useBottomPanelStore()
 </script>

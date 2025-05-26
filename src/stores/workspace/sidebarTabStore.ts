@@ -1,11 +1,12 @@
-import { useModelLibrarySidebarTab } from '@/hooks/sidebarTabs/modelLibrarySidebarTab'
-import { useNodeLibrarySidebarTab } from '@/hooks/sidebarTabs/nodeLibrarySidebarTab'
-import { useQueueSidebarTab } from '@/hooks/sidebarTabs/queueSidebarTab'
-import { useWorkflowsSidebarTab } from '@/hooks/sidebarTabs/workflowsSidebarTab'
-import { SidebarTabExtension } from '@/types/extensionTypes'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+
+import { useModelLibrarySidebarTab } from '@/composables/sidebarTabs/useModelLibrarySidebarTab'
+import { useNodeLibrarySidebarTab } from '@/composables/sidebarTabs/useNodeLibrarySidebarTab'
+import { useQueueSidebarTab } from '@/composables/sidebarTabs/useQueueSidebarTab'
+import { useWorkflowsSidebarTab } from '@/composables/sidebarTabs/useWorkflowsSidebarTab'
 import { useCommandStore } from '@/stores/commandStore'
+import { SidebarTabExtension } from '@/types/extensionTypes'
 
 export const useSidebarTabStore = defineStore('sidebarTab', () => {
   const sidebarTabs = ref<SidebarTabExtension[]>([])
@@ -27,12 +28,13 @@ export const useSidebarTabStore = defineStore('sidebarTab', () => {
     useCommandStore().registerCommand({
       id: `Workspace.ToggleSidebarTab.${tab.id}`,
       icon: tab.icon,
-      label: tab.tooltip,
+      label: `Toggle ${tab.title} Sidebar`,
       tooltip: tab.tooltip,
       versionAdded: '1.3.9',
       function: () => {
         toggleSidebarTab(tab.id)
-      }
+      },
+      source: 'System'
     })
   }
 

@@ -1,13 +1,16 @@
-// @ts-strict-ignore
-import { api } from './api'
-import { ComfyDialog as _ComfyDialog } from './ui/dialog'
-import { toggleSwitch } from './ui/toggleSwitch'
-import { ComfySettingsDialog } from './ui/settings'
-import { ComfyApp, app } from './app'
-import { TaskItem } from '@/types/apiTypes'
-import { showSettingsDialog } from '@/services/dialogService'
-import { useSettingStore } from '@/stores/settingStore'
+import { WORKFLOW_ACCEPT_STRING } from '@/constants/supportedWorkflowFormats'
+import { type StatusWsMessageStatus, TaskItem } from '@/schemas/apiSchema'
+import { useDialogService } from '@/services/dialogService'
+import { useLitegraphService } from '@/services/litegraphService'
 import { useCommandStore } from '@/stores/commandStore'
+import { useSettingStore } from '@/stores/settingStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+
+import { api } from './api'
+import { ComfyApp, app } from './app'
+import { ComfyDialog as _ComfyDialog } from './ui/dialog'
+import { ComfySettingsDialog } from './ui/settings'
+import { toggleSwitch } from './ui/toggleSwitch'
 
 export const ComfyDialog = _ComfyDialog
 
@@ -89,7 +92,8 @@ export function $el<TTag extends string>(
   return element as ElementType<TTag>
 }
 
-function dragElement(dragEl, settings): () => void {
+// @ts-expect-error fixme ts strict error
+function dragElement(dragEl): () => void {
   var posDiffX = 0,
     posDiffY = 0,
     posStartX = 0,
@@ -105,7 +109,7 @@ function dragElement(dragEl, settings): () => void {
   }
 
   // When the element resizes (e.g. view queue) ensure it is still in the windows bounds
-  const resizeObserver = new ResizeObserver(() => {
+  new ResizeObserver(() => {
     ensureInBounds()
   }).observe(dragEl)
 
@@ -145,6 +149,7 @@ function dragElement(dragEl, settings): () => void {
     dragEl.style.top = newPosY + 'px'
     dragEl.style.bottom = 'unset'
 
+    // @ts-expect-error fixme ts strict error
     if (savePos) {
       localStorage.setItem(
         'Comfy.MenuPosition',
@@ -167,21 +172,12 @@ function dragElement(dragEl, settings): () => void {
     }
   }
 
+  // @ts-expect-error fixme ts strict error
   let savePos = undefined
-  settings.addSetting({
-    id: 'Comfy.MenuPosition',
-    category: ['Comfy', 'Menu', 'MenuPosition'],
-    name: "Save legacy menu's position",
-    type: 'boolean',
-    defaultValue: savePos,
-    onChange(value) {
-      if (savePos === undefined && value) {
-        restorePos()
-      }
-      savePos = value
-    }
-  })
+  restorePos()
+  savePos = true
 
+  // @ts-expect-error fixme ts strict error
   function dragMouseDown(e) {
     e = e || window.event
     e.preventDefault()
@@ -193,6 +189,7 @@ function dragElement(dragEl, settings): () => void {
     document.onmousemove = elementDrag
   }
 
+  // @ts-expect-error fixme ts strict error
   function elementDrag(e) {
     e = e || window.event
     e.preventDefault()
@@ -237,6 +234,7 @@ class ComfyList {
   element: HTMLDivElement
   button?: HTMLButtonElement
 
+  // @ts-expect-error fixme ts strict error
   constructor(text, type?, reverse?) {
     this.#text = text
     this.#type = type || text.toLowerCase()
@@ -257,6 +255,7 @@ class ComfyList {
           textContent: section
         }),
         $el('div.comfy-list-items', [
+          // @ts-expect-error fixme ts strict error
           ...(this.#reverse ? items[section].reverse() : items[section]).map(
             (item: TaskItem) => {
               // Allow items to specify a custom remove action (e.g. for interrupt current prompt)
@@ -272,6 +271,7 @@ class ComfyList {
                   textContent: 'Load',
                   onclick: async () => {
                     await app.loadGraphData(
+                      // @ts-expect-error fixme ts strict error
                       item.prompt[3].extra_pnginfo.workflow,
                       true,
                       false
@@ -318,6 +318,7 @@ class ComfyList {
 
   async show() {
     this.element.style.display = 'block'
+    // @ts-expect-error fixme ts strict error
     this.button.textContent = 'Close'
 
     await this.load()
@@ -325,6 +326,7 @@ class ComfyList {
 
   hide() {
     this.element.style.display = 'none'
+    // @ts-expect-error fixme ts strict error
     this.button.textContent = 'View ' + this.#text
   }
 
@@ -347,15 +349,22 @@ export class ComfyUI {
   lastQueueSize: number
   queue: ComfyList
   history: ComfyList
+  // @ts-expect-error fixme ts strict error
   autoQueueMode: string
+  // @ts-expect-error fixme ts strict error
   graphHasChanged: boolean
+  // @ts-expect-error fixme ts strict error
   autoQueueEnabled: boolean
-  menuHamburger: HTMLDivElement
+  // @ts-expect-error fixme ts strict error
   menuContainer: HTMLDivElement
+  // @ts-expect-error fixme ts strict error
   queueSize: Element
+  // @ts-expect-error fixme ts strict error
   restoreMenuPosition: () => void
+  // @ts-expect-error fixme ts strict error
   loadFile: () => void
 
+  // @ts-expect-error fixme ts strict error
   constructor(app) {
     this.app = app
     this.dialog = new ComfyDialog()
@@ -374,14 +383,17 @@ export class ComfyUI {
     this.setup(document.body)
   }
 
+  // @ts-expect-error - containerElement is not used because of a
+  // Playbook edit that hides the menu panel.
   setup(containerElement: HTMLElement) {
     const fileInput = $el('input', {
       id: 'comfy-file-input',
       type: 'file',
-      accept: '.json,image/png,.latent,.safetensors,image/webp,audio/flac',
+      accept: WORKFLOW_ACCEPT_STRING,
       style: { display: 'none' },
       parent: document.body,
       onchange: async () => {
+        // @ts-expect-error fixme ts strict error
         await app.handleFile(fileInput.files[0])
         fileInput.value = ''
       }
@@ -403,6 +415,7 @@ export class ComfyUI {
         }
       ],
       {
+        // @ts-expect-error fixme ts strict error
         onChange: (value) => {
           this.autoQueueMode = value.item.value
         }
@@ -421,244 +434,248 @@ export class ComfyUI {
       }
     })
 
-    this.menuHamburger = $el(
-      'div.comfy-menu-hamburger',
-      {
-        parent: containerElement,
-        onclick: () => {
-          this.menuContainer.style.display = 'block'
-          this.menuHamburger.style.display = 'none'
-        }
-      },
-      [$el('div'), $el('div'), $el('div')]
-    ) as HTMLDivElement
-
-    // The propsOrChildren prop has been set to null to remove menu panel
+    // The propsOrChildren prop has been set to "{}" to remove menu panel
     // for use in the Playbook wrapper (previous value was '{ parent: containerElement }').
-    this.menuContainer = $el('div.comfy-menu', null, [
-      $el(
-        'div.drag-handle.comfy-menu-header',
-        {
-          style: {
-            overflow: 'hidden',
-            position: 'relative',
-            width: '100%',
-            cursor: 'default'
-          }
-        },
-        [
-          $el('span.drag-handle'),
-          $el('span.comfy-menu-queue-size', { $: (q) => (this.queueSize = q) }),
-          $el('div.comfy-menu-actions', [
-            $el('button.comfy-settings-btn', {
-              textContent: '⚙️',
-              onclick: showSettingsDialog
+    this.menuContainer = $el(
+      'div.comfy-menu.no-drag',
+      {},
+      [
+        $el(
+          'div.drag-handle.comfy-menu-header',
+          {
+            style: {
+              overflow: 'hidden',
+              position: 'relative',
+              width: '100%',
+              cursor: 'default'
+            }
+          },
+          [
+            $el('span.drag-handle'),
+            $el('span.comfy-menu-queue-size', {
+              $: (q) => (this.queueSize = q)
             }),
-            $el('button.comfy-close-menu-btn', {
-              textContent: '\u00d7',
-              onclick: () => {
-                this.menuContainer.style.display = 'none'
-                this.menuHamburger.style.display = 'flex'
+            $el('div.comfy-menu-actions', [
+              $el('button.comfy-settings-btn', {
+                textContent: '⚙️',
+                onclick: () => {
+                  useDialogService().showSettingsDialog()
+                }
+              }),
+              $el('button.comfy-close-menu-btn', {
+                textContent: '\u00d7',
+                onclick: () => {
+                  useWorkspaceStore().focusMode = true
+                }
+              })
+            ])
+          ]
+        ),
+        $el('button.comfy-queue-btn', {
+          id: 'queue-button',
+          textContent: 'Queue Prompt',
+          onclick: () => app.queuePrompt(0, this.batchCount)
+        }),
+        $el('div', {}, [
+          $el('label', { innerHTML: 'Extra options' }, [
+            $el('input', {
+              type: 'checkbox',
+              // @ts-expect-error fixme ts strict error
+              onchange: (i) => {
+                // @ts-expect-error fixme ts strict error
+                document.getElementById('extraOptions').style.display = i
+                  .srcElement.checked
+                  ? 'block'
+                  : 'none'
+                this.batchCount = i.srcElement.checked
+                  ? Number.parseInt(
+                      (
+                        document.getElementById(
+                          'batchCountInputRange'
+                        ) as HTMLInputElement
+                      ).value
+                    )
+                  : 1
+                ;(
+                  document.getElementById(
+                    'autoQueueCheckbox'
+                  ) as HTMLInputElement
+                ).checked = false
+                this.autoQueueEnabled = false
               }
             })
           ])
-        ]
-      ),
-      $el('button.comfy-queue-btn', {
-        id: 'queue-button',
-        textContent: 'Queue Prompt',
-        onclick: () => app.queuePrompt(0, this.batchCount)
-      }),
-      $el('div', {}, [
-        $el('label', { innerHTML: 'Extra options' }, [
-          $el('input', {
-            type: 'checkbox',
-            onchange: (i) => {
-              document.getElementById('extraOptions').style.display = i
-                .srcElement.checked
-                ? 'block'
-                : 'none'
-              this.batchCount = i.srcElement.checked
-                ? Number.parseInt(
-                    (
-                      document.getElementById(
-                        'batchCountInputRange'
-                      ) as HTMLInputElement
-                    ).value
-                  )
-                : 1
-              ;(
-                document.getElementById('autoQueueCheckbox') as HTMLInputElement
-              ).checked = false
-              this.autoQueueEnabled = false
-            }
-          })
-        ])
-      ]),
-      $el(
-        'div',
-        { id: 'extraOptions', style: { width: '100%', display: 'none' } },
-        [
-          $el('div', [
-            $el('label', { innerHTML: 'Batch count' }),
-            $el('input', {
-              id: 'batchCountInputNumber',
-              type: 'number',
-              value: this.batchCount,
-              min: '1',
-              style: { width: '35%', marginLeft: '0.4em' },
-              oninput: (i) => {
-                this.batchCount = i.target.value
-                /* Even though an <input> element with a type of range logically represents a number (since
+        ]),
+        $el(
+          'div',
+          { id: 'extraOptions', style: { width: '100%', display: 'none' } },
+          [
+            $el('div', [
+              $el('label', { innerHTML: 'Batch count' }),
+              $el('input', {
+                id: 'batchCountInputNumber',
+                type: 'number',
+                value: this.batchCount,
+                min: '1',
+                style: { width: '35%', marginLeft: '0.4em' },
+                // @ts-expect-error fixme ts strict error
+                oninput: (i) => {
+                  this.batchCount = i.target.value
+                  /* Even though an <input> element with a type of range logically represents a number (since
               it's used for numeric input), the value it holds is still treated as a string in HTML and
               JavaScript. This behavior is consistent across all <input> elements regardless of their type
               (like text, number, or range), where the .value property is always a string. */
-                ;(
-                  document.getElementById(
-                    'batchCountInputRange'
-                  ) as HTMLInputElement
-                ).value = this.batchCount.toString()
-              }
-            }),
-            $el('input', {
-              id: 'batchCountInputRange',
-              type: 'range',
-              min: '1',
-              max: '100',
-              value: this.batchCount,
-              oninput: (i) => {
-                this.batchCount = i.srcElement.value
-                // Note
-                ;(
-                  document.getElementById(
-                    'batchCountInputNumber'
-                  ) as HTMLInputElement
-                ).value = i.srcElement.value
-              }
-            })
-          ]),
-          $el('div', [
-            $el('label', {
-              for: 'autoQueueCheckbox',
-              innerHTML: 'Auto Queue'
-            }),
-            $el('input', {
-              id: 'autoQueueCheckbox',
-              type: 'checkbox',
-              checked: false,
-              title: 'Automatically queue prompt when the queue size hits 0',
-              onchange: (e) => {
-                this.autoQueueEnabled = e.target.checked
-                autoQueueModeEl.style.display = this.autoQueueEnabled
-                  ? ''
-                  : 'none'
-              }
-            }),
-            autoQueueModeEl
-          ])
-        ]
-      ),
-      $el('div.comfy-menu-btns', [
+                  ;(
+                    document.getElementById(
+                      'batchCountInputRange'
+                    ) as HTMLInputElement
+                  ).value = this.batchCount.toString()
+                }
+              }),
+              $el('input', {
+                id: 'batchCountInputRange',
+                type: 'range',
+                min: '1',
+                max: '100',
+                value: this.batchCount,
+                // @ts-expect-error fixme ts strict error
+                oninput: (i) => {
+                  this.batchCount = i.srcElement.value
+                  // Note
+                  ;(
+                    document.getElementById(
+                      'batchCountInputNumber'
+                    ) as HTMLInputElement
+                  ).value = i.srcElement.value
+                }
+              })
+            ]),
+            $el('div', [
+              $el('label', {
+                for: 'autoQueueCheckbox',
+                innerHTML: 'Auto Queue'
+              }),
+              $el('input', {
+                id: 'autoQueueCheckbox',
+                type: 'checkbox',
+                checked: false,
+                title: 'Automatically queue prompt when the queue size hits 0',
+                // @ts-expect-error fixme ts strict error
+                onchange: (e) => {
+                  this.autoQueueEnabled = e.target.checked
+                  autoQueueModeEl.style.display = this.autoQueueEnabled
+                    ? ''
+                    : 'none'
+                }
+              }),
+              autoQueueModeEl
+            ])
+          ]
+        ),
+        $el('div.comfy-menu-btns', [
+          $el('button', {
+            id: 'queue-front-button',
+            textContent: 'Queue Front',
+            onclick: () => app.queuePrompt(-1, this.batchCount)
+          }),
+          $el('button', {
+            $: (b) => (this.queue.button = b as HTMLButtonElement),
+            id: 'comfy-view-queue-button',
+            textContent: 'View Queue',
+            onclick: () => {
+              this.history.hide()
+              this.queue.toggle()
+            }
+          }),
+          $el('button', {
+            $: (b) => (this.history.button = b as HTMLButtonElement),
+            id: 'comfy-view-history-button',
+            textContent: 'View History',
+            onclick: () => {
+              this.queue.hide()
+              this.history.toggle()
+            }
+          })
+        ]),
+        this.queue.element,
+        this.history.element,
         $el('button', {
-          id: 'queue-front-button',
-          textContent: 'Queue Front',
-          onclick: () => app.queuePrompt(-1, this.batchCount)
-        }),
-        $el('button', {
-          $: (b) => (this.queue.button = b as HTMLButtonElement),
-          id: 'comfy-view-queue-button',
-          textContent: 'View Queue',
+          id: 'comfy-save-button',
+          textContent: 'Save',
           onclick: () => {
-            this.history.hide()
-            this.queue.toggle()
+            useCommandStore().execute('Comfy.ExportWorkflow')
           }
         }),
         $el('button', {
-          $: (b) => (this.history.button = b as HTMLButtonElement),
-          id: 'comfy-view-history-button',
-          textContent: 'View History',
+          id: 'comfy-dev-save-api-button',
+          textContent: 'Save (API Format)',
+          style: { width: '100%', display: 'none' },
           onclick: () => {
-            this.queue.hide()
-            this.history.toggle()
+            useCommandStore().execute('Comfy.ExportWorkflowAPI')
+          }
+        }),
+        $el('button', {
+          id: 'comfy-load-button',
+          textContent: 'Load',
+          onclick: () => fileInput.click()
+        }),
+        $el('button', {
+          id: 'comfy-refresh-button',
+          textContent: 'Refresh',
+          onclick: () => app.refreshComboInNodes()
+        }),
+        $el('button', {
+          id: 'comfy-clipspace-button',
+          textContent: 'Clipspace',
+          onclick: () => app.openClipspace()
+        }),
+        $el('button', {
+          id: 'comfy-clear-button',
+          textContent: 'Clear',
+          onclick: () => {
+            if (
+              !useSettingStore().get('Comfy.ConfirmClear') ||
+              confirm('Clear workflow?')
+            ) {
+              app.clean()
+              app.graph.clear()
+              useLitegraphService().resetView()
+              api.dispatchCustomEvent('graphCleared')
+            }
+          }
+        }),
+        $el('button', {
+          id: 'comfy-load-default-button',
+          textContent: 'Load Default',
+          onclick: async () => {
+            if (
+              !useSettingStore().get('Comfy.ConfirmClear') ||
+              confirm('Load default workflow?')
+            ) {
+              useLitegraphService().resetView()
+              await app.loadGraphData()
+            }
+          }
+        }),
+        $el('button', {
+          id: 'comfy-reset-view-button',
+          textContent: 'Reset View',
+          onclick: async () => {
+            useLitegraphService().resetView()
           }
         })
-      ]),
-      this.queue.element,
-      this.history.element,
-      $el('button', {
-        id: 'comfy-save-button',
-        textContent: 'Save',
-        onclick: () => {
-          useCommandStore().execute('Comfy.ExportWorkflow')
-        }
-      }),
-      $el('button', {
-        id: 'comfy-dev-save-api-button',
-        textContent: 'Save (API Format)',
-        style: { width: '100%', display: 'none' },
-        onclick: () => {
-          useCommandStore().execute('Comfy.ExportWorkflowAPI')
-        }
-      }),
-      $el('button', {
-        id: 'comfy-load-button',
-        textContent: 'Load',
-        onclick: () => fileInput.click()
-      }),
-      $el('button', {
-        id: 'comfy-refresh-button',
-        textContent: 'Refresh',
-        onclick: () => app.refreshComboInNodes()
-      }),
-      $el('button', {
-        id: 'comfy-clipspace-button',
-        textContent: 'Clipspace',
-        // @ts-expect-error Move to ComfyApp
-        onclick: () => app.openClipspace()
-      }),
-      $el('button', {
-        id: 'comfy-clear-button',
-        textContent: 'Clear',
-        onclick: () => {
-          if (
-            !useSettingStore().get('Comfy.ConfirmClear') ||
-            confirm('Clear workflow?')
-          ) {
-            app.clean()
-            app.graph.clear()
-            app.resetView()
-            api.dispatchEvent(new CustomEvent('graphCleared'))
-          }
-        }
-      }),
-      $el('button', {
-        id: 'comfy-load-default-button',
-        textContent: 'Load Default',
-        onclick: async () => {
-          if (
-            !useSettingStore().get('Comfy.ConfirmClear') ||
-            confirm('Load default workflow?')
-          ) {
-            app.resetView()
-            await app.loadGraphData()
-          }
-        }
-      }),
-      $el('button', {
-        id: 'comfy-reset-view-button',
-        textContent: 'Reset View',
-        onclick: async () => {
-          app.resetView()
-        }
-      })
-    ]) as HTMLDivElement
+      ]
+    ) as HTMLDivElement
+    // Hide by default on construction so it does not interfere with other views.
+    this.menuContainer.style.display = 'none'
 
-    this.restoreMenuPosition = dragElement(this.menuContainer, this.settings)
+    this.restoreMenuPosition = dragElement(this.menuContainer)
 
+    // @ts-expect-error
     this.setStatus({ exec_info: { queue_remaining: 'X' } })
   }
 
-  setStatus(status) {
+  setStatus(status: StatusWsMessageStatus | null) {
     this.queueSize.textContent =
       'Queue size: ' + (status ? status.exec_info.queue_remaining : 'ERR')
     if (status) {

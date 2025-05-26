@@ -1,5 +1,5 @@
 <template>
-  <component v-if="extension.type === 'vue'" :is="extension.component" />
+  <component :is="extension.component" v-if="extension.type === 'vue'" />
   <div
     v-else
     :ref="
@@ -11,12 +11,13 @@
           )
       }
     "
-  ></div>
+  />
 </template>
 
 <script setup lang="ts">
-import { CustomExtension, VueExtension } from '@/types/extensionTypes'
 import { onBeforeUnmount } from 'vue'
+
+import { CustomExtension, VueExtension } from '@/types/extensionTypes'
 
 const props = defineProps<{
   extension: VueExtension | CustomExtension

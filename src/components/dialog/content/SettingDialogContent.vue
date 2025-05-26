@@ -1,206 +1,153 @@
 <template>
   <div class="settings-container">
-    <ScrollPanel class="settings-sidebar flex-shrink-0 p-2 w-64">
+    <ScrollPanel class="settings-sidebar flex-shrink-0 p-2 w-48 2xl:w-64">
       <SearchBox
-        class="settings-search-box w-full mb-2"
         v-model:modelValue="searchQuery"
+        class="settings-search-box w-full mb-2"
+        :placeholder="$t('g.searchSettings') + '...'"
+        :debounce-time="128"
         @search="handleSearch"
-        :placeholder="$t('searchSettings') + '...'"
       />
       <Listbox
         v-model="activeCategory"
-        :options="categories"
-        optionLabel="label"
-        scrollHeight="100%"
-        :disabled="inSearch"
+        :options="groupedMenuTreeNodes"
+        option-label="translatedLabel"
+        option-group-label="label"
+        option-group-children="children"
+        scroll-height="100%"
+        :option-disabled="
+          (option: SettingTreeNode) =>
+            !queryIsEmpty && !searchResultsCategories.has(option.label ?? '')
+        "
         class="border-none w-full"
-      />
+      >
+        <template #optiongroup>
+          <Divider class="my-0" />
+        </template>
+      </Listbox>
     </ScrollPanel>
-    <Divider layout="vertical" />
-    <ScrollPanel class="settings-content flex-grow">
-      <Tabs :value="tabValue">
-        <TabPanels class="settings-tab-panels">
-          <TabPanel key="search-results" value="Search Results">
-            <div v-if="searchResults.length > 0">
-              <SettingGroup
-                v-for="(group, i) in searchResults"
-                :key="group.label"
-                :divider="i !== 0"
-                :group="group"
-              />
-            </div>
-            <NoResultsPlaceholder
-              v-else
-              icon="pi pi-search"
-              :title="$t('noResultsFound')"
-              :message="$t('searchFailedMessage')"
-            />
-          </TabPanel>
-          <TabPanel
-            v-for="category in categories"
-            :key="category.key"
-            :value="category.label"
-          >
-            <SettingGroup
-              v-for="(group, i) in sortedGroups(category)"
-              :key="group.label"
-              :divider="i !== 0"
-              :group="{
-                label: group.label,
-                settings: flattenTree<SettingParams>(group)
-              }"
-            />
-          </TabPanel>
-          <TabPanel key="about" value="About">
-            <AboutPanel />
-          </TabPanel>
-          <TabPanel key="keybinding" value="Keybinding">
-            <Suspense>
-              <KeybindingPanel />
-              <template #fallback>
-                <div>Loading keybinding panel...</div>
-              </template>
-            </Suspense>
-          </TabPanel>
-          <TabPanel key="extension" value="Extension">
-            <Suspense>
-              <ExtensionPanel />
-              <template #fallback>
-                <div>Loading extension panel...</div>
-              </template>
-            </Suspense>
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-    </ScrollPanel>
+    <Divider layout="vertical" class="mx-1 2xl:mx-4 hidden md:flex" />
+    <Divider layout="horizontal" class="flex md:hidden" />
+    <Tabs :value="tabValue" :lazy="true" class="settings-content h-full w-full">
+      <TabPanels class="settings-tab-panels h-full w-full pr-0">
+        <PanelTemplate value="Search Results">
+          <SettingsPanel :setting-groups="searchResults" />
+        </PanelTemplate>
+
+        <PanelTemplate
+          v-for="category in settingCategories"
+          :key="category.key"
+          :value="category.label ?? ''"
+        >
+          <template #header>
+            <CurrentUserMessage v-if="tabValue === 'Comfy'" />
+            <FirstTimeUIMessage v-if="tabValue === 'Comfy'" />
+            <ColorPaletteMessage v-if="tabValue === 'Appearance'" />
+          </template>
+          <SettingsPanel :setting-groups="sortedGroups(category)" />
+        </PanelTemplate>
+
+        <Suspense v-for="panel in panels" :key="panel.node.key">
+          <component :is="panel.component" />
+          <template #fallback>
+            <div>Loading {{ panel.node.label }} panel...</div>
+          </template>
+        </Suspense>
+      </TabPanels>
+    </Tabs>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
-import Listbox from 'primevue/listbox'
-import Tabs from 'primevue/tabs'
-import TabPanels from 'primevue/tabpanels'
-import TabPanel from 'primevue/tabpanel'
 import Divider from 'primevue/divider'
+import Listbox from 'primevue/listbox'
 import ScrollPanel from 'primevue/scrollpanel'
-import { SettingTreeNode, useSettingStore } from '@/stores/settingStore'
-import { SettingParams } from '@/types/settingTypes'
-import SettingGroup from './setting/SettingGroup.vue'
+import TabPanels from 'primevue/tabpanels'
+import Tabs from 'primevue/tabs'
+import { computed, watch } from 'vue'
+
 import SearchBox from '@/components/common/SearchBox.vue'
-import NoResultsPlaceholder from '@/components/common/NoResultsPlaceholder.vue'
+import { useFirebaseAuthActions } from '@/composables/auth/useFirebaseAuthActions'
+import { useSettingSearch } from '@/composables/setting/useSettingSearch'
+import { useSettingUI } from '@/composables/setting/useSettingUI'
+import { SettingTreeNode } from '@/stores/settingStore'
+import { ISettingGroup, SettingParams } from '@/types/settingTypes'
 import { flattenTree } from '@/utils/treeUtil'
-import AboutPanel from './setting/AboutPanel.vue'
 
-const KeybindingPanel = defineAsyncComponent(
-  () => import('./setting/KeybindingPanel.vue')
-)
-const ExtensionPanel = defineAsyncComponent(
-  () => import('./setting/ExtensionPanel.vue')
-)
+import ColorPaletteMessage from './setting/ColorPaletteMessage.vue'
+import CurrentUserMessage from './setting/CurrentUserMessage.vue'
+import FirstTimeUIMessage from './setting/FirstTimeUIMessage.vue'
+import PanelTemplate from './setting/PanelTemplate.vue'
+import SettingsPanel from './setting/SettingsPanel.vue'
 
-interface ISettingGroup {
-  label: string
-  settings: SettingParams[]
+const { defaultPanel } = defineProps<{
+  defaultPanel?:
+    | 'about'
+    | 'keybinding'
+    | 'extension'
+    | 'server-config'
+    | 'user'
+    | 'credits'
+}>()
+
+const {
+  activeCategory,
+  defaultCategory,
+  settingCategories,
+  groupedMenuTreeNodes,
+  panels
+} = useSettingUI(defaultPanel)
+
+const {
+  searchQuery,
+  searchResultsCategories,
+  queryIsEmpty,
+  inSearch,
+  handleSearch: handleSearchBase,
+  getSearchResults
+} = useSettingSearch()
+
+const authActions = useFirebaseAuthActions()
+
+// Sort groups for a category
+const sortedGroups = (category: SettingTreeNode): ISettingGroup[] => {
+  return [...(category.children ?? [])]
+    .sort((a, b) => a.label.localeCompare(b.label))
+    .map((group) => ({
+      label: group.label,
+      settings: flattenTree<SettingParams>(group)
+    }))
 }
-
-const aboutPanelNode: SettingTreeNode = {
-  key: 'about',
-  label: 'About',
-  children: []
-}
-
-const keybindingPanelNode: SettingTreeNode = {
-  key: 'keybinding',
-  label: 'Keybinding',
-  children: []
-}
-
-const extensionPanelNode: SettingTreeNode = {
-  key: 'extension',
-  label: 'Extension',
-  children: []
-}
-
-const extensionPanelNodeList = computed<SettingTreeNode[]>(() => {
-  const settingStore = useSettingStore()
-  const showExtensionPanel = settingStore.get('Comfy.Settings.ExtensionPanel')
-  return showExtensionPanel ? [extensionPanelNode] : []
-})
-
-const settingStore = useSettingStore()
-const settingRoot = computed<SettingTreeNode>(() => settingStore.settingTree)
-const categories = computed<SettingTreeNode[]>(() => [
-  ...(settingRoot.value.children || []),
-  keybindingPanelNode,
-  ...extensionPanelNodeList.value,
-  aboutPanelNode
-])
-const activeCategory = ref<SettingTreeNode | null>(null)
-const searchResults = ref<ISettingGroup[]>([])
-
-watch(activeCategory, (newCategory, oldCategory) => {
-  if (newCategory === null) {
-    activeCategory.value = oldCategory
-  }
-})
-
-onMounted(() => {
-  activeCategory.value = categories.value[0]
-})
-
-const sortedGroups = (category: SettingTreeNode) => {
-  return [...(category.children || [])].sort((a, b) =>
-    a.label.localeCompare(b.label)
-  )
-}
-
-const searchQuery = ref<string>('')
-const searchInProgress = ref<boolean>(false)
-watch(searchQuery, () => (searchInProgress.value = true))
 
 const handleSearch = (query: string) => {
-  if (!query) {
-    searchResults.value = []
-    return
-  }
-
-  const allSettings = flattenTree<SettingParams>(settingRoot.value)
-  const filteredSettings = allSettings.filter(
-    (setting) =>
-      setting.id.toLowerCase().includes(query.toLowerCase()) ||
-      setting.name.toLowerCase().includes(query.toLowerCase())
-  )
-
-  const groupedSettings: { [key: string]: SettingParams[] } = {}
-  filteredSettings.forEach((setting) => {
-    const groupLabel = setting.id.split('.')[1]
-    if (!groupedSettings[groupLabel]) {
-      groupedSettings[groupLabel] = []
-    }
-    groupedSettings[groupLabel].push(setting)
-  })
-
-  searchResults.value = Object.entries(groupedSettings).map(
-    ([label, settings]) => ({
-      label,
-      settings
-    })
-  )
-  searchInProgress.value = false
+  handleSearchBase(query)
+  activeCategory.value = query ? null : defaultCategory.value
 }
 
-const inSearch = computed(
-  () => searchQuery.value.length > 0 && !searchInProgress.value
+// Get search results
+const searchResults = computed<ISettingGroup[]>(() =>
+  getSearchResults(activeCategory.value)
 )
-const tabValue = computed(() =>
-  inSearch.value ? 'Search Results' : activeCategory.value?.label
+
+const tabValue = computed<string>(() =>
+  inSearch.value ? 'Search Results' : activeCategory.value?.label ?? ''
 )
+
+// Don't allow null category to be set outside of search.
+// In search mode, the active category can be null to show all search results.
+watch(activeCategory, (_, oldValue) => {
+  if (!tabValue.value) {
+    activeCategory.value = oldValue
+  }
+  if (activeCategory.value?.key === 'credits') {
+    void authActions.fetchBalance()
+  }
+})
 </script>
 
 <style>
 .settings-tab-panels {
-  padding-top: 0px !important;
+  padding-top: 0 !important;
 }
 </style>
 
@@ -209,29 +156,32 @@ const tabValue = computed(() =>
   display: flex;
   height: 70vh;
   width: 60vw;
-  max-width: 1024px;
+  max-width: 64rem;
   overflow: hidden;
+}
+
+.settings-content {
+  overflow-x: auto;
 }
 
 @media (max-width: 768px) {
   .settings-container {
     flex-direction: column;
     height: auto;
+    width: 80vw;
   }
 
   .settings-sidebar {
     width: 100%;
   }
+
+  .settings-content {
+    height: 350px;
+  }
 }
 
-/* Show a separator line above the Keybinding tab */
-/* This indicates the start of custom setting panels */
-.settings-sidebar :deep(.p-listbox-option[aria-label='Keybinding']) {
-  position: relative;
-}
-
-.settings-sidebar :deep(.p-listbox-option[aria-label='Keybinding'])::before {
-  @apply content-[''] top-0 left-0 absolute w-full;
-  border-top: 1px solid var(--p-divider-border-color);
+/* Hide the first group separator */
+.settings-sidebar :deep(.p-listbox-option-group:nth-child(1)) {
+  display: none;
 }
 </style>
