@@ -9,6 +9,11 @@ export interface WorkflowWindowMessageData {
     | 'SendWrapperOriginToComfyWindow'
     | 'SendWorkflowDataToPlaybookWrapper'
     | 'SendSelectedNodesToPlaybookWrapper'
+    | 'NewWorkflowLoadedInComfyWindow'
+    | 'ClearWorkflowInComfyWindow'
+    | 'ExportWorkflowJSONFromComfyWindow'
+    | 'SendNodesDefinitionToComfyWindow'
+    | 'SendNodesDeletedToPlaybookWrapper'
   data?: any
 }
 

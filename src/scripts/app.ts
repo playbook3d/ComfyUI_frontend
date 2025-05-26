@@ -60,7 +60,8 @@ import { shallowReactive } from 'vue'
 import {
   ComfyWorkflowNodeData,
   WorkflowWindowMessageData
-} from './playbookTypes'
+} from './playbook-scripts/playbookTypes'
+import { notifyPlaybookWrapperNewWorkflowLoaded } from './playbook-scripts/notifyPlaybookWrapperNewWorkflowLoaded'
 
 export const ANIM_PREVIEW_WIDGET = '$$comfy_animation_preview'
 
@@ -155,6 +156,7 @@ export class ComfyApp {
 
   // Playbook Fields
   playbookWrapperOrigin: string
+  serializedNodesDefinition: string
   // ------------- |
 
   /**
@@ -187,7 +189,7 @@ export class ComfyApp {
     this.bypassBgColor = '#FF00FF'
 
     /*
-     *  Subscribe listener to receive messaging from iFrame wrapper layer.
+     *  Subscribe listener to receive messaging from Playbook wrapper.
      */
     window.addEventListener('message', async (event) => {
       const eventMessageData: WorkflowWindowMessageData = event.data
@@ -224,6 +226,34 @@ export class ComfyApp {
             'Comfy Window Received: RequestWorkflowDataFromComfyWindow'
           )
           this.sendWorkflowDataToPlaybookWrapper()
+          break
+
+        // Clear graph. This functionality is identical to that triggered
+        // when "Clear" is clicked on the ConfyUI menu.
+        case 'ClearWorkflowInComfyWindow':
+          console.log('Comfy Window Received: ClearWorkflowInComfyWindow')
+          this.clean()
+          this.graph.clear()
+          this.resetView()
+          api.dispatchEvent(new CustomEvent('graphCleared'))
+          break
+
+        // Export the workflow as JSON. This functionality is identical to that
+        // triggered when "Save" is clicked on the ConfyUI menu.
+        case 'ExportWorkflowJSONFromComfyWindow':
+          console.log(
+            'Comfy Window Received: ExportWorkflowJSONFromComfyWindow'
+          )
+          useCommandStore().execute('Comfy.ExportWorkflow')
+          break
+
+        case 'SendNodesDefinitionToComfyWindow':
+          console.log(
+            'Comfy Window Received: SendNodesDefinitionToComfyWindow',
+            eventMessageData
+          )
+          this.serializedNodesDefinition = eventMessageData.data
+          await this.registerNodes()
           break
 
         default:
@@ -1200,6 +1230,20 @@ export class ComfyApp {
     this.canvasEl.addEventListener(
       'dragover',
       (e) => {
+        // Disable dropEffect (green plus icon) for JSON files.
+        const items = e.dataTransfer.items
+        if (items) {
+          for (let i = 0; i < items.length; i++) {
+            if (
+              items[i].kind === 'file' &&
+              items[i].type === 'application/json'
+            ) {
+              console.log(`File type: ${items[i].type}`)
+              e.dataTransfer.dropEffect = 'none'
+            }
+          }
+        }
+
         this.canvas.adjustMouseEvent(e)
         // @ts-expect-error: canvasX and canvasY are added by adjustMouseEvent in litegraph
         const node = this.graph.getNodeOnPos(e.canvasX, e.canvasY)
@@ -1977,7 +2021,6 @@ export class ComfyApp {
 
       console.log('ComfyUI: new LGraph created in setup')
     }
-    // this.graph = new LGraph()
 
     this.#addAfterConfigureHandler()
 
@@ -2086,7 +2129,7 @@ export class ComfyApp {
           )
         }
       },
-      500
+      100
     )
   }
 
@@ -2923,6 +2966,8 @@ export class ComfyApp {
       file.type === 'application/json' ||
       file.name?.endsWith('.json')
     ) {
+      // Playbook Edit: Disabling import of ComfyUI workflow JSON files.
+      return
       const reader = new FileReader()
       reader.onload = async () => {
         const readerResult = reader.result as string
@@ -2938,6 +2983,7 @@ export class ComfyApp {
             false,
             fileName
           )
+          notifyPlaybookWrapperNewWorkflowLoaded(this.playbookWrapperOrigin)
         }
       }
       reader.readAsText(file)
