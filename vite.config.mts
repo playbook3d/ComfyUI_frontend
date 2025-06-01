@@ -7,7 +7,11 @@ import { defineConfig } from 'vite'
 import { createHtmlPlugin } from 'vite-plugin-html'
 import type { UserConfigExport } from 'vitest/config'
 
-import { comfyAPIPlugin, generateImportMapPlugin } from './build/plugins'
+import {
+  addElementVnodeExportPlugin,
+  comfyAPIPlugin,
+  generateImportMapPlugin
+} from './build/plugins'
 
 dotenv.config()
 
@@ -82,40 +86,11 @@ export default defineConfig({
     ...(!DISABLE_VUE_PLUGINS ? [vue(), createHtmlPlugin({})] : [vue()]),
     comfyAPIPlugin(IS_DEV),
     generateImportMapPlugin([
-      {
-        name: 'vue',
-        pattern: 'vue',
-        entry: './dist/vue.esm-browser.prod.js'
-      },
-      {
-        name: 'vue-i18n',
-        pattern: 'vue-i18n',
-        entry: './dist/vue-i18n.esm-browser.prod.js'
-      },
-      {
-        name: 'primevue',
-        pattern: /^primevue\/?.*/,
-        entry: './index.mjs',
-        recursiveDependence: true
-      },
-      {
-        name: '@primevue/themes',
-        pattern: /^@primevue\/themes\/?.*/,
-        entry: './index.mjs',
-        recursiveDependence: true
-      },
-      {
-        name: '@primevue/forms',
-        pattern: /^@primevue\/forms\/?.*/,
-        entry: './index.mjs',
-        recursiveDependence: true,
-        override: {
-          '@primeuix/forms': {
-            entry: ''
-          }
-        }
-      }
+      { name: 'vue', pattern: /[\\/]node_modules[\\/]vue[\\/]/ },
+      { name: 'primevue', pattern: /[\\/]node_modules[\\/]primevue[\\/]/ },
+      { name: 'vue-i18n', pattern: /[\\/]node_modules[\\/]vue-i18n[\\/]/ }
     ]),
+    addElementVnodeExportPlugin(),
 
     Icons({
       compiler: 'vue3'
