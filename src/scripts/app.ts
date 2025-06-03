@@ -47,7 +47,6 @@ import { useExtensionStore } from '@/stores/extensionStore'
 import { useFirebaseAuthStore } from '@/stores/firebaseAuthStore'
 import { KeyComboImpl, useKeybindingStore } from '@/stores/keybindingStore'
 import { useCommandStore } from '@/stores/commandStore'
-import { ComfyWorkflowNodeData } from './playbook-scripts/playbookTypes'
 import { useModelStore } from '@/stores/modelStore'
 import { SYSTEM_NODE_DEFS, useNodeDefStore } from '@/stores/nodeDefStore'
 import { useSettingStore } from '@/stores/settingStore'
@@ -85,12 +84,7 @@ import { $el, ComfyUI } from './ui'
 import { ComfyAppMenu } from './ui/menu/index'
 import { clone } from './utils'
 import { type ComfyWidgetConstructor } from './widgets'
-import {
-  notifyPlaybookWrapperNewWorkflowLoaded,
-  notifyWrapperOriginSetOnComfyInstance,
-  sendNodeSelectionToPlaybookWrapper,
-  sendWorkflowDataToPlaybookWrapper,
-} from './playbook-scripts/playbookMessaging'
+
 import { areSelectedItemsEqual, restructureSelectedNodesForPlaybookWrapper } from './playbook-scripts/playbookHelpers'
 
 import { IWidget } from '@comfyorg/litegraph'
@@ -357,9 +351,6 @@ export class ComfyApp {
 
           this.lastSelectedItems = new Set(this.canvas.selectedItems)
           
-          // TODO: Consolidate these methods of handling node selection. Better
-          // system might be tracking node selection by array of IDs and getting
-          // actual node data by cross-referencing with graph data on the front end.
           // This is a hack way of handling node selection changes;
           // necessary because canvas.onSelectionChange was deprecated
           // without replacement functionality in recent ComfyUI updates.
@@ -420,9 +411,23 @@ export class ComfyApp {
           // This listener will broadcast selection changes to Playbook wrapper.
           this.canvas.onSelectionChange = (nodes) => {
             if (this.playbookWrapperOrigin) {
-              sendNodeSelectionToPlaybookWrapper(nodes, this.playbookWrapperOrigin)
+              if (!areSelectedItemsEqual(this.lastSelectedItems, this.canvas.selectedItems)) {
+                const selectedItems = Array.from(this.canvas.selectedItems)
+                sendNodeSelectionToPlaybookWrapper(selectedItems, this.playbookWrapperOrigin)
+                this.lastSelectedItems = new Set(this.canvas.selectedItems)
+              }
+            }
+          })
+
+          // This listener handles deselection via hotkey deletion.
+          this.canvas.onNodeDeselected = () => {
+            if (this.playbookWrapperOrigin) {
+              const selectedItems = Array.from(this.canvas.selectedItems)
+              sendNodeSelectionToPlaybookWrapper(selectedItems, this.playbookWrapperOrigin)
+              this.lastSelectedItems = new Set(this.canvas.selectedItems)
             }
           }
+          
           break
 
         case 'RequestWorkflowDataFromComfyWindow':
