@@ -1,13 +1,15 @@
-import { Settings } from './apiTypes'
-
-export type StorageLocation = 'browser' | 'server'
+import type { Settings } from '@/schemas/apiSchema'
 
 export type SettingInputType =
   | 'boolean'
   | 'number'
   | 'slider'
+  | 'knob'
   | 'combo'
   | 'text'
+  | 'image'
+  | 'color'
+  | 'url'
   | 'hidden'
 
 export type SettingCustomRenderer = (
@@ -19,7 +21,7 @@ export type SettingCustomRenderer = (
 
 export interface SettingOption {
   text: string
-  value?: string
+  value?: any
 }
 
 export interface Setting {
@@ -29,15 +31,10 @@ export interface Setting {
   render: () => HTMLElement
 }
 
-export interface SettingParams {
+export interface SettingParams extends FormItem {
   id: keyof Settings
-  name: string
-  type: SettingInputType | SettingCustomRenderer
-  defaultValue: any
+  defaultValue: any | (() => any)
   onChange?: (newValue: any, oldValue?: any) => void
-  attrs?: any
-  tooltip?: string
-  options?: Array<string | SettingOption> | ((value: any) => SettingOption[])
   // By default category is id.split('.'). However, changing id to assign
   // new category has poor backward compatibility. Use this field to overwrite
   // default category from id.
@@ -51,4 +48,20 @@ export interface SettingParams {
   versionAdded?: string
   // Version of the setting when it was last modified
   versionModified?: string
+}
+
+/**
+ * The base form item for rendering in a form.
+ */
+export interface FormItem {
+  name: string
+  type: SettingInputType | SettingCustomRenderer
+  tooltip?: string
+  attrs?: Record<string, any>
+  options?: Array<string | SettingOption>
+}
+
+export interface ISettingGroup {
+  label: string
+  settings: SettingParams[]
 }

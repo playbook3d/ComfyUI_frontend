@@ -1,26 +1,33 @@
 <template>
-  <div :class="props.class">
+  <div>
     <IconField>
-      <InputIcon :class="props.icon" />
-      <InputText
-        class="search-box-input"
-        :class="{ ['with-filter']: props.filterIcon }"
-        @input="handleInput"
-        :modelValue="props.modelValue"
-        :placeholder="props.placeholder"
-      />
       <Button
-        v-if="props.filterIcon"
-        class="p-inputicon"
-        :icon="props.filterIcon"
+        v-if="filterIcon"
+        class="p-inputicon filter-button"
+        :icon="filterIcon"
         text
         severity="contrast"
         @click="$emit('showFilter', $event)"
       />
+      <InputText
+        class="search-box-input w-full"
+        :model-value="modelValue"
+        :placeholder="placeholder"
+        @input="handleInput"
+      />
+      <InputIcon v-if="!modelValue" :class="icon" />
+      <Button
+        v-if="modelValue"
+        class="p-inputicon clear-button"
+        icon="pi pi-times"
+        text
+        severity="contrast"
+        @click="clearSearch"
+      />
     </IconField>
     <div
-      class="search-filters pt-2 flex flex-wrap gap-2"
       v-if="filters?.length"
+      class="search-filters pt-2 flex flex-wrap gap-2"
     >
       <SearchFilterChip
         v-for="filter in filters"
@@ -35,64 +42,60 @@
 </template>
 
 <script setup lang="ts" generic="TFilter extends SearchFilter">
-import type { SearchFilter } from './SearchFilterChip.vue'
 import { debounce } from 'lodash'
+import Button from 'primevue/button'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import InputText from 'primevue/inputtext'
-import Button from 'primevue/button'
-import SearchFilterChip from './SearchFilterChip.vue'
-import { toRefs } from 'vue'
 
-interface Props {
-  class?: string
+import type { SearchFilter } from './SearchFilterChip.vue'
+import SearchFilterChip from './SearchFilterChip.vue'
+
+const {
+  modelValue,
+  placeholder = 'Search...',
+  icon = 'pi pi-search',
+  debounceTime = 300,
+  filterIcon,
+  filters = []
+} = defineProps<{
   modelValue: string
   placeholder?: string
   icon?: string
   debounceTime?: number
   filterIcon?: string
   filters?: TFilter[]
-}
+}>()
 
-const props = withDefaults(defineProps<Props>(), {
-  placeholder: 'Search...',
-  icon: 'pi pi-search',
-  debounceTime: 300
-})
-
-const { filters } = toRefs(props)
-
-const emit = defineEmits([
-  'update:modelValue',
-  'search',
-  'showFilter',
-  'removeFilter'
-])
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: string): void
+  (e: 'search', value: string, filters: TFilter[]): void
+  (e: 'showFilter', event: Event): void
+  (e: 'removeFilter', filter: TFilter): void
+}>()
 
 const emitSearch = debounce((value: string) => {
-  emit('search', value, props.filters)
-}, props.debounceTime)
+  emit('search', value, filters)
+}, debounceTime)
 
 const handleInput = (event: Event) => {
   const target = event.target as HTMLInputElement
   emit('update:modelValue', target.value)
   emitSearch(target.value)
 }
+
+const clearSearch = () => {
+  emit('update:modelValue', '')
+  emitSearch('')
+}
 </script>
 
 <style scoped>
-.search-box-input {
-  width: 100%;
-  padding-left: 36px;
-}
-
-.search-box-input.with-filter {
-  padding-right: 36px;
+:deep(.p-inputtext) {
+  --p-form-field-padding-x: 0.625rem;
 }
 
 .p-button.p-inputicon {
-  padding: 0;
-  width: auto;
-  border: none !important;
+  @apply p-0 w-auto border-none;
 }
 </style>

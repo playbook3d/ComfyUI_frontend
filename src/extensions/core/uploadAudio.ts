@@ -1,10 +1,16 @@
-// @ts-strict-ignore
-import { app } from '../../scripts/app'
-import { api } from '../../scripts/api'
-import type { IWidget } from '@comfyorg/litegraph'
+import type { LGraphNode } from '@comfyorg/litegraph'
+import type { IStringWidget } from '@comfyorg/litegraph/dist/types/widgets'
+
+import { useNodeDragAndDrop } from '@/composables/node/useNodeDragAndDrop'
+import { useNodeFileInput } from '@/composables/node/useNodeFileInput'
+import { useNodePaste } from '@/composables/node/useNodePaste'
+import { t } from '@/i18n'
+import type { ComfyNodeDef } from '@/schemas/nodeDefSchema'
 import type { DOMWidget } from '@/scripts/domWidget'
-import { ComfyNodeDef } from '@/types/apiTypes'
 import { useToastStore } from '@/stores/toastStore'
+
+import { api } from '../../scripts/api'
+import { app } from '../../scripts/app'
 
 type FolderType = 'input' | 'output' | 'temp'
 
@@ -35,8 +41,8 @@ function getResourceURL(
 }
 
 async function uploadFile(
-  audioWidget: IWidget,
-  audioUIWidget: DOMWidget<HTMLAudioElement>,
+  audioWidget: IStringWidget,
+  audioUIWidget: DOMWidget<HTMLAudioElement, string>,
   file: File,
   updateNode: boolean,
   pasted: boolean = false
@@ -57,7 +63,9 @@ async function uploadFile(
       let path = data.name
       if (data.subfolder) path = data.subfolder + '/' + path
 
+      // @ts-expect-error fixme ts strict error
       if (!audioWidget.options.values.includes(path)) {
+        // @ts-expect-error fixme ts strict error
         audioWidget.options.values.push(path)
       }
 
@@ -71,6 +79,7 @@ async function uploadFile(
       useToastStore().addAlert(resp.status + ' - ' + resp.statusText)
     }
   } catch (error) {
+    // @ts-expect-error fixme ts strict error
     useToastStore().addAlert(error)
   }
 }
@@ -81,33 +90,44 @@ app.registerExtension({
   name: 'Comfy.AudioWidget',
   async beforeRegisterNodeDef(nodeType, nodeData) {
     if (
-      ['LoadAudio', 'SaveAudio', 'PreviewAudio'].includes(nodeType.comfyClass)
+      [
+        'LoadAudio',
+        'SaveAudio',
+        'PreviewAudio',
+        'SaveAudioMP3',
+        'SaveAudioOpus'
+      ].includes(
+        // @ts-expect-error fixme ts strict error
+        nodeType.prototype.comfyClass
+      )
     ) {
-      nodeData.input.required.audioUI = ['AUDIO_UI']
+      // @ts-expect-error fixme ts strict error
+      nodeData.input.required.audioUI = ['AUDIO_UI', {}]
     }
   },
   getCustomWidgets() {
     return {
-      AUDIO_UI(node, inputName: string) {
+      AUDIO_UI(node: LGraphNode, inputName: string) {
         const audio = document.createElement('audio')
         audio.controls = true
         audio.classList.add('comfy-audio')
         audio.setAttribute('name', 'media')
 
-        const audioUIWidget: DOMWidget<HTMLAudioElement> = node.addDOMWidget(
-          inputName,
-          /* name=*/ 'audioUI',
-          audio,
-          { serialize: false }
-        )
+        const audioUIWidget: DOMWidget<HTMLAudioElement, string> =
+          node.addDOMWidget(inputName, /* name=*/ 'audioUI', audio)
+        audioUIWidget.serialize = false
 
-        const isOutputNode = node.constructor.nodeData.output_node
+        const { nodeData } = node.constructor
+        if (nodeData == null) throw new TypeError('nodeData is null')
+
+        const isOutputNode = nodeData.output_node
         if (isOutputNode) {
           // Hide the audio widget when there is no audio initially.
           audioUIWidget.element.classList.add('empty-audio-widget')
           // Populate the audio widget UI on node execution.
           const onExecuted = node.onExecuted
-          node.onExecuted = function (message) {
+          node.onExecuted = function (message: any) {
+            // @ts-expect-error fixme ts strict error
             onExecuted?.apply(this, arguments)
             const audios = message.audio
             if (!audios) return
@@ -126,9 +146,10 @@ app.registerExtension({
     for (const [nodeId, output] of Object.entries(nodeOutputs)) {
       const node = app.graph.getNodeById(nodeId)
       if ('audio' in output) {
+        // @ts-expect-error fixme ts strict error
         const audioUIWidget = node.widgets.find(
           (w) => w.name === 'audioUI'
-        ) as unknown as DOMWidget<HTMLAudioElement>
+        ) as unknown as DOMWidget<HTMLAudioElement, string>
         const audio = output.audio[0]
         audioUIWidget.element.src = api.apiURL(
           getResourceURL(audio.subfolder, audio.filename, audio.type)
@@ -141,21 +162,23 @@ app.registerExtension({
 
 app.registerExtension({
   name: 'Comfy.UploadAudio',
-  async beforeRegisterNodeDef(nodeType, nodeData: ComfyNodeDef) {
+  async beforeRegisterNodeDef(_nodeType, nodeData: ComfyNodeDef) {
     if (nodeData?.input?.required?.audio?.[1]?.audio_upload === true) {
-      nodeData.input.required.upload = ['AUDIOUPLOAD']
+      nodeData.input.required.upload = ['AUDIOUPLOAD', {}]
     }
   },
   getCustomWidgets() {
     return {
       AUDIOUPLOAD(node, inputName: string) {
         // The widget that allows user to select file.
-        const audioWidget: IWidget = node.widgets.find(
-          (w: IWidget) => w.name === 'audio'
-        )
-        const audioUIWidget: DOMWidget<HTMLAudioElement> = node.widgets.find(
-          (w: IWidget) => w.name === 'audioUI'
-        )
+        // @ts-expect-error fixme ts strict error
+        const audioWidget = node.widgets.find(
+          (w) => w.name === 'audio'
+        ) as IStringWidget
+        // @ts-expect-error fixme ts strict error
+        const audioUIWidget = node.widgets.find(
+          (w) => w.name === 'audioUI'
+        ) as unknown as DOMWidget<HTMLAudioElement, string>
 
         const onAudioWidgetUpdate = () => {
           audioUIWidget.element.src = api.apiURL(
@@ -171,32 +194,48 @@ app.registerExtension({
         // Load saved audio file widget values if restoring from workflow
         const onGraphConfigured = node.onGraphConfigured
         node.onGraphConfigured = function () {
+          // @ts-expect-error fixme ts strict error
           onGraphConfigured?.apply(this, arguments)
           if (audioWidget.value) {
             onAudioWidgetUpdate()
           }
         }
 
-        const fileInput = document.createElement('input')
-        fileInput.type = 'file'
-        fileInput.accept = 'audio/*'
-        fileInput.style.display = 'none'
-        fileInput.onchange = () => {
-          if (fileInput.files.length) {
-            uploadFile(audioWidget, audioUIWidget, fileInput.files[0], true)
+        const handleUpload = async (files: File[]) => {
+          if (files?.length) {
+            uploadFile(audioWidget, audioUIWidget, files[0], true)
           }
+          return files
         }
+
+        const isAudioFile = (file: File) => file.type.startsWith('audio/')
+
+        const { openFileSelection } = useNodeFileInput(node, {
+          accept: 'audio/*',
+          onSelect: handleUpload
+        })
+
         // The widget to pop up the upload dialog.
         const uploadWidget = node.addWidget(
           'button',
           inputName,
-          /* value=*/ '',
-          () => {
-            fileInput.click()
-          },
+          '',
+          openFileSelection,
           { serialize: false }
         )
-        uploadWidget.label = 'choose file to upload'
+        uploadWidget.label = t('g.choose_file_to_upload')
+
+        useNodeDragAndDrop(node, {
+          fileFilter: isAudioFile,
+          onDrop: handleUpload
+        })
+
+        useNodePaste(node, {
+          fileFilter: isAudioFile,
+          onPaste: handleUpload
+        })
+
+        node.previewMediaType = 'audio'
 
         return { widget: uploadWidget }
       }

@@ -9,6 +9,8 @@
   --fg-color: #000;
   --bg-color: #fff;
   --comfy-menu-bg: #353535;
+  --comfy-menu-secondary-bg: #292929;
+  --comfy-topbar-height: 2.5rem;
   --comfy-input-bg: #222;
   --input-text: #ddd;
   --descrip-text: #999;
@@ -43,8 +45,6 @@ body {
   height: 100vh;
   margin: 0;
   overflow: hidden;
-  grid-template-columns: auto 1fr auto;
-  grid-template-rows: auto 1fr auto;
   background: var(--bg-color) var(--bg-img);
   color: var(--fg-color);
   min-height: -webkit-fill-available;
@@ -52,84 +52,6 @@ body {
   min-width: -webkit-fill-available;
   max-width: -webkit-fill-available;
   font-family: Arial, sans-serif;
-}
-
-/**
-  +------------------+------------------+------------------+
-  |                                                        |
-  |  .comfyui-body-                                        |
-  |       top                                              |
-  | (spans all cols)                                       |
-  |                                                        |
-  +------------------+------------------+------------------+
-  |                  |                  |                  |
-  | .comfyui-body-   |   #graph-canvas  | .comfyui-body-   |
-  |      left        |                  |      right       |
-  |                  |                  |                  |
-  |                  |                  |                  |
-  +------------------+------------------+------------------+
-  |                                                        |
-  |  .comfyui-body-                                        |
-  |      bottom                                            |
-  | (spans all cols)                                       |
-  |                                                        |
-  +------------------+------------------+------------------+
-*/
-
-.comfyui-body-top {
-  order: -5;
-  /* Span across all columns */
-  grid-column: 1/-1;
-  /* Position at the first row */
-  grid-row: 1;
-  /* Top menu bar dropdown needs to be above of graph canvas splitter overlay which is z-index: 999 */
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-}
-
-.comfyui-body-left {
-  order: -4;
-  /* Position in the first column */
-  grid-column: 1;
-  /* Position below the top element */
-  grid-row: 2;
-  z-index: 10;
-  display: flex;
-}
-
-.graph-canvas-container {
-  width: 100%;
-  height: 100%;
-  order: -3;
-  grid-column: 2;
-  grid-row: 2;
-  position: relative;
-  overflow: hidden;
-}
-
-#graph-canvas {
-  width: 100%;
-  height: 100%;
-  touch-action: none;
-}
-
-.comfyui-body-right {
-  order: -2;
-  z-index: 10;
-  grid-column: 3;
-  grid-row: 2;
-}
-
-.comfyui-body-bottom {
-  order: 4;
-  /* Span across all columns */
-  grid-column: 1/-1;
-  grid-row: 3;
-  /* Bottom menu bar dropdown needs to be above of graph canvas splitter overlay which is z-index: 999 */
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
 }
 
 .comfy-multiline-input {
@@ -142,6 +64,69 @@ body {
   border: none;
   box-sizing: border-box;
   font-size: var(--comfy-textarea-font-size);
+}
+
+.comfy-markdown {
+  /* We assign the textarea and the Tiptap editor to the same CSS grid area to stack them on top of one another. */
+  display: grid;
+}
+
+.comfy-markdown > textarea {
+  grid-area: 1 / 1 / 2 / 2;
+}
+
+.comfy-markdown .tiptap {
+  grid-area: 1 / 1 / 2 / 2;
+  background-color: var(--comfy-input-bg);
+  color: var(--input-text);
+  overflow: hidden;
+  overflow-y: auto;
+  resize: none;
+  border: none;
+  box-sizing: border-box;
+  font-size: var(--comfy-textarea-font-size);
+  height: 100%;
+  padding: 0.5em;
+}
+
+.comfy-markdown.editing .tiptap {
+  display: none;
+}
+
+.comfy-markdown .tiptap :first-child {
+  margin-top: 0;
+}
+
+.comfy-markdown .tiptap :last-child {
+  margin-bottom: 0;
+}
+
+.comfy-markdown .tiptap blockquote {
+  border-left: medium solid;
+  margin-left: 1em;
+  padding-left: 0.5em;
+}
+
+.comfy-markdown .tiptap pre {
+  border: thin dotted;
+  border-radius: 0.5em;
+  margin: 0.5em;
+  padding: 0.5em;
+}
+
+.comfy-markdown .tiptap table {
+  border-collapse: collapse;
+}
+
+.comfy-markdown .tiptap th {
+  text-align: left;
+  background: var(--comfy-menu-bg);
+}
+
+.comfy-markdown .tiptap th,
+.comfy-markdown .tiptap td {
+  padding: 0.5em;
+  border: thin solid;
 }
 
 .comfy-modal {
@@ -176,28 +161,9 @@ body {
 }
 
 .comfy-modal select,
-.comfy-modal input[type=button],
-.comfy-modal input[type=checkbox] {
+.comfy-modal input[type='button'],
+.comfy-modal input[type='checkbox'] {
   margin: 3px 3px 3px 4px;
-}
-
-.comfy-menu-hamburger {
-  position: fixed;
-  top: 10px;
-  z-index: 9999;
-  right: 10px;
-  width: 30px;
-  display: none;
-  gap: 8px;
-  flex-direction: column;
-  cursor: pointer;
-}
-
-.comfy-menu-hamburger div {
-  height: 3px;
-  width: 100%;
-  border-radius: 20px;
-  background-color: white;
 }
 
 .comfy-menu {
@@ -310,8 +276,8 @@ span.drag-handle {
   padding: 3px 4px;
   cursor: move;
   vertical-align: middle;
-  margin-top: -.4em;
-  margin-left: -.2em;
+  margin-top: -0.4em;
+  margin-left: -0.2em;
   font-size: 12px;
   font-family: sans-serif;
   letter-spacing: 2px;
@@ -378,11 +344,11 @@ button.comfy-queue-btn {
   z-index: 99;
 }
 
-.comfy-modal.comfy-settings input[type="range"] {
+.comfy-modal.comfy-settings input[type='range'] {
   vertical-align: middle;
 }
 
-.comfy-modal.comfy-settings input[type="range"] + input[type="number"] {
+.comfy-modal.comfy-settings input[type='range'] + input[type='number'] {
   width: 3.5em;
 }
 
@@ -413,7 +379,7 @@ button.comfy-queue-btn {
   .comfy-menu span.drag-handle {
     display: none;
   }
-  
+
   .comfy-menu-queue-size {
     flex: unset;
   }
@@ -432,6 +398,7 @@ button.comfy-queue-btn {
 .graphdialog {
   min-height: 1em;
   background-color: var(--comfy-menu-bg);
+  z-index: 41; /* z-index is set to 41 here in order to appear over selection-overlay-container which should have a z-index of 40 */
 }
 
 .graphdialog .name {
@@ -447,7 +414,9 @@ button.comfy-queue-btn {
   padding-right: 8px;
 }
 
-.graphdialog input, .graphdialog textarea, .graphdialog select {
+.graphdialog input,
+.graphdialog textarea,
+.graphdialog select {
   background-color: var(--comfy-input-bg);
   border: 2px solid;
   border-color: var(--border-color);
@@ -500,81 +469,6 @@ dialog::backdrop {
   justify-content: center;
 }
 
-#comfy-settings-dialog {
-  padding: 0;
-  width: 41rem;
-}
-
-#comfy-settings-dialog tr > td:first-child {
-  text-align: right;
-}
-
-#comfy-settings-dialog tbody button, #comfy-settings-dialog table > button {
-  background-color: var(--bg-color);
-  border: 1px var(--border-color) solid;
-  border-radius: 0;
-  color: var(--input-text);
-  font-size: 1rem;
-  padding: 0.5rem;
-}
-
-#comfy-settings-dialog button:hover {
-  background-color: var(--tr-odd-bg-color);
-}
-
-/* General CSS for tables */
-
-.comfy-table {
-  border-collapse: collapse;
-  color: var(--input-text);
-  font-family: Arial, sans-serif;
-  width: 100%;
-}
-
-.comfy-table caption {
-  position: sticky;
-  top: 0;
-  background-color: var(--bg-color);
-  color: var(--input-text);
-  font-size: 1rem;
-  font-weight: bold;
-  padding: 8px;
-  text-align: center;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.comfy-table caption .comfy-btn {
-  position: absolute;
-  top: -2px;
-  right: 0;
-  bottom: 0;
-  cursor: pointer;
-  border: none;
-  height: 100%;
-  border-radius: 0;
-  aspect-ratio: 1/1;
-  user-select: none;
-  font-size: 20px;
-}
-
-.comfy-table caption .comfy-btn:focus {
-  outline: none;
-}
-
-.comfy-table tr:nth-child(even) {
-  background-color: var(--tr-even-bg-color);
-}
-
-.comfy-table tr:nth-child(odd) {
-  background-color: var(--tr-odd-bg-color);
-}
-
-.comfy-table td,
-.comfy-table th {
-  border: 1px solid var(--border-color);
-  padding: 8px;
-}
-
 /* Context menu */
 
 .litegraph .dialog {
@@ -588,7 +482,7 @@ dialog::backdrop {
 }
 
 .litemenu-entry.has_submenu::after {
-  content: ">";
+  content: '>';
   position: absolute;
   top: 0;
   right: 2px;
@@ -598,15 +492,12 @@ dialog::backdrop {
 .litegraph.litecontextmenu.dark {
   z-index: 9999 !important;
   background-color: var(--comfy-menu-bg) !important;
-  filter: brightness(95%);
-  will-change: transform;
 }
 
-.litegraph.litecontextmenu .litemenu-entry:hover:not(.disabled):not(.separator) {
-  background-color: var(--comfy-menu-bg) !important;
-  filter: brightness(155%);
-  will-change: transform;
-  color: var(--input-text);
+.litegraph.litecontextmenu
+  .litemenu-entry:hover:not(.disabled):not(.separator) {
+  background-color: var(--comfy-menu-hover-bg, var(--border-color)) !important;
+  color: var(--fg-color);
 }
 
 .litegraph.litecontextmenu .litemenu-entry.submenu,
@@ -640,6 +531,13 @@ dialog::backdrop {
   object-fit: contain;
   width: var(--comfy-img-preview-width);
   height: var(--comfy-img-preview-height);
+}
+
+.comfy-img-preview video {
+  pointer-events: auto;
+  object-fit: contain;
+  height: 100%;
+  width: 100%;
 }
 
 .comfy-missing-nodes li button {
@@ -676,24 +574,6 @@ dialog::backdrop {
   will-change: transform;
 }
 
-@media only screen and (max-width: 450px) {
-  #comfy-settings-dialog .comfy-table tbody {
-    display: grid;
-  }
-  #comfy-settings-dialog .comfy-table tr {
-    display: grid;
-  }
-  #comfy-settings-dialog tr > td:first-child {
-    text-align: center;
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-  #comfy-settings-dialog tr > td:not(:first-child) {
-    text-align: center;
-    border-top: none;
-  }
-}
-
 audio.comfy-audio.empty-audio-widget {
   display: none;
 }
@@ -704,7 +584,6 @@ audio.comfy-audio.empty-audio-widget {
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
 }
 
 /* Set auto complete panel's width as it is not accessible within vue-root */
@@ -715,3 +594,41 @@ audio.comfy-audio.empty-audio-widget {
 .p-tree-node-content {
   padding: var(--comfy-tree-explorer-item-padding) !important;
 }
+
+/* Load3d styles */
+.comfy-load-3d,
+.comfy-load-3d-animation,
+.comfy-preview-3d,
+.comfy-preview-3d-animation{
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.comfy-load-3d canvas,
+.comfy-load-3d-animation canvas,
+.comfy-preview-3d canvas,
+.comfy-preview-3d-animation canvas{
+  display: flex;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* End of Load3d styles */
+
+/* [Desktop] Electron window specific styles */
+.app-drag {
+  app-region: drag;
+}
+
+.no-drag {
+  app-region: no-drag;
+}
+
+.window-actions-spacer {
+  width: calc(100vw - env(titlebar-area-width, 100vw));
+}
+/* End of [Desktop] Electron window specific styles */

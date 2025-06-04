@@ -16,7 +16,24 @@ export function notifyWrapperOriginSetOnComfyInstance(wrapperOrigin: string) {
     message: 'WrapperOriginSetOnComfyInstance'
   }
 
-  window.top.postMessage(messageData, wrapperOrigin)
+  if (window.top) {
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
+}
+
+export function notifyPlaybookWrapperNewWorkflowLoaded(wrapperOrigin: string) {
+  const messageData: WorkflowWindowMessageData = {
+    message: 'NewWorkflowLoadedInComfyWindow'
+  }
+
+  console.log(
+    'Comfy Window Sending: NewWorkflowLoadedInComfyWindow: ',
+    messageData
+  )
+
+  if (window.top) {
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
 }
 
 /**
@@ -27,7 +44,7 @@ export function sendNodeSelectionToPlaybookWrapper(
   wrapperOrigin: string
 ) {
   console.log(
-    'Comfy Window Sending: sendNodeSelectionToPlaybookWrapper: target origin: ',
+    'Comfy Window Sending: SendNodeSelectionToPlaybookWrapper: ',
     selectedNodes
   )
 
@@ -58,7 +75,9 @@ export function sendNodeSelectionToPlaybookWrapper(
     data: JSON.stringify(restructuredNodesData)
   }
 
-  window.top.postMessage(messageData, wrapperOrigin)
+  if (window.top) {
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
 }
 
 /**
@@ -76,5 +95,25 @@ export async function sendWorkflowDataToPlaybookWrapper(wrapperOrigin: string) {
     messageData
   )
 
-  window.top.postMessage(messageData, wrapperOrigin)
+  if (window.top) {
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
+}
+
+/**
+ * Send message on selected nodes deletion.
+ */
+export async function sendNodesDeletedToPlaybookWrapper(wrapperOrigin: string) {
+  const messageData: WorkflowWindowMessageData = {
+    message: 'SendNodesDeletedToPlaybookWrapper',
+  }
+
+  console.log(
+    'Comfy Window Sending: SendNodesDeletedToPlaybookWrapper: ',
+    messageData
+  )
+
+  if (window.top) {
+    window.top.postMessage(messageData, wrapperOrigin)
+  }
 }

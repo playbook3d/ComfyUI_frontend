@@ -1,26 +1,29 @@
 <template>
   <SidebarIcon
     :icon="icon"
-    @click="toggleTheme"
     :tooltip="$t('sideToolbar.themeToggle')"
     class="comfy-vue-theme-toggle"
+    @click="toggleTheme"
   />
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import SidebarIcon from './SidebarIcon.vue'
-import { useSettingStore } from '@/stores/settingStore'
-import { useCommandStore } from '@/stores/commandStore'
 
-const settingStore = useSettingStore()
-const currentTheme = computed(() => settingStore.get('Comfy.ColorPalette'))
+import { useCommandStore } from '@/stores/commandStore'
+import { useColorPaletteStore } from '@/stores/workspace/colorPaletteStore'
+
+import SidebarIcon from './SidebarIcon.vue'
+
+const colorPaletteStore = useColorPaletteStore()
 const icon = computed(() =>
-  currentTheme.value !== 'light' ? 'pi pi-moon' : 'pi pi-sun'
+  colorPaletteStore.completedActivePalette.light_theme
+    ? 'pi pi-sun'
+    : 'pi pi-moon'
 )
 
 const commandStore = useCommandStore()
-const toggleTheme = () => {
-  commandStore.execute('Comfy.ToggleTheme')
+const toggleTheme = async () => {
+  await commandStore.execute('Comfy.ToggleTheme')
 }
 </script>

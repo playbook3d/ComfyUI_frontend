@@ -1,11 +1,11 @@
-// @ts-strict-ignore
-import { $el } from '../../ui'
-import { applyClasses, ClassList, toggleElement } from '../utils'
-import { prop } from '../../utils'
-import type { ComfyPopup } from './popup'
-import type { ComfyComponent } from '.'
+import { Settings } from '@/schemas/apiSchema'
 import type { ComfyApp } from '@/scripts/app'
-import { Settings } from '@/types/apiTypes'
+
+import type { ComfyComponent } from '.'
+import { $el } from '../../ui'
+import { prop } from '../../utils'
+import { ClassList, applyClasses, toggleElement } from '../utils'
+import type { ComfyPopup } from './popup'
 
 type ComfyButtonProps = {
   icon?: string
@@ -26,6 +26,7 @@ export class ComfyButton implements ComfyComponent<HTMLElement> {
   isOver = false
   iconElement = $el('i.mdi')
   contentElement = $el('span')
+  // @ts-expect-error fixme ts strict error
   popup: ComfyPopup
   element: HTMLElement
   overIcon: string
@@ -69,18 +70,22 @@ export class ComfyButton implements ComfyComponent<HTMLElement> {
       [this.iconElement, this.contentElement]
     )
 
+    // @ts-expect-error fixme ts strict error
     this.icon = prop(
       this,
       'icon',
       icon,
       toggleElement(this.iconElement, { onShow: this.updateIcon })
     )
+    // @ts-expect-error fixme ts strict error
     this.overIcon = prop(this, 'overIcon', overIcon, () => {
       if (this.isOver) {
         this.updateIcon()
       }
     })
+    // @ts-expect-error fixme ts strict error
     this.iconSize = prop(this, 'iconSize', iconSize, this.updateIcon)
+    // @ts-expect-error fixme ts strict error
     this.content = prop(
       this,
       'content',
@@ -96,6 +101,7 @@ export class ComfyButton implements ComfyComponent<HTMLElement> {
       })
     )
 
+    // @ts-expect-error fixme ts strict error
     this.tooltip = prop(this, 'tooltip', tooltip, (v) => {
       if (v) {
         this.element.title = v
@@ -112,6 +118,7 @@ export class ComfyButton implements ComfyComponent<HTMLElement> {
       this.updateClasses()
       ;(this.element as HTMLButtonElement).disabled = !this.enabled
     })
+    // @ts-expect-error fixme ts strict error
     this.action = prop(this, 'action', action)
     this.element.addEventListener('click', (e) => {
       if (this.popup) {
@@ -126,9 +133,11 @@ export class ComfyButton implements ComfyComponent<HTMLElement> {
     if (visibilitySetting?.id) {
       const settingUpdated = () => {
         this.hidden =
+          // @ts-expect-error fixme ts strict error
           app.ui.settings.getSettingValue(visibilitySetting.id) !==
           visibilitySetting.showValue
       }
+      // @ts-expect-error fixme ts strict error
       app.ui.settings.addEventListener(
         visibilitySetting.id + '.change',
         settingUpdated
