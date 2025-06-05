@@ -1,15 +1,16 @@
 import type { ComfyApp } from '@/scripts/app'
+
 import { $el } from '../../ui'
-import { downloadBlob } from '../../utils'
 import { ComfyButtonGroup } from '../components/buttonGroup'
-import { showPromptDialog } from '@/services/dialogService'
-import { useSettingStore } from '@/stores/settingStore'
 import './menu.css'
 
 // Export to make sure following components are shimmed and exported by vite
 export { ComfyButton } from '../components/button'
 export { ComfySplitButton } from '../components/splitButton'
 export { ComfyPopup } from '../components/popup'
+export { ComfyAsyncDialog } from '@/scripts/ui/components/asyncDialog'
+export { DraggableList } from '@/scripts/ui/draggableList'
+export { applyTextReplacements, addStylesheet } from '@/scripts/utils'
 
 export class ComfyAppMenu {
   app: ComfyApp
@@ -32,37 +33,5 @@ export class ComfyAppMenu {
       this.settingsGroup.element,
       this.viewGroup.element
     ])
-  }
-
-  async getFilename(defaultName: string): Promise<string | null> {
-    if (useSettingStore().get('Comfy.PromptFilename')) {
-      let filename = await showPromptDialog({
-        title: 'Export Workflow',
-        message: 'Enter the filename:',
-        defaultValue: defaultName
-      })
-      if (!filename) return null
-      if (!filename.toLowerCase().endsWith('.json')) {
-        filename += '.json'
-      }
-      return filename
-    }
-    return defaultName
-  }
-
-  async exportWorkflow(
-    filename: string,
-    promptProperty: 'workflow' | 'output'
-  ): Promise<string> {
-    if (this.app.workflowManager.activeWorkflow?.path) {
-      filename = this.app.workflowManager.activeWorkflow.name
-    }
-    const p = await this.app.graphToPrompt()
-    const json = JSON.stringify(p[promptProperty], null, 2)
-    // return json
-    const blob = new Blob([json], { type: 'application/json' })
-    const file = await this.getFilename(filename)
-    if (!file) return
-    downloadBlob(file, blob)
   }
 }

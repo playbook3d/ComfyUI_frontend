@@ -1,33 +1,33 @@
-// @ts-strict-ignore
-import { LiteGraph, LGraphCanvas } from '@comfyorg/litegraph'
+import { LGraphCanvas, LiteGraph } from '@comfyorg/litegraph'
+import { LGraphNode } from '@comfyorg/litegraph'
+
 import { app } from '../../scripts/app'
 import { ComfyWidgets } from '../../scripts/widgets'
-import { LGraphNode } from '@comfyorg/litegraph'
+
 // Node that add notes to your project
 
 app.registerExtension({
   name: 'Comfy.NoteNode',
   registerCustomNodes() {
     class NoteNode extends LGraphNode {
-      static category: string
+      static override category: string
+      static collapsable: boolean
+      static title_mode: number
 
-      color = LGraphCanvas.node_colors.yellow.color
-      bgcolor = LGraphCanvas.node_colors.yellow.bgcolor
+      override color = LGraphCanvas.node_colors.yellow.color
+      override bgcolor = LGraphCanvas.node_colors.yellow.bgcolor
       groupcolor = LGraphCanvas.node_colors.yellow.groupcolor
-      isVirtualNode: boolean
-      collapsable: boolean
-      title_mode: number
+      override isVirtualNode: boolean
 
-      constructor(title?: string) {
+      constructor(title: string) {
         super(title)
         if (!this.properties) {
           this.properties = { text: '' }
         }
         ComfyWidgets.STRING(
-          // Should we extends LGraphNode?  Yesss
           this,
-          '',
-          ['', { default: this.properties.text, multiline: true }],
+          'text',
+          ['STRING', { default: this.properties.text, multiline: true }],
           app
         )
 
@@ -48,5 +48,33 @@ app.registerExtension({
     )
 
     NoteNode.category = 'utils'
+
+    /** Markdown variant of NoteNode */
+    class MarkdownNoteNode extends LGraphNode {
+      static override title = 'Markdown Note'
+
+      override color = LGraphCanvas.node_colors.yellow.color
+      override bgcolor = LGraphCanvas.node_colors.yellow.bgcolor
+      groupcolor = LGraphCanvas.node_colors.yellow.groupcolor
+
+      constructor(title: string) {
+        super(title)
+        if (!this.properties) {
+          this.properties = { text: '' }
+        }
+        ComfyWidgets.MARKDOWN(
+          this,
+          'text',
+          ['STRING', { default: this.properties.text }],
+          app
+        )
+
+        this.serialize_widgets = true
+        this.isVirtualNode = true
+      }
+    }
+
+    LiteGraph.registerNodeType('MarkdownNote', MarkdownNoteNode)
+    MarkdownNoteNode.category = 'utils'
   }
 })

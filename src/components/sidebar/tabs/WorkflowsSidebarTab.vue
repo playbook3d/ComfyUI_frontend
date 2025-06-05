@@ -1,62 +1,63 @@
 <template>
   <SidebarTabTemplate
     :title="$t('sideToolbar.workflows')"
-    class="bg-[var(--p-tree-background)]"
+    class="workflows-sidebar-tab bg-[var(--p-tree-background)]"
   >
     <template #tool-buttons>
       <Button
-        class="browse-templates-button"
-        icon="pi pi-th-large"
-        v-tooltip="$t('sideToolbar.browseTemplates')"
+        v-tooltip.bottom="$t('g.refresh')"
+        icon="pi pi-refresh"
+        severity="secondary"
         text
-        @click="() => commandStore.execute('Comfy.BrowseTemplates')"
-      />
-      <Button
-        class="open-workflow-button"
-        icon="pi pi-folder-open"
-        v-tooltip="$t('sideToolbar.openWorkflow')"
-        text
-        @click="() => commandStore.execute('Comfy.OpenWorkflow')"
-      />
-      <Button
-        class="new-blank-workflow-button"
-        icon="pi pi-plus"
-        v-tooltip="$t('sideToolbar.newBlankWorkflow')"
-        @click="() => commandStore.execute('Comfy.NewBlankWorkflow')"
-        text
+        @click="workflowStore.syncWorkflows()"
       />
     </template>
     <template #header>
       <SearchBox
-        class="workflows-search-box p-4"
         v-model:modelValue="searchQuery"
+        class="workflows-search-box p-2 2xl:p-4"
+        :placeholder="$t('g.searchWorkflows') + '...'"
         @search="handleSearch"
-        :placeholder="$t('searchWorkflows') + '...'"
       />
     </template>
     <template #body>
-      <div class="comfyui-workflows-panel" v-if="!isSearching">
+      <div v-if="!isSearching" class="comfyui-workflows-panel">
         <div
-          class="comfyui-workflows-open"
           v-if="workflowTabsPosition === 'Sidebar'"
+          class="comfyui-workflows-open"
         >
-          <TextDivider text="Open" type="dashed" class="ml-2" />
+          <TextDivider
+            :text="t('sideToolbar.workflowTab.workflowTreeType.open')"
+            type="dashed"
+            class="ml-2"
+          />
           <TreeExplorer
-            :roots="renderTreeNode(workflowStore.openWorkflowsTree).children"
-            v-model:selectionKeys="selectionKeys"
+            v-model:expandedKeys="dummyExpandedKeys"
+            :root="renderTreeNode(openWorkflowsTree, WorkflowTreeType.Open)"
+            :selection-keys="selectionKeys"
           >
             <template #node="{ node }">
               <TreeExplorerTreeNode :node="node">
-                <template #before-label="{ node }">
-                  <span v-if="node.data.unsaved">*</span>
+                <template #before-label="{ node: treeNode }">
+                  <span
+                    v-if="
+                      treeNode.data?.isModified || !treeNode.data?.isPersisted
+                    "
+                    >*</span
+                  >
                 </template>
-                <template #actions="{ node }">
+                <template #actions="{ node: treeNode }">
                   <Button
+                    class="close-workflow-button"
                     icon="pi pi-times"
                     text
-                    severity="secondary"
+                    :severity="
+                      workspaceStore.shiftDown ? 'danger' : 'secondary'
+                    "
                     size="small"
-                    @click.stop="app.workflowManager.closeWorkflow(node.data)"
+                    @click.stop="
+                      handleCloseWorkflow(treeNode.data as ComfyWorkflow)
+                    "
                   />
                 </template>
               </TreeExplorerTreeNode>
@@ -64,14 +65,23 @@
           </TreeExplorer>
         </div>
         <div
-          class="comfyui-workflows-bookmarks"
           v-show="workflowStore.bookmarkedWorkflows.length > 0"
+          class="comfyui-workflows-bookmarks"
         >
-          <TextDivider text="Bookmarks" type="dashed" class="ml-2" />
+          <TextDivider
+            :text="t('sideToolbar.workflowTab.workflowTreeType.bookmarks')"
+            type="dashed"
+            class="ml-2"
+          />
           <TreeExplorer
-            :roots="
-              renderTreeNode(workflowStore.bookmarkedWorkflowsTree).children
+            v-model:expandedKeys="dummyExpandedKeys"
+            :root="
+              renderTreeNode(
+                bookmarkedWorkflowsTree,
+                WorkflowTreeType.Bookmarks
+              )
             "
+            :selection-keys="selectionKeys"
           >
             <template #node="{ node }">
               <WorkflowTreeLeaf :node="node" />
@@ -79,21 +89,33 @@
           </TreeExplorer>
         </div>
         <div class="comfyui-workflows-browse">
-          <TextDivider text="Browse" type="dashed" class="ml-2" />
+          <TextDivider
+            :text="t('sideToolbar.workflowTab.workflowTreeType.browse')"
+            type="dashed"
+            class="ml-2"
+          />
           <TreeExplorer
-            :roots="renderTreeNode(workflowStore.workflowsTree).children"
+            v-if="workflowStore.persistedWorkflows.length > 0"
             v-model:expandedKeys="expandedKeys"
+            :root="renderTreeNode(workflowsTree, WorkflowTreeType.Browse)"
+            :selection-keys="selectionKeys"
           >
             <template #node="{ node }">
               <WorkflowTreeLeaf :node="node" />
             </template>
           </TreeExplorer>
+          <NoResultsPlaceholder
+            v-else
+            icon="pi pi-folder"
+            :title="$t('g.empty')"
+            :message="$t('g.noWorkflowsFound')"
+          />
         </div>
       </div>
-      <div class="comfyui-workflows-search-panel" v-else>
+      <div v-else class="comfyui-workflows-search-panel">
         <TreeExplorer
-          :roots="renderTreeNode(filteredRoot).children"
           v-model:expandedKeys="expandedKeys"
+          :root="renderTreeNode(filteredRoot, WorkflowTreeType.Browse)"
         >
           <template #node="{ node }">
             <WorkflowTreeLeaf :node="node" />
@@ -102,26 +124,35 @@
       </div>
     </template>
   </SidebarTabTemplate>
+  <ConfirmDialog />
 </template>
 
 <script setup lang="ts">
+import Button from 'primevue/button'
+import ConfirmDialog from 'primevue/confirmdialog'
+import { computed, nextTick, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+import NoResultsPlaceholder from '@/components/common/NoResultsPlaceholder.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
-import WorkflowTreeLeaf from '@/components/sidebar/tabs/workflows/WorkflowTreeLeaf.vue'
-import SidebarTabTemplate from '@/components/sidebar/tabs/SidebarTabTemplate.vue'
+import TextDivider from '@/components/common/TextDivider.vue'
 import TreeExplorer from '@/components/common/TreeExplorer.vue'
 import TreeExplorerTreeNode from '@/components/common/TreeExplorerTreeNode.vue'
-import Button from 'primevue/button'
-import TextDivider from '@/components/common/TextDivider.vue'
-import { app } from '@/scripts/app'
-import { computed, nextTick, ref } from 'vue'
-import { useWorkflowStore } from '@/stores/workflowStore'
-import { useCommandStore } from '@/stores/commandStore'
-import type { TreeNode } from 'primevue/treenode'
-import { TreeExplorerNode } from '@/types/treeExplorerTypes'
-import { ComfyWorkflow } from '@/scripts/workflows'
-import { useI18n } from 'vue-i18n'
-import { useTreeExpansion } from '@/hooks/treeHooks'
+import SidebarTabTemplate from '@/components/sidebar/tabs/SidebarTabTemplate.vue'
+import WorkflowTreeLeaf from '@/components/sidebar/tabs/workflows/WorkflowTreeLeaf.vue'
+import { useTreeExpansion } from '@/composables/useTreeExpansion'
+import { useWorkflowService } from '@/services/workflowService'
 import { useSettingStore } from '@/stores/settingStore'
+import {
+  useWorkflowBookmarkStore,
+  useWorkflowStore
+} from '@/stores/workflowStore'
+import { ComfyWorkflow } from '@/stores/workflowStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+import type { TreeNode } from '@/types/treeExplorerTypes'
+import { TreeExplorerNode } from '@/types/treeExplorerTypes'
+import { appendJsonExt } from '@/utils/formatUtil'
+import { buildTree, sortedTree } from '@/utils/treeUtil'
 
 const settingStore = useSettingStore()
 const workflowTabsPosition = computed(() =>
@@ -132,11 +163,9 @@ const searchQuery = ref('')
 const isSearching = computed(() => searchQuery.value.length > 0)
 const filteredWorkflows = ref<ComfyWorkflow[]>([])
 const filteredRoot = computed<TreeNode>(() => {
-  return workflowStore.buildWorkflowTree(
-    filteredWorkflows.value as ComfyWorkflow[]
-  )
+  return buildWorkflowTree(filteredWorkflows.value as ComfyWorkflow[])
 })
-const handleSearch = (query: string) => {
+const handleSearch = async (query: string) => {
   if (query.length === 0) {
     filteredWorkflows.value = []
     expandedKeys.value = {}
@@ -144,64 +173,102 @@ const handleSearch = (query: string) => {
   }
   const lowerQuery = query.toLocaleLowerCase()
   filteredWorkflows.value = workflowStore.workflows.filter((workflow) => {
-    return workflow.name.toLocaleLowerCase().includes(lowerQuery)
+    return workflow.path.toLocaleLowerCase().includes(lowerQuery)
   })
-  nextTick(() => {
-    expandNode(filteredRoot.value)
-  })
+  await nextTick()
+  expandNode(filteredRoot.value)
 }
 
-const commandStore = useCommandStore()
-
 const workflowStore = useWorkflowStore()
+const workflowService = useWorkflowService()
+const workspaceStore = useWorkspaceStore()
 const { t } = useI18n()
 const expandedKeys = ref<Record<string, boolean>>({})
 const { expandNode, toggleNodeOnEvent } = useTreeExpansion(expandedKeys)
+const dummyExpandedKeys = ref<Record<string, boolean>>({})
 
-const renderTreeNode = (node: TreeNode): TreeExplorerNode<ComfyWorkflow> => {
-  const children = node.children?.map(renderTreeNode)
+const handleCloseWorkflow = async (workflow?: ComfyWorkflow) => {
+  if (workflow) {
+    await workflowService.closeWorkflow(workflow, {
+      warnIfUnsaved: !workspaceStore.shiftDown
+    })
+  }
+}
+
+enum WorkflowTreeType {
+  Open = 'Open',
+  Bookmarks = 'Bookmarks',
+  Browse = 'Browse'
+}
+
+const buildWorkflowTree = (workflows: ComfyWorkflow[]) => {
+  return buildTree(workflows, (workflow: ComfyWorkflow) =>
+    workflow.key.split('/')
+  )
+}
+
+const workflowsTree = computed(() =>
+  sortedTree(buildWorkflowTree(workflowStore.persistedWorkflows), {
+    groupLeaf: true
+  })
+)
+// Bookmarked workflows tree is flat.
+const bookmarkedWorkflowsTree = computed(() =>
+  buildTree(workflowStore.bookmarkedWorkflows, (workflow) => [workflow.key])
+)
+// Open workflows tree is flat.
+const openWorkflowsTree = computed(() =>
+  buildTree(workflowStore.openWorkflows, (workflow) => [workflow.key])
+)
+
+const renderTreeNode = (
+  node: TreeNode,
+  type: WorkflowTreeType
+): TreeExplorerNode<ComfyWorkflow> => {
+  const children = node.children?.map((child) => renderTreeNode(child, type))
 
   const workflow: ComfyWorkflow = node.data
 
-  const handleClick = (
-    node: TreeExplorerNode<ComfyWorkflow>,
+  async function handleClick(
+    this: TreeExplorerNode<ComfyWorkflow>,
     e: MouseEvent
-  ) => {
-    if (node.leaf) {
-      const workflow = node.data
-      workflow.load()
+  ) {
+    if (this.leaf) {
+      await workflowService.openWorkflow(workflow)
     } else {
-      toggleNodeOnEvent(e, node)
+      toggleNodeOnEvent(e, this)
     }
   }
+
   const actions = node.leaf
     ? {
         handleClick,
-        handleRename: (
-          node: TreeExplorerNode<ComfyWorkflow>,
-          newName: string
-        ) => {
-          const workflow = node.data
-          workflow.rename(newName)
+        async handleRename(newName: string) {
+          const newPath =
+            type === WorkflowTreeType.Browse
+              ? workflow.directory + '/' + appendJsonExt(newName)
+              : ComfyWorkflow.basePath + appendJsonExt(newName)
+
+          await workflowService.renameWorkflow(workflow, newPath)
         },
         handleDelete: workflow.isTemporary
           ? undefined
-          : (node: TreeExplorerNode<ComfyWorkflow>) => {
-              const workflow = node.data
-              workflow.delete()
+          : async function () {
+              await workflowService.deleteWorkflow(workflow)
             },
-        contextMenuItems: (node: TreeExplorerNode<ComfyWorkflow>) => {
+        contextMenuItems() {
           return [
             {
-              label: t('insert'),
+              label: t('g.insert'),
               icon: 'pi pi-file-export',
-              command: () => {
+              command: async () => {
                 const workflow = node.data
-                workflow.insert()
+                await workflowService.insertWorkflow(workflow)
               }
             }
           ]
-        }
+        },
+        draggable: true
       }
     : { handleClick }
 
@@ -216,6 +283,11 @@ const renderTreeNode = (node: TreeNode): TreeExplorerNode<ComfyWorkflow> => {
 }
 
 const selectionKeys = computed(() => ({
-  [`root/${workflowStore.activeWorkflow?.name}.json`]: true
+  [`root/${workflowStore.activeWorkflow?.key}`]: true
 }))
+
+const workflowBookmarkStore = useWorkflowBookmarkStore()
+onMounted(async () => {
+  await workflowBookmarkStore.loadBookmarks()
+})
 </script>

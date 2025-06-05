@@ -7,6 +7,7 @@ app.registerExtension({
   init() {
     const editAttentionDelta = app.ui.settings.addSetting({
       id: 'Comfy.EditAttention.Delta',
+      category: ['Comfy', 'EditTokenWeight', 'Delta'],
       name: 'Ctrl+up/down precision',
       type: 'slider',
       attrs: {
@@ -152,7 +153,7 @@ app.registerExtension({
       const weightDelta = event.key === 'ArrowUp' ? delta : -delta
       const updatedText = selectedText.replace(
         /\((.*):([+-]?\d+(?:\.\d+)?)\)/,
-        (match, text, weight) => {
+        (_, text, weight) => {
           weight = incrementWeight(weight, weightDelta)
           if (weight == 1) {
             return text

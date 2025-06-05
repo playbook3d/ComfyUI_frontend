@@ -3,11 +3,12 @@
 </template>
 
 <script setup lang="ts">
-import { useSettingStore } from '@/stores/settingStore'
-import { useToastStore } from '@/stores/toastStore'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import { nextTick, watch } from 'vue'
+
+import { useSettingStore } from '@/stores/settingStore'
+import { useToastStore } from '@/stores/toastStore'
 
 const toast = useToast()
 const toastStore = useToastStore()
@@ -58,7 +59,9 @@ function updateToastPosition() {
     document.getElementById('dynamic-toast-style') || createStyleElement()
   const rect = document
     .querySelector('.graph-canvas-container')
-    .getBoundingClientRect()
+    ?.getBoundingClientRect()
+  if (!rect) return
+
   styleElement.textContent = `
     .p-toast.p-component.p-toast-top-right {
       top: ${rect.top + 20}px !important;

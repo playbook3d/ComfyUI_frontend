@@ -11,18 +11,14 @@
 
 <script setup lang="ts">
 import Tag from 'primevue/tag'
-import { KeyComboImpl } from '@/stores/keybindingStore'
 import { computed } from 'vue'
 
-const props = withDefaults(
-  defineProps<{
-    keyCombo: KeyComboImpl
-    isModified: boolean
-  }>(),
-  {
-    isModified: false
-  }
-)
+import { KeyComboImpl } from '@/stores/keybindingStore'
 
-const keySequences = computed(() => props.keyCombo.getKeySequences())
+const { keyCombo, isModified = false } = defineProps<{
+  keyCombo: KeyComboImpl
+  isModified?: boolean
+}>()
+
+const keySequences = computed(() => keyCombo.getKeySequences())
 </script>

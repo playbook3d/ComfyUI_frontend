@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col h-full">
     <Tabs v-model:value="bottomPanelStore.activeBottomPanelTabId">
-      <TabList pt:tabList="border-none">
+      <TabList pt:tab-list="border-none">
         <div class="w-full flex justify-between">
           <div class="tabs-container">
             <Tab
@@ -41,9 +41,10 @@
 
 <script setup lang="ts">
 import Button from 'primevue/button'
-import Tabs from 'primevue/tabs'
-import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
+import TabList from 'primevue/tablist'
+import Tabs from 'primevue/tabs'
+
 import ExtensionSlot from '@/components/common/ExtensionSlot.vue'
 import { useBottomPanelStore } from '@/stores/workspace/bottomPanelStore'
 

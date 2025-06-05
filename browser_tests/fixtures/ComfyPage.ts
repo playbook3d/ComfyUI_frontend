@@ -1,24 +1,39 @@
-import type { Page, Locator, APIRequestContext } from '@playwright/test'
+import type { LGraphNode } from '@comfyorg/litegraph'
+import type { APIRequestContext, Locator, Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 import { test as base } from '@playwright/test'
-import { ComfyActionbar } from '../helpers/actionbar'
 import dotenv from 'dotenv'
-dotenv.config()
 import * as fs from 'fs'
+
+import type { NodeId } from '../../src/schemas/comfyWorkflowSchema'
+import type { KeyCombo } from '../../src/schemas/keyBindingSchema'
+import type { useWorkspaceStore } from '../../src/stores/workspaceStore'
 import { NodeBadgeMode } from '../../src/types/nodeSource'
-import type { NodeId } from '../../src/types/comfyWorkflow'
-import type { KeyCombo } from '../../src/types/keyBindingTypes'
+import { ComfyActionbar } from '../helpers/actionbar'
 import { ComfyTemplates } from '../helpers/templates'
+import { ComfyMouse } from './ComfyMouse'
 import { ComfyNodeSearchBox } from './components/ComfyNodeSearchBox'
+import { SettingDialog } from './components/SettingDialog'
 import {
   NodeLibrarySidebarTab,
+  QueueSidebarTab,
   WorkflowsSidebarTab
 } from './components/SidebarTab'
 import { Topbar } from './components/Topbar'
-import { NodeReference } from './utils/litegraphUtils'
 import type { Position, Size } from './types'
+import { NodeReference } from './utils/litegraphUtils'
+import TaskHistory from './utils/taskHistory'
+
+dotenv.config()
+
+type WorkspaceStore = ReturnType<typeof useWorkspaceStore>
 
 class ComfyMenu {
+  private _nodeLibraryTab: NodeLibrarySidebarTab | null = null
+  private _workflowsTab: WorkflowsSidebarTab | null = null
+  private _queueTab: QueueSidebarTab | null = null
+  private _topbar: Topbar | null = null
+
   public readonly sideToolbar: Locator
   public readonly themeToggleButton: Locator
   public readonly saveButton: Locator
@@ -32,15 +47,23 @@ class ComfyMenu {
   }
 
   get nodeLibraryTab() {
-    return new NodeLibrarySidebarTab(this.page)
+    this._nodeLibraryTab ??= new NodeLibrarySidebarTab(this.page)
+    return this._nodeLibraryTab
   }
 
   get workflowsTab() {
-    return new WorkflowsSidebarTab(this.page)
+    this._workflowsTab ??= new WorkflowsSidebarTab(this.page)
+    return this._workflowsTab
+  }
+
+  get queueTab() {
+    this._queueTab ??= new QueueSidebarTab(this.page)
+    return this._queueTab
   }
 
   get topbar() {
-    return new Topbar(this.page)
+    this._topbar ??= new Topbar(this.page)
+    return this._topbar
   }
 
   async toggleTheme() {
@@ -71,7 +94,33 @@ type FolderStructure = {
   [key: string]: FolderStructure | string
 }
 
+type KeysOfType<T, Match> = {
+  [K in keyof T]: T[K] extends Match ? K : never
+}[keyof T]
+
+class ConfirmDialog {
+  public readonly delete: Locator
+  public readonly overwrite: Locator
+  public readonly reject: Locator
+  public readonly confirm: Locator
+
+  constructor(public readonly page: Page) {
+    this.delete = page.locator('button.p-button[aria-label="Delete"]')
+    this.overwrite = page.locator('button.p-button[aria-label="Overwrite"]')
+    this.reject = page.locator('button.p-button[aria-label="Cancel"]')
+    this.confirm = page.locator('button.p-button[aria-label="Confirm"]')
+  }
+
+  async click(locator: KeysOfType<ConfirmDialog, Locator>) {
+    const loc = this[locator]
+    await expect(loc).toBeVisible()
+    await loc.click()
+  }
+}
+
 export class ComfyPage {
+  private _history: TaskHistory | null = null
+
   public readonly url: string
   // All canvas position operations are based on default view of canvas.
   public readonly canvas: Locator
@@ -84,11 +133,24 @@ export class ComfyPage {
   // Inputs
   public readonly workflowUploadInput: Locator
 
+  // Toasts
+  public readonly visibleToasts: Locator
+
   // Components
   public readonly searchBox: ComfyNodeSearchBox
   public readonly menu: ComfyMenu
   public readonly actionbar: ComfyActionbar
   public readonly templates: ComfyTemplates
+  public readonly settingDialog: SettingDialog
+  public readonly confirmDialog: ConfirmDialog
+
+  /** Worker index to test user ID */
+  public readonly userIds: string[] = []
+
+  /** Test user ID for the current context */
+  get id() {
+    return this.userIds[comfyPageFixture.info().parallelIndex]
+  }
 
   constructor(
     public readonly page: Page,
@@ -100,10 +162,14 @@ export class ComfyPage {
     this.resetViewButton = page.getByRole('button', { name: 'Reset View' })
     this.queueButton = page.getByRole('button', { name: 'Queue Prompt' })
     this.workflowUploadInput = page.locator('#comfy-file-input')
+    this.visibleToasts = page.locator('.p-toast-message:visible')
+
     this.searchBox = new ComfyNodeSearchBox(page)
     this.menu = new ComfyMenu(page)
     this.actionbar = new ComfyActionbar(page)
     this.templates = new ComfyTemplates(page)
+    this.settingDialog = new SettingDialog(page)
+    this.confirmDialog = new ConfirmDialog(page)
   }
 
   convertLeafToContent(structure: FolderStructure): FolderStructure {
@@ -143,7 +209,7 @@ export class ComfyPage {
       {
         data: {
           tree_structure: this.convertLeafToContent(structure),
-          base_path: 'user/default/workflows'
+          base_path: `user/${this.id}/workflows`
         }
       }
     )
@@ -153,6 +219,35 @@ export class ComfyPage {
         `Failed to setup workflows directory: ${await resp.text()}`
       )
     }
+
+    await this.page.evaluate(async () => {
+      await window['app'].extensionManager.workflow.syncWorkflows()
+    })
+  }
+
+  async setupUser(username: string) {
+    const res = await this.request.get(`${this.url}/api/users`)
+    if (res.status() !== 200)
+      throw new Error(`Failed to retrieve users: ${await res.text()}`)
+
+    const apiRes = await res.json()
+    const user = Object.entries(apiRes?.users ?? {}).find(
+      ([, name]) => name === username
+    )
+    const id = user?.[0]
+
+    return id ? id : await this.createUser(username)
+  }
+
+  async createUser(username: string) {
+    const resp = await this.request.post(`${this.url}/api/users`, {
+      data: { username }
+    })
+
+    if (resp.status() !== 200)
+      throw new Error(`Failed to create user: ${await resp.text()}`)
+
+    return await resp.json()
   }
 
   async setupSettings(settings: Record<string, any>) {
@@ -168,12 +263,22 @@ export class ComfyPage {
     }
   }
 
-  async setup() {
+  setupHistory(): TaskHistory {
+    this._history ??= new TaskHistory(this)
+    return this._history
+  }
+
+  async setup({ clearStorage = true }: { clearStorage?: boolean } = {}) {
     await this.goto()
-    await this.page.evaluate(() => {
-      localStorage.clear()
-      sessionStorage.clear()
-    })
+    if (clearStorage) {
+      await this.page.evaluate((id) => {
+        localStorage.clear()
+        sessionStorage.clear()
+        localStorage.setItem('Comfy.userId', id)
+      }, this.id)
+    }
+    await this.goto()
+
     // Unify font for consistent screenshots.
     await this.page.addStyleTag({
       url: 'https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap'
@@ -184,8 +289,8 @@ export class ComfyPage {
     await this.page.addStyleTag({
       content: `
       * {
-				font-family: 'Roboto Mono', 'Noto Color Emoji';
-			}`
+        font-family: 'Roboto Mono', 'Noto Color Emoji';
+      }`
     })
     await this.page.waitForFunction(() => document.fonts.ready)
     await this.page.waitForFunction(
@@ -275,11 +380,6 @@ export class ComfyPage {
     }, settingId)
   }
 
-  async reload() {
-    await this.page.reload({ timeout: 15000 })
-    await this.setup()
-  }
-
   async goto() {
     await this.page.goto(this.url)
   }
@@ -301,6 +401,30 @@ export class ComfyPage {
     await this.nextFrame()
   }
 
+  async deleteWorkflow(
+    workflowName: string,
+    whenMissing: 'ignoreMissing' | 'throwIfMissing' = 'ignoreMissing'
+  ) {
+    // Open workflows tab
+    const { workflowsTab } = this.menu
+    await workflowsTab.open()
+
+    // Action to take if workflow missing
+    if (whenMissing === 'ignoreMissing') {
+      const workflows = await workflowsTab.getTopLevelSavedWorkflowNames()
+      if (!workflows.includes(workflowName)) return
+    }
+
+    // Delete workflow
+    await workflowsTab.getPersistedItem(workflowName).click({ button: 'right' })
+    await this.clickContextMenuItem('Delete')
+    await this.confirmDialog.delete.click()
+
+    // Clear toast & close tab
+    await this.closeToasts(1)
+    await workflowsTab.close()
+  }
+
   async resetView() {
     if (await this.resetViewButton.isVisible()) {
       await this.resetViewButton.click()
@@ -310,8 +434,27 @@ export class ComfyPage {
     await this.nextFrame()
   }
 
+  async getToastErrorCount() {
+    return await this.page
+      .locator('.p-toast-message.p-toast-message-error')
+      .count()
+  }
+
   async getVisibleToastCount() {
-    return await this.page.locator('.p-toast:visible').count()
+    return await this.visibleToasts.count()
+  }
+
+  async closeToasts(requireCount = 0) {
+    if (requireCount) await expect(this.visibleToasts).toHaveCount(requireCount)
+
+    // Clear all toasts
+    const toastCloseButtons = await this.page
+      .locator('.p-toast-close-button')
+      .all()
+    for (const button of toastCloseButtons) {
+      await button.click()
+    }
+    await expect(this.visibleToasts).toHaveCount(0)
   }
 
   async clickTextEncodeNode1() {
@@ -362,52 +505,127 @@ export class ComfyPage {
     await this.nextFrame()
   }
 
-  async dragAndDropFile(fileName: string) {
-    const filePath = this.assetPath(fileName)
+  async dragAndDropExternalResource(
+    options: {
+      fileName?: string
+      url?: string
+      dropPosition?: Position
+    } = {}
+  ) {
+    const { dropPosition = { x: 100, y: 100 }, fileName, url } = options
 
-    // Read the file content
-    const buffer = fs.readFileSync(filePath)
+    if (!fileName && !url)
+      throw new Error('Must provide either fileName or url')
 
-    // Get file type
-    const getFileType = (fileName: string) => {
-      if (fileName.endsWith('.png')) return 'image/png'
-      if (fileName.endsWith('.webp')) return 'image/webp'
-      if (fileName.endsWith('.json')) return 'application/json'
-      return 'application/octet-stream'
+    const evaluateParams: {
+      dropPosition: Position
+      fileName?: string
+      fileType?: string
+      buffer?: Uint8Array | number[]
+      url?: string
+    } = { dropPosition }
+
+    // Dropping a file from the filesystem
+    if (fileName) {
+      const filePath = this.assetPath(fileName)
+      const buffer = fs.readFileSync(filePath)
+
+      const getFileType = (fileName: string) => {
+        if (fileName.endsWith('.png')) return 'image/png'
+        if (fileName.endsWith('.svg')) return 'image/svg+xml'
+        if (fileName.endsWith('.webp')) return 'image/webp'
+        if (fileName.endsWith('.webm')) return 'video/webm'
+        if (fileName.endsWith('.json')) return 'application/json'
+        if (fileName.endsWith('.glb')) return 'model/gltf-binary'
+        return 'application/octet-stream'
+      }
+
+      evaluateParams.fileName = fileName
+      evaluateParams.fileType = getFileType(fileName)
+      evaluateParams.buffer = [...new Uint8Array(buffer)]
     }
 
-    const fileType = getFileType(fileName)
+    // Dropping a URL (e.g., dropping image across browser tabs in Firefox)
+    if (url) evaluateParams.url = url
 
-    await this.page.evaluate(
-      async ({ buffer, fileName, fileType }) => {
-        const file = new File([new Uint8Array(buffer)], fileName, {
-          type: fileType
-        })
-        const dataTransfer = new DataTransfer()
+    // Execute the drag and drop in the browser
+    await this.page.evaluate(async (params) => {
+      const dataTransfer = new DataTransfer()
+
+      // Add file if provided
+      if (params.buffer && params.fileName && params.fileType) {
+        const file = new File(
+          [new Uint8Array(params.buffer)],
+          params.fileName,
+          {
+            type: params.fileType
+          }
+        )
         dataTransfer.items.add(file)
+      }
 
-        const dropEvent = new DragEvent('drop', {
-          bubbles: true,
-          cancelable: true,
-          dataTransfer
-        })
+      // Add URL data if provided
+      if (params.url) {
+        dataTransfer.setData('text/uri-list', params.url)
+        dataTransfer.setData('text/x-moz-url', params.url)
+      }
 
-        Object.defineProperty(dropEvent, 'preventDefault', {
-          value: () => {},
-          writable: false
-        })
+      const targetElement = document.elementFromPoint(
+        params.dropPosition.x,
+        params.dropPosition.y
+      )
 
-        Object.defineProperty(dropEvent, 'stopPropagation', {
-          value: () => {},
-          writable: false
-        })
+      if (!targetElement) {
+        console.error('No element found at drop position:', params.dropPosition)
+        return { success: false, error: 'No element at position' }
+      }
 
-        document.dispatchEvent(dropEvent)
-      },
-      { buffer: [...new Uint8Array(buffer)], fileName, fileType }
-    )
+      const eventOptions = {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+        clientX: params.dropPosition.x,
+        clientY: params.dropPosition.y
+      }
+
+      const dragOverEvent = new DragEvent('dragover', eventOptions)
+      const dropEvent = new DragEvent('drop', eventOptions)
+
+      Object.defineProperty(dropEvent, 'preventDefault', {
+        value: () => {},
+        writable: false
+      })
+
+      Object.defineProperty(dropEvent, 'stopPropagation', {
+        value: () => {},
+        writable: false
+      })
+
+      targetElement.dispatchEvent(dragOverEvent)
+      targetElement.dispatchEvent(dropEvent)
+
+      return {
+        success: true,
+        targetInfo: {
+          tagName: targetElement.tagName,
+          id: targetElement.id,
+          classList: Array.from(targetElement.classList)
+        }
+      }
+    }, evaluateParams)
 
     await this.nextFrame()
+  }
+
+  async dragAndDropFile(
+    fileName: string,
+    options: { dropPosition?: Position } = {}
+  ) {
+    return this.dragAndDropExternalResource({ fileName, ...options })
+  }
+
+  async dragAndDropURL(url: string, options: { dropPosition?: Position } = {}) {
+    return this.dragAndDropExternalResource({ url, ...options })
   }
 
   async dragNode2() {
@@ -440,15 +658,35 @@ export class ComfyPage {
     return { x: 427, y: 98 }
   }
 
+  get promptDialogInput() {
+    return this.page.locator('.p-dialog-content input[type="text"]')
+  }
+
+  async fillPromptDialog(value: string) {
+    await this.promptDialogInput.fill(value)
+    await this.page.keyboard.press('Enter')
+    await this.promptDialogInput.waitFor({ state: 'hidden' })
+    await this.nextFrame()
+  }
+
   async disconnectEdge() {
     await this.dragAndDrop(this.clipTextEncodeNode1InputSlot, this.emptySpace)
   }
 
-  async connectEdge() {
-    await this.dragAndDrop(
-      this.loadCheckpointNodeClipOutputSlot,
-      this.clipTextEncodeNode1InputSlot
-    )
+  async connectEdge(
+    options: {
+      reverse?: boolean
+    } = {}
+  ) {
+    const { reverse = false } = options
+    const start = reverse
+      ? this.clipTextEncodeNode1InputSlot
+      : this.loadCheckpointNodeClipOutputSlot
+    const end = reverse
+      ? this.loadCheckpointNodeClipOutputSlot
+      : this.clipTextEncodeNode1InputSlot
+
+    await this.dragAndDrop(start, end)
   }
 
   async adjustWidgetValue() {
@@ -479,9 +717,6 @@ export class ComfyPage {
     safeSpot = safeSpot || { x: 10, y: 10 }
     await this.page.mouse.move(safeSpot.x, safeSpot.y)
     await this.page.mouse.down()
-    // TEMPORARY HACK: Multiple pans open the search menu, so cheat and keep it closed.
-    // TODO: Fix that (double-click at not-the-same-coordinations should not open the menu)
-    await this.page.keyboard.press('Escape')
     await this.page.mouse.move(offset.x + safeSpot.x, offset.y + safeSpot.y)
     await this.page.mouse.up()
     await this.nextFrame()
@@ -510,8 +745,13 @@ export class ComfyPage {
     await this.nextFrame()
   }
 
+  async clickContextMenuItem(name: string): Promise<void> {
+    await this.page.getByRole('menuitem', { name }).click()
+    await this.nextFrame()
+  }
+
   async doubleClickCanvas() {
-    await this.page.mouse.dblclick(10, 10)
+    await this.page.mouse.dblclick(10, 10, { delay: 5 })
     await this.nextFrame()
   }
 
@@ -538,6 +778,18 @@ export class ComfyPage {
     await this.nextFrame()
   }
 
+  async selectNodes(nodeTitles: string[]) {
+    await this.page.keyboard.down('Control')
+    for (const nodeTitle of nodeTitles) {
+      const nodes = await this.getNodeRefsByTitle(nodeTitle)
+      for (const node of nodes) {
+        await node.click('title')
+      }
+    }
+    await this.page.keyboard.up('Control')
+    await this.nextFrame()
+  }
+
   async select2Nodes() {
     // Select 2 CLIP nodes.
     await this.page.keyboard.down('Control')
@@ -547,43 +799,42 @@ export class ComfyPage {
     await this.nextFrame()
   }
 
-  async ctrlSend(keyToPress: string) {
-    await this.page.keyboard.down('Control')
-    await this.page.keyboard.press(keyToPress)
-    await this.page.keyboard.up('Control')
+  async ctrlSend(keyToPress: string, locator: Locator | null = this.canvas) {
+    const target = locator ?? this.page.keyboard
+    await target.press(`Control+${keyToPress}`)
     await this.nextFrame()
   }
 
-  async ctrlA() {
-    await this.ctrlSend('KeyA')
+  async ctrlA(locator?: Locator | null) {
+    await this.ctrlSend('KeyA', locator)
   }
 
-  async ctrlB() {
-    await this.ctrlSend('KeyB')
+  async ctrlB(locator?: Locator | null) {
+    await this.ctrlSend('KeyB', locator)
   }
 
-  async ctrlC() {
-    await this.ctrlSend('KeyC')
+  async ctrlC(locator?: Locator | null) {
+    await this.ctrlSend('KeyC', locator)
   }
 
-  async ctrlV() {
-    await this.ctrlSend('KeyV')
+  async ctrlV(locator?: Locator | null) {
+    await this.ctrlSend('KeyV', locator)
   }
 
-  async ctrlZ() {
-    await this.ctrlSend('KeyZ')
+  async ctrlZ(locator?: Locator | null) {
+    await this.ctrlSend('KeyZ', locator)
   }
 
-  async ctrlY() {
-    await this.ctrlSend('KeyY')
+  async ctrlY(locator?: Locator | null) {
+    await this.ctrlSend('KeyY', locator)
   }
 
-  async ctrlArrowUp() {
-    await this.ctrlSend('ArrowUp')
+  async ctrlArrowUp(locator?: Locator | null) {
+    await this.ctrlSend('ArrowUp', locator)
   }
 
-  async ctrlArrowDown() {
-    await this.ctrlSend('ArrowDown')
+  async ctrlArrowDown(locator?: Locator | null) {
+    await this.ctrlSend('ArrowDown', locator)
   }
 
   async closeMenu() {
@@ -611,10 +862,14 @@ export class ComfyPage {
       x: nodePos.x + nodeSize.width * ratioX,
       y: nodePos.y + nodeSize.height * ratioY
     }
-    await this.dragAndDrop(bottomRight, target)
+    // -1 to be inside the node.  -2 because nodes currently get an arbitrary +1 to width.
+    await this.dragAndDrop(
+      { x: bottomRight.x - 2, y: bottomRight.y - 1 },
+      target
+    )
     await this.nextFrame()
     if (revertAfter) {
-      await this.dragAndDrop(target, bottomRight)
+      await this.dragAndDrop({ x: target.x - 2, y: target.y - 1 }, bottomRight)
       await this.nextFrame()
     }
   }
@@ -625,14 +880,20 @@ export class ComfyPage {
     revertAfter: boolean = false
   ) {
     const ksamplerPos = {
-      x: 864,
-      y: 157
+      x: 863,
+      y: 156
     }
     const ksamplerSize = {
       width: 315,
       height: 292
     }
-    this.resizeNode(ksamplerPos, ksamplerSize, percentX, percentY, revertAfter)
+    return this.resizeNode(
+      ksamplerPos,
+      ksamplerSize,
+      percentX,
+      percentY,
+      revertAfter
+    )
   }
 
   async resizeLoadCheckpointNode(
@@ -641,14 +902,14 @@ export class ComfyPage {
     revertAfter: boolean = false
   ) {
     const loadCheckpointPos = {
-      x: 25,
-      y: 440
+      x: 26,
+      y: 444
     }
     const loadCheckpointSize = {
-      width: 320,
-      height: 120
+      width: 315,
+      height: 127
     }
-    this.resizeNode(
+    return this.resizeNode(
       loadCheckpointPos,
       loadCheckpointSize,
       percentX,
@@ -663,14 +924,14 @@ export class ComfyPage {
     revertAfter: boolean = false
   ) {
     const emptyLatentPos = {
-      x: 475,
-      y: 580
+      x: 473,
+      y: 579
     }
     const emptyLatentSize = {
-      width: 303,
-      height: 132
+      width: 315,
+      height: 136
     }
-    this.resizeNode(
+    return this.resizeNode(
       emptyLatentPos,
       emptyLatentSize,
       percentX,
@@ -679,34 +940,69 @@ export class ComfyPage {
     )
   }
 
+  async clickDialogButton(prompt: string, buttonText: string = 'Yes') {
+    const modal = this.page.locator(
+      `.comfy-modal-content:has-text("${prompt}")`
+    )
+    await expect(modal).toBeVisible()
+    await modal
+      .locator('.comfyui-button', {
+        hasText: buttonText
+      })
+      .click()
+    await expect(modal).toBeHidden()
+  }
+
   async convertAllNodesToGroupNode(groupNodeName: string) {
-    this.page.on('dialog', async (dialog) => {
-      await dialog.accept(groupNodeName)
-    })
     await this.canvas.press('Control+a')
     const node = await this.getFirstNodeRef()
     await node!.clickContextMenuOption('Convert to Group Node')
+    await this.fillPromptDialog(groupNodeName)
     await this.nextFrame()
   }
+
   async convertOffsetToCanvas(pos: [number, number]) {
     return this.page.evaluate((pos) => {
       return window['app'].canvas.ds.convertOffsetToCanvas(pos)
     }, pos)
   }
+
+  /** Get number of DOM widgets on the canvas. */
+  async getDOMWidgetCount() {
+    return await this.page.locator('.dom-widget').count()
+  }
+
   async getNodeRefById(id: NodeId) {
     return new NodeReference(id, this)
+  }
+  async getNodes(): Promise<LGraphNode[]> {
+    return await this.page.evaluate(() => {
+      return window['app'].graph.nodes
+    })
   }
   async getNodeRefsByType(type: string): Promise<NodeReference[]> {
     return Promise.all(
       (
         await this.page.evaluate((type) => {
           return window['app'].graph.nodes
-            .filter((n) => n.type === type)
-            .map((n) => n.id)
+            .filter((n: LGraphNode) => n.type === type)
+            .map((n: LGraphNode) => n.id)
         }, type)
       ).map((id: NodeId) => this.getNodeRefById(id))
     )
   }
+  async getNodeRefsByTitle(title: string): Promise<NodeReference[]> {
+    return Promise.all(
+      (
+        await this.page.evaluate((title) => {
+          return window['app'].graph.nodes
+            .filter((n: LGraphNode) => n.title === title)
+            .map((n: LGraphNode) => n.id)
+        }, title)
+      ).map((id: NodeId) => this.getNodeRefById(id))
+    )
+  }
+
   async getFirstNodeRef(): Promise<NodeReference | null> {
     const id = await this.page.evaluate(() => {
       return window['app'].graph.nodes[0]?.id
@@ -717,21 +1013,77 @@ export class ComfyPage {
   async moveMouseToEmptyArea() {
     await this.page.mouse.move(10, 10)
   }
+  async getUndoQueueSize() {
+    return this.page.evaluate(() => {
+      const workflow = (window['app'].extensionManager as WorkspaceStore)
+        .workflow.activeWorkflow
+      return workflow?.changeTracker.undoQueue.length
+    })
+  }
+  async getRedoQueueSize() {
+    return this.page.evaluate(() => {
+      const workflow = (window['app'].extensionManager as WorkspaceStore)
+        .workflow.activeWorkflow
+      return workflow?.changeTracker.redoQueue.length
+    })
+  }
+  async isCurrentWorkflowModified() {
+    return this.page.evaluate(() => {
+      return (window['app'].extensionManager as WorkspaceStore).workflow
+        .activeWorkflow?.isModified
+    })
+  }
+  async getExportedWorkflow({ api = false }: { api?: boolean } = {}) {
+    return this.page.evaluate(async (api) => {
+      return (await window['app'].graphToPrompt())[api ? 'output' : 'workflow']
+    }, api)
+  }
+  async setFocusMode(focusMode: boolean) {
+    await this.page.evaluate((focusMode) => {
+      window['app'].extensionManager.focusMode = focusMode
+    }, focusMode)
+    await this.nextFrame()
+  }
 }
 
-export const comfyPageFixture = base.extend<{ comfyPage: ComfyPage }>({
-  comfyPage: async ({ page, request }, use) => {
+export const comfyPageFixture = base.extend<{
+  comfyPage: ComfyPage
+  comfyMouse: ComfyMouse
+}>({
+  comfyPage: async ({ page, request }, use, testInfo) => {
     const comfyPage = new ComfyPage(page, request)
-    await comfyPage.setupSettings({
-      // Hide canvas menu/info by default.
-      'Comfy.Graph.CanvasInfo': false,
-      'Comfy.Graph.CanvasMenu': false,
-      // Hide all badges by default.
-      'Comfy.NodeBadge.NodeIdBadgeMode': NodeBadgeMode.None,
-      'Comfy.NodeBadge.NodeSourceBadgeMode': NodeBadgeMode.None
-    })
+
+    const { parallelIndex } = testInfo
+    const username = `playwright-test-${parallelIndex}`
+    const userId = await comfyPage.setupUser(username)
+    comfyPage.userIds[parallelIndex] = userId
+
+    try {
+      await comfyPage.setupSettings({
+        'Comfy.UseNewMenu': 'Disabled',
+        // Hide canvas menu/info/selection toolbox by default.
+        'Comfy.Graph.CanvasInfo': false,
+        'Comfy.Graph.CanvasMenu': false,
+        'Comfy.Canvas.SelectionToolbox': false,
+        // Hide all badges by default.
+        'Comfy.NodeBadge.NodeIdBadgeMode': NodeBadgeMode.None,
+        'Comfy.NodeBadge.NodeSourceBadgeMode': NodeBadgeMode.None,
+        // Disable tooltips by default to avoid flakiness.
+        'Comfy.EnableTooltips': false,
+        'Comfy.userId': userId,
+        // Set tutorial completed to true to avoid loading the tutorial workflow.
+        'Comfy.TutorialCompleted': true
+      })
+    } catch (e) {
+      console.error(e)
+    }
+
     await comfyPage.setup()
     await use(comfyPage)
+  },
+  comfyMouse: async ({ comfyPage }, use) => {
+    const comfyMouse = new ComfyMouse(comfyPage)
+    use(comfyMouse)
   }
 })
 
@@ -764,5 +1116,19 @@ const makeMatcher = function <T>(
 export const comfyExpect = expect.extend({
   toBePinned: makeMatcher((n) => n.isPinned(), 'pinned'),
   toBeBypassed: makeMatcher((n) => n.isBypassed(), 'bypassed'),
-  toBeCollapsed: makeMatcher((n) => n.isCollapsed(), 'collapsed')
+  toBeCollapsed: makeMatcher((n) => n.isCollapsed(), 'collapsed'),
+  async toHaveFocus(locator: Locator, options = { timeout: 256 }) {
+    const isFocused = await locator.evaluate(
+      (el) => el === document.activeElement
+    )
+
+    await expect(async () => {
+      expect(isFocused).toBe(!this.isNot)
+    }).toPass(options)
+
+    return {
+      pass: isFocused,
+      message: () => `Expected element to ${isFocused ? 'not ' : ''}be focused.`
+    }
+  }
 })
