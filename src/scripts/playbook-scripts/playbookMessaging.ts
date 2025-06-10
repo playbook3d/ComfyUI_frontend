@@ -40,40 +40,19 @@ export function notifyPlaybookWrapperNewWorkflowLoaded(wrapperOrigin: string) {
  * Send message with selected nodes data to Playbook wrapper.
  */
 export function sendNodeSelectionToPlaybookWrapper(
-  selectedNodes: any,
+  selectedNodes: ComfyWorkflowNodeData[],
   wrapperOrigin: string
 ) {
-  console.log(
-    'Comfy Window Sending: SendNodeSelectionToPlaybookWrapper: ',
-    selectedNodes
-  )
-
-  const selectedNodesArray = Object.values(selectedNodes)
-
-  // Reduce node data to structure expected by Playbook wrapper.
-  const restructuredNodesData = selectedNodesArray.map((node: any) => {
-    const nodeData: ComfyWorkflowNodeData = {
-      id: node.id,
-      type: node.type,
-      widgets_values: node.widgets_values,
-      widgets: node.widgets,
-      title: node.title,
-      inputs: node.inputs,
-      outputs: node.outputs,
-      properties: node.properties,
-      pos: node.pos,
-      size: node.size,
-      flags: node.flags
-    }
-
-    return nodeData
-  })
-
   // Serializing data to prevent errors messaging objects with callbacks.
   const messageData: WorkflowWindowMessageData = {
     message: 'SendSelectedNodesToPlaybookWrapper',
-    data: JSON.stringify(restructuredNodesData)
+    data: JSON.stringify(selectedNodes)
   }
+
+  console.log(
+    'Comfy Window Sending: SendNodeSelectionToPlaybookWrapper: ',
+    messageData
+  )
 
   if (window.top) {
     window.top.postMessage(messageData, wrapperOrigin)

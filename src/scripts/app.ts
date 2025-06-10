@@ -46,7 +46,7 @@ import { useExtensionStore } from '@/stores/extensionStore'
 import { useFirebaseAuthStore } from '@/stores/firebaseAuthStore'
 import { KeyComboImpl, useKeybindingStore } from '@/stores/keybindingStore'
 import { useCommandStore } from '@/stores/commandStore'
-import { WorkflowWindowMessageData } from './playbook-scripts/playbookTypes'
+import { ComfyWorkflowNodeData, WorkflowWindowMessageData } from './playbook-scripts/playbookTypes'
 import { useModelStore } from '@/stores/modelStore'
 import { SYSTEM_NODE_DEFS, useNodeDefStore } from '@/stores/nodeDefStore'
 import { useSettingStore } from '@/stores/settingStore'
@@ -90,7 +90,7 @@ import {
   sendNodeSelectionToPlaybookWrapper,
   sendWorkflowDataToPlaybookWrapper,
 } from './playbook-scripts/playbookMessaging'
-import { areSelectedItemsEqual } from './playbook-scripts/playbookHelpers'
+import { areSelectedItemsEqual, restructureSelectedNodesForPlaybookWrapper } from './playbook-scripts/playbookHelpers'
 
 export const ANIM_PREVIEW_WIDGET = '$$comfy_animation_preview'
 
@@ -312,6 +312,9 @@ export class ComfyApp {
 
           this.lastSelectedItems = new Set(this.canvas.selectedItems)
           
+          // TODO: Consolidate these methods of handling node selection. Better
+          // system might be tracking node selection by array of IDs and getting
+          // actual node data by cross-referencing with graph data on the front end.
           // This is a hack way of handling node selection changes;
           // necessary because canvas.onSelectionChange was deprecated
           // without replacement functionality in recent ComfyUI updates.
@@ -319,17 +322,50 @@ export class ComfyApp {
             if (this.playbookWrapperOrigin) {
               if (!areSelectedItemsEqual(this.lastSelectedItems, this.canvas.selectedItems)) {
                 const selectedItems = Array.from(this.canvas.selectedItems)
-                sendNodeSelectionToPlaybookWrapper(selectedItems, this.playbookWrapperOrigin)
+                const selectedNodes = restructureSelectedNodesForPlaybookWrapper(selectedItems)
+                sendNodeSelectionToPlaybookWrapper(selectedNodes, this.playbookWrapperOrigin)
                 this.lastSelectedItems = new Set(this.canvas.selectedItems)
               }
             }
           })
 
+          api.addEventListener('graphChanged', (evt) => {
+            const activeState = evt.detail
+            if (this.playbookWrapperOrigin) {
+
+              const selectedItems = Array.from(this.canvas.selectedItems)
+
+              if (selectedItems.length === 0) return
+              
+              const selectedNodesActiveState = selectedItems.map(item => {
+                const matchingNode = activeState.nodes.find(node => node.id === item.id)
+                if (matchingNode) {
+                  return matchingNode
+                }
+              })
+
+              const selectedNodes = restructureSelectedNodesForPlaybookWrapper(selectedItems)
+
+              // As is, there is an issue where widget values reverts during cloning.
+              const selectedNodesClone = JSON.parse(JSON.stringify(selectedNodes))
+
+              // So we clone and then reset widget_values with active state. 
+              selectedNodesClone.forEach((node: ComfyWorkflowNodeData) => {
+                const widgetValues = selectedNodesActiveState.find(_node => _node?.id === node.id)?.widgets_values as string[] 
+                node.widgets_values = widgetValues
+              })
+
+              sendNodeSelectionToPlaybookWrapper(selectedNodesClone, this.playbookWrapperOrigin)
+              this.lastSelectedItems = new Set(this.canvas.selectedItems)
+            }
+          })
+          
           // This listener handles deselection via hotkey deletion.
           this.canvas.onNodeDeselected = () => {
             if (this.playbookWrapperOrigin) {
               const selectedItems = Array.from(this.canvas.selectedItems)
-              sendNodeSelectionToPlaybookWrapper(selectedItems, this.playbookWrapperOrigin)
+              const selectedNodes = restructureSelectedNodesForPlaybookWrapper(selectedItems)
+              sendNodeSelectionToPlaybookWrapper(selectedNodes, this.playbookWrapperOrigin)
               this.lastSelectedItems = new Set(this.canvas.selectedItems)
             }
           }
