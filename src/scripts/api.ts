@@ -264,7 +264,7 @@ export class ComfyApi extends EventTarget {
     super()
     this.user = ''
     this.api_host = location.host
-    this.api_base = location.pathname.split('/').slice(0, -1).join('/')
+    this.api_base = config.api ?? location.pathname.split('/').slice(0, -1).join('/')
     console.log('Running on', this.api_host)
     this.initialClientId = sessionStorage.getItem('clientId')
     this.is_offline = config.offline
@@ -280,6 +280,12 @@ export class ComfyApi extends EventTarget {
 
   fileURL(route: string): string {
     return this.api_base + route
+  }
+
+  getWorkflow(workflowId?: string) {
+    const stringMockWorkflow = `{"id":"6d50b9a1-629d-4073-a7c8-8c6506b97a0a","revision":0,"last_node_id":12,"last_link_id":17,"nodes":[{"id":8,"type":"VAEDecode","pos":[1209,188],"size":[210,46],"flags":{},"order":5,"mode":0,"inputs":[{"name":"samples","type":"LATENT","link":14},{"name":"vae","type":"VAE","link":8}],"outputs":[{"name":"IMAGE","type":"IMAGE","slot_index":0,"links":[9]}],"properties":{"Node name for S&R":"VAEDecode"},"widgets_values":[]},{"id":9,"type":"SaveImage","pos":[1499,144],"size":[637.0745849609375,735.6196899414062],"flags":{},"order":6,"mode":0,"inputs":[{"name":"images","type":"IMAGE","link":9}],"outputs":[],"properties":{"Node name for S&R":"SaveImage"},"widgets_values":["ComfyUI"]},{"id":5,"type":"EmptyLatentImage","pos":[473,683],"size":[315,106],"flags":{},"order":0,"mode":0,"inputs":[],"outputs":[{"name":"LATENT","type":"LATENT","slot_index":0,"links":[10]}],"properties":{"Node name for S&R":"EmptyLatentImage"},"widgets_values":[1024,1024,1]},{"id":7,"type":"CLIPTextEncode","pos":[413,389],"size":[425.27801513671875,180.6060791015625],"flags":{},"order":3,"mode":0,"inputs":[{"name":"clip","type":"CLIP","link":5}],"outputs":[{"name":"CONDITIONING","type":"CONDITIONING","slot_index":0,"links":[11]}],"properties":{"Node name for S&R":"CLIPTextEncode"},"widgets_values":["text, watermark, uniform, patterns, underexposed, ugly, high contrast, jpeg, (worst quality, low quality, lowres, low details, overexposed, underexposed, grayscale, bw,  bad art:1.4), (font, username, error, logo, words, letters, digits, autograph, trademark, name:1.2), (blur, blurry, grainy), poorly lit, bad shadow, draft, cropped, out of frame, cut off, censored, jpeg artifacts, out of focus, glitch, duplicate, (amateur:1.3), JuggernautNegative,"]},{"id":6,"type":"CLIPTextEncode","pos":[403,165],"size":[422.84503173828125,164.31304931640625],"flags":{},"order":2,"mode":0,"inputs":[{"name":"clip","type":"CLIP","link":3}],"outputs":[{"name":"CONDITIONING","type":"CONDITIONING","slot_index":0,"links":[12]}],"properties":{"Node name for S&R":"CLIPTextEncode"},"widgets_values":["MAGICO JHONSON"]},{"id":10,"type":"KSampler","pos":[872,194],"size":[315,262],"flags":{},"order":4,"mode":0,"inputs":[{"name":"model","type":"MODEL","link":13},{"name":"positive","type":"CONDITIONING","link":12},{"name":"negative","type":"CONDITIONING","link":11},{"name":"latent_image","type":"LATENT","link":10}],"outputs":[{"name":"LATENT","type":"LATENT","slot_index":0,"links":[14]}],"properties":{"Node name for S&R":"KSampler"},"widgets_values":[464438046406968,"randomize",7,1.9000000000000001,"dpmpp_sde_gpu","karras",1]},{"id":4,"type":"CheckpointLoaderSimple","pos":[-56.48199462890625,473.42822265625],"size":[315,98],"flags":{},"order":1,"mode":0,"inputs":[],"outputs":[{"name":"MODEL","type":"MODEL","slot_index":0,"links":[13]},{"name":"CLIP","type":"CLIP","slot_index":1,"links":[3,5]},{"name":"VAE","type":"VAE","slot_index":2,"links":[8]}],"properties":{"Node name for S&R":"CheckpointLoaderSimple"},"widgets_values":["juggernautXL_v9Rdphoto2Lightning.safetensors"]}],"links":[[3,4,1,6,0,"CLIP"],[5,4,1,7,0,"CLIP"],[8,4,2,8,1,"VAE"],[9,8,0,9,0,"IMAGE"],[10,5,0,10,3,"LATENT"],[11,7,0,10,2,"CONDITIONING"],[12,6,0,10,1,"CONDITIONING"],[13,4,0,10,0,"MODEL"],[14,10,0,8,0,"LATENT"]],"groups":[],"config":{},"extra":{"ds":{"scale":0.7247295000000007,"offset":[112.74241522551714,55.993182771269936]},"frontendVersion":"1.20.4","node_versions":{"comfy-core":"0.3.29"},"ue_links":[],"VHS_latentpreview":false,"VHS_latentpreviewrate":0},"version":0.4}`
+    return new Promise<Response>((resolve) => resolve(new Response(stringMockWorkflow)))
+    // return this.fetchApi('/workflows/' + workflowId)
   }
 
   fetchApi(route: string, dataToReturn?: any, options?: RequestInit) {
@@ -298,13 +304,13 @@ export class ComfyApi extends EventTarget {
       options.cache = 'no-cache'
     }
 
-    if (Array.isArray(options.headers)) {
-      options.headers.push(['Comfy-User', this.user])
-    } else if (options.headers instanceof Headers) {
-      options.headers.set('Comfy-User', this.user)
-    } else {
-      options.headers['Comfy-User'] = this.user
-    }
+    // if (Array.isArray(options.headers)) {
+    //   options.headers.push(['Comfy-User', this.user])
+    // } else if (options.headers instanceof Headers) {
+    //   options.headers.set('Comfy-User', this.user)
+    // } else {
+    //   options.headers['Comfy-User'] = this.user
+    // }
     return fetch(this.apiURL(route), options)
   }
 

@@ -37,7 +37,7 @@ export const useExtensionService = () => {
           try {
             await import(/* @vite-ignore */ api.fileURL(ext))
           } catch (error) {
-            console.error('Error loading extension', ext, error)
+            // console.error('Error loading extension', ext, error)
           }
         })
     )

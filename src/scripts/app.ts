@@ -287,6 +287,15 @@ export class ComfyApp {
     /*
      *  Subscribe listener to receive messaging from Playbook wrapper.
      */
+    
+    const workflow = this.api.getWorkflow();
+    workflow.then((workflow: any) => {
+      if (workflow) {
+        this.loadGraphData(workflow as ComfyWorkflowJSON, true)
+      }
+    })
+
+
     window.addEventListener('message', async (event) => {
       const eventMessageData: WorkflowWindowMessageData = event.data
 
@@ -917,8 +926,8 @@ export class ComfyApp {
       this.canvasContainer,
       this.canvas
     )
-
-    this.waitForPlaybookWrapperOriginToSendSetupComplete()
+    
+    // this.waitForPlaybookWrapperOriginToSendSetupComplete()
   }
 
   waitForPlaybookWrapperOriginToSendSetupCompleteInterval: any = null
