@@ -287,13 +287,6 @@ export class ComfyApp {
     /*
      *  Subscribe listener to receive messaging from Playbook wrapper.
      */
-    
-    const workflow = this.api.getWorkflow();
-    workflow.then((workflow: any) => {
-      if (workflow) {
-        this.loadGraphData(workflow as ComfyWorkflowJSON, true)
-      }
-    })
 
 
     window.addEventListener('message', async (event) => {
@@ -870,7 +863,7 @@ export class ComfyApp {
     // //@ts-expect-error fixme ts strict error
     // this.bodyRight = document.getElementById('comfyui-body-right')
     // //@ts-expect-error fixme ts strict error
-    // this.bodyBottom = document.getElementById('comfyui-body-bottom')
+    this.bodyBottom = document.getElementById('comfyui-body-bottom')
     // @ts-expect-error fixme ts strict error
     this.canvasContainer = document.getElementById('graph-canvas-container')
 

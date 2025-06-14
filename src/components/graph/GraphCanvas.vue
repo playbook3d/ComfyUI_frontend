@@ -322,6 +322,12 @@ onMounted(async () => {
       await useWorkflowService().reloadCurrentWorkflow()
     }
   )
+  const workflow = await comfyApp.api.getWorkflow()
+  const jsonFile = await workflow.json()
+  if (jsonFile) {
+    console.log('Comfy Window Received: jsonFile', jsonFile)
+    await comfyApp.loadGraphData(jsonFile, true)
+  }
 
   emit('ready')
 })

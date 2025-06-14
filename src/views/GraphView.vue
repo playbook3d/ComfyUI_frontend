@@ -1,9 +1,9 @@
 <template>
   <div class="comfyui-body grid h-full w-full overflow-hidden">
     <!-- [Playbook Edit] Commenting these components out for Playbook customisation. -->
-    <!-- <div id="comfyui-body-top" class="comfyui-body-top">
+    <div id="comfyui-body-top" class="comfyui-body-top">
       <TopMenubar v-if="useNewMenu === 'Top'" />
-    </div> -->
+    </div>
     <!-- <div id="comfyui-body-bottom" class="comfyui-body-bottom">
       <TopMenubar v-if="useNewMenu === 'Bottom'" />
     </div> -->
@@ -33,7 +33,7 @@ import UnloadWindowConfirmDialog from '@/components/dialog/UnloadWindowConfirmDi
 import GraphCanvas from '@/components/graph/GraphCanvas.vue'
 import RerouteMigrationToast from '@/components/toast/RerouteMigrationToast.vue'
 // import GlobalToast from '@/components/toast/GlobalToast.vue'
-// import TopMenubar from '@/components/topbar/TopMenubar.vue'
+import TopMenubar from '@/components/topbar/TopMenubar.vue'
 import { useBrowserTabTitle } from '@/composables/useBrowserTabTitle'
 import { useCoreCommands } from '@/composables/useCoreCommands'
 import { useErrorHandling } from '@/composables/useErrorHandling'

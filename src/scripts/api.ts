@@ -41,6 +41,7 @@ import {
 } from '@/schemas/nodeDefSchema'
 
 import { WorkflowTemplates } from '@/types/workflowTemplateTypes'
+import { AccountsApi } from './accountsApi'
 
 interface QueuePromptRequestBody {
   client_id: string
@@ -259,12 +260,17 @@ export class ComfyApi extends EventTarget {
    * The API key for the comfy org account if the user logged in via API key.
    */
   apiKey?: string
-
+  accountsApi: AccountsApi
   constructor() {
     super()
+    this.accountsApi = new AccountsApi(import.meta.env.VITE_MODAL_API, import.meta.env.VITE_API_KEY)
+
+    // @ts-expect-error fixme ts strict error
+    window['__COMFYUI_FRONTEND_VERSION__'] = config.app_version
+    console.log('ComfyUI Front-end version:', config.app_version)
     this.user = ''
     this.api_host = location.host
-    this.api_base = config.api ?? location.pathname.split('/').slice(0, -1).join('/')
+    this.api_base = 'app_url'
     console.log('Running on', this.api_host)
     this.initialClientId = sessionStorage.getItem('clientId')
     this.is_offline = config.offline
@@ -274,21 +280,38 @@ export class ComfyApi extends EventTarget {
     return this.api_base + '/internal' + route
   }
 
-  apiURL(route: string): string {
-    return this.api_base + '/api' + route
+  async apiURL(route: string): Promise<string> {
+    const urlParams = new URLSearchParams(window.location.search)
+    let teamId
+    if (urlParams.has('team_id')) {
+      teamId = urlParams.get('team_id')
+    }
+    const { app_url, user_jwt, workflow_id } = await (
+      await this.accountsApi.getInfo(teamId as string) as any
+    ).json()
+    return app_url + '/api' + route
   }
 
   fileURL(route: string): string {
     return this.api_base + route
   }
 
-  getWorkflow(workflowId?: string) {
-    const stringMockWorkflow = `{"id":"6d50b9a1-629d-4073-a7c8-8c6506b97a0a","revision":0,"last_node_id":12,"last_link_id":17,"nodes":[{"id":8,"type":"VAEDecode","pos":[1209,188],"size":[210,46],"flags":{},"order":5,"mode":0,"inputs":[{"name":"samples","type":"LATENT","link":14},{"name":"vae","type":"VAE","link":8}],"outputs":[{"name":"IMAGE","type":"IMAGE","slot_index":0,"links":[9]}],"properties":{"Node name for S&R":"VAEDecode"},"widgets_values":[]},{"id":9,"type":"SaveImage","pos":[1499,144],"size":[637.0745849609375,735.6196899414062],"flags":{},"order":6,"mode":0,"inputs":[{"name":"images","type":"IMAGE","link":9}],"outputs":[],"properties":{"Node name for S&R":"SaveImage"},"widgets_values":["ComfyUI"]},{"id":5,"type":"EmptyLatentImage","pos":[473,683],"size":[315,106],"flags":{},"order":0,"mode":0,"inputs":[],"outputs":[{"name":"LATENT","type":"LATENT","slot_index":0,"links":[10]}],"properties":{"Node name for S&R":"EmptyLatentImage"},"widgets_values":[1024,1024,1]},{"id":7,"type":"CLIPTextEncode","pos":[413,389],"size":[425.27801513671875,180.6060791015625],"flags":{},"order":3,"mode":0,"inputs":[{"name":"clip","type":"CLIP","link":5}],"outputs":[{"name":"CONDITIONING","type":"CONDITIONING","slot_index":0,"links":[11]}],"properties":{"Node name for S&R":"CLIPTextEncode"},"widgets_values":["text, watermark, uniform, patterns, underexposed, ugly, high contrast, jpeg, (worst quality, low quality, lowres, low details, overexposed, underexposed, grayscale, bw,  bad art:1.4), (font, username, error, logo, words, letters, digits, autograph, trademark, name:1.2), (blur, blurry, grainy), poorly lit, bad shadow, draft, cropped, out of frame, cut off, censored, jpeg artifacts, out of focus, glitch, duplicate, (amateur:1.3), JuggernautNegative,"]},{"id":6,"type":"CLIPTextEncode","pos":[403,165],"size":[422.84503173828125,164.31304931640625],"flags":{},"order":2,"mode":0,"inputs":[{"name":"clip","type":"CLIP","link":3}],"outputs":[{"name":"CONDITIONING","type":"CONDITIONING","slot_index":0,"links":[12]}],"properties":{"Node name for S&R":"CLIPTextEncode"},"widgets_values":["MAGICO JHONSON"]},{"id":10,"type":"KSampler","pos":[872,194],"size":[315,262],"flags":{},"order":4,"mode":0,"inputs":[{"name":"model","type":"MODEL","link":13},{"name":"positive","type":"CONDITIONING","link":12},{"name":"negative","type":"CONDITIONING","link":11},{"name":"latent_image","type":"LATENT","link":10}],"outputs":[{"name":"LATENT","type":"LATENT","slot_index":0,"links":[14]}],"properties":{"Node name for S&R":"KSampler"},"widgets_values":[464438046406968,"randomize",7,1.9000000000000001,"dpmpp_sde_gpu","karras",1]},{"id":4,"type":"CheckpointLoaderSimple","pos":[-56.48199462890625,473.42822265625],"size":[315,98],"flags":{},"order":1,"mode":0,"inputs":[],"outputs":[{"name":"MODEL","type":"MODEL","slot_index":0,"links":[13]},{"name":"CLIP","type":"CLIP","slot_index":1,"links":[3,5]},{"name":"VAE","type":"VAE","slot_index":2,"links":[8]}],"properties":{"Node name for S&R":"CheckpointLoaderSimple"},"widgets_values":["juggernautXL_v9Rdphoto2Lightning.safetensors"]}],"links":[[3,4,1,6,0,"CLIP"],[5,4,1,7,0,"CLIP"],[8,4,2,8,1,"VAE"],[9,8,0,9,0,"IMAGE"],[10,5,0,10,3,"LATENT"],[11,7,0,10,2,"CONDITIONING"],[12,6,0,10,1,"CONDITIONING"],[13,4,0,10,0,"MODEL"],[14,10,0,8,0,"LATENT"]],"groups":[],"config":{},"extra":{"ds":{"scale":0.7247295000000007,"offset":[112.74241522551714,55.993182771269936]},"frontendVersion":"1.20.4","node_versions":{"comfy-core":"0.3.29"},"ue_links":[],"VHS_latentpreview":false,"VHS_latentpreviewrate":0},"version":0.4}`
-    return new Promise<Response>((resolve) => resolve(new Response(stringMockWorkflow)))
-    // return this.fetchApi('/workflows/' + workflowId)
+  async getWorkflow(workflowId?: string) {
+    const urlParams = new URLSearchParams(window.location.search)
+    let teamId
+    if (urlParams.has('team_id')) {
+      teamId = urlParams.get('team_id')
+    }
+    const { _app_url, user_jwt, workflow_id } = await (
+      await this.accountsApi.getInfo(teamId as string) as any
+    ).json()
+    const stringMockWorkflow = `{"id":"32a25f4c-e76f-427c-b023-2b7dd17cc5c7","revision":0,"last_node_id":40,"last_link_id":119,"nodes":[{"id":17,"type":"BasicScheduler","pos":[480,1008],"size":[315,106],"flags":{},"order":9,"mode":0,"inputs":[{"name":"model","type":"MODEL","link":55}],"outputs":[{"name":"SIGMAS","type":"SIGMAS","links":[20]}],"properties":{"Node name for S&R":"BasicScheduler"},"widgets_values":["simple",20,1]},{"id":16,"type":"KSamplerSelect","pos":[480,912],"size":[315,58],"flags":{},"order":0,"mode":0,"inputs":[],"outputs":[{"name":"SAMPLER","type":"SAMPLER","links":[19]}],"properties":{"Node name for S&R":"KSamplerSelect"},"widgets_values":["euler"]},{"id":26,"type":"FluxGuidance","pos":[480,144],"size":[317.4000244140625,58],"flags":{},"order":8,"mode":0,"inputs":[{"name":"conditioning","type":"CONDITIONING","link":41}],"outputs":[{"name":"CONDITIONING","type":"CONDITIONING","slot_index":0,"links":[42]}],"properties":{"Node name for S&R":"FluxGuidance"},"widgets_values":[3.5]},{"id":13,"type":"SamplerCustomAdvanced","pos":[864,192],"size":[272.3617858886719,124.53733825683594],"flags":{},"order":11,"mode":0,"inputs":[{"name":"noise","type":"NOISE","link":37},{"name":"guider","type":"GUIDER","link":30},{"name":"sampler","type":"SAMPLER","link":19},{"name":"sigmas","type":"SIGMAS","link":20},{"name":"latent_image","type":"LATENT","link":116}],"outputs":[{"name":"output","type":"LATENT","slot_index":0,"links":[24]},{"name":"denoised_output","type":"LATENT","links":null}],"properties":{"Node name for S&R":"SamplerCustomAdvanced"},"widgets_values":[]},{"id":8,"type":"VAEDecode","pos":[866,367],"size":[210,46],"flags":{},"order":12,"mode":0,"inputs":[{"name":"samples","type":"LATENT","link":24},{"name":"vae","type":"VAE","link":12}],"outputs":[{"name":"IMAGE","type":"IMAGE","slot_index":0,"links":[9]}],"properties":{"Node name for S&R":"VAEDecode"},"widgets_values":[]},{"id":30,"type":"ModelSamplingFlux","pos":[480,1152],"size":[315,130],"flags":{},"order":7,"mode":0,"inputs":[{"name":"model","type":"MODEL","link":56}],"outputs":[{"name":"MODEL","type":"MODEL","slot_index":0,"links":[54,55]}],"properties":{"Node name for S&R":"ModelSamplingFlux"},"widgets_values":[1.15,0.5,1024,1024]},{"id":27,"type":"EmptySD3LatentImage","pos":[480,624],"size":[315,106],"flags":{},"order":1,"mode":0,"inputs":[],"outputs":[{"name":"LATENT","type":"LATENT","slot_index":0,"links":[116]}],"properties":{"Node name for S&R":"EmptySD3LatentImage"},"widgets_values":[1024,1024,1]},{"id":22,"type":"BasicGuider","pos":[588.820556640625,43.92744827270508],"size":[222.3482666015625,46],"flags":{},"order":10,"mode":0,"inputs":[{"name":"model","type":"MODEL","link":54},{"name":"conditioning","type":"CONDITIONING","link":42}],"outputs":[{"name":"GUIDER","type":"GUIDER","slot_index":0,"links":[30]}],"properties":{"Node name for S&R":"BasicGuider"},"widgets_values":[]},{"id":10,"type":"VAELoader","pos":[61.54898452758789,1236.017578125],"size":[311.81634521484375,60.429901123046875],"flags":{},"order":2,"mode":0,"inputs":[],"outputs":[{"name":"VAE","type":"VAE","slot_index":0,"links":[12]}],"properties":{"Node name for S&R":"VAELoader"},"widgets_values":["ae.safetensors"]},{"id":11,"type":"DualCLIPLoader","pos":[43.60044860839844,1064.43505859375],"size":[315,130],"flags":{},"order":3,"mode":0,"inputs":[],"outputs":[{"name":"CLIP","type":"CLIP","slot_index":0,"links":[10]}],"properties":{"Node name for S&R":"DualCLIPLoader"},"widgets_values":["t5xxl_fp16.safetensors","clip_l.safetensors","flux","default"]},{"id":12,"type":"UNETLoader","pos":[28.34018325805664,909.1227416992188],"size":[315,82],"flags":{},"order":4,"mode":0,"inputs":[],"outputs":[{"name":"MODEL","type":"MODEL","slot_index":0,"links":[56]}],"properties":{"Node name for S&R":"UNETLoader"},"widgets_values":["flux1-dev.safetensors","default"]},{"id":9,"type":"SaveImage","pos":[1269.0985107421875,193.5947265625],"size":[511.04693603515625,477.54815673828125],"flags":{},"order":13,"mode":0,"inputs":[{"name":"images","type":"IMAGE","link":9}],"outputs":[],"properties":{"Node name for S&R":"SaveImage"},"widgets_values":["ComfyUI"]},{"id":25,"type":"RandomNoise","pos":[495.1676025390625,777.5550537109375],"size":[315,82],"flags":{},"order":5,"mode":0,"inputs":[],"outputs":[{"name":"NOISE","type":"NOISE","links":[37]}],"properties":{"Node name for S&R":"RandomNoise"},"widgets_values":[195992730087197,"randomize"]},{"id":6,"type":"CLIPTextEncode","pos":[379.29315185546875,258.0357971191406],"size":[422.84503173828125,164.31304931640625],"flags":{},"order":6,"mode":0,"inputs":[{"name":"clip","type":"CLIP","link":10}],"outputs":[{"name":"CONDITIONING","type":"CONDITIONING","slot_index":0,"links":[41]}],"title":"CLIP Text Encode (Positive Prompt)","properties":{"Node name for S&R":"CLIPTextEncode"},"widgets_values":["skateboards"]}],"links":[[9,8,0,9,0,"IMAGE"],[10,11,0,6,0,"CLIP"],[12,10,0,8,1,"VAE"],[19,16,0,13,2,"SAMPLER"],[20,17,0,13,3,"SIGMAS"],[24,13,0,8,0,"LATENT"],[30,22,0,13,1,"GUIDER"],[37,25,0,13,0,"NOISE"],[41,6,0,26,0,"CONDITIONING"],[42,26,0,22,1,"CONDITIONING"],[54,30,0,22,0,"MODEL"],[55,30,0,17,0,"MODEL"],[56,12,0,30,0,"MODEL"],[116,27,0,13,4,"LATENT"]],"groups":[],"config":{},"extra":{"ds":{"scale":0.7247295000000004,"offset":[463.92774200571637,-163.09693890974512]},"frontendVersion":"1.16.9","groupNodes":{},"node_versions":{"comfy-core":"0.3.29"},"ue_links":[],"VHS_latentpreview":false,"VHS_latentpreviewrate":0},"version":0.4}`
+    //return new Promise<Response>((resolve) => resolve(new Response(stringMockWorkflow)))
+    // return this.fetchApi('/workflows/' + workflowId)}
+    return this.accountsApi.getWorkflow(workflow_id, user_jwt)
   }
 
-  fetchApi(route: string, dataToReturn?: any, options?: RequestInit) {
+  async fetchApi(route: string, dataToReturn?: any, options?: RequestInit) {
     if (this.is_offline) {
       return new Promise<Response>((resolve) =>
         resolve(new Response(JSON.stringify(dataToReturn, null)))
@@ -311,7 +334,7 @@ export class ComfyApi extends EventTarget {
     // } else {
     //   options.headers['Comfy-User'] = this.user
     // }
-    return fetch(this.apiURL(route), options)
+    return fetch(await this.apiURL(route), options)
   }
 
   override addEventListener<TEvent extends keyof ApiEvents>(
@@ -379,20 +402,21 @@ export class ComfyApi extends EventTarget {
    * Creates and connects a WebSocket for realtime updates
    * @param {boolean} isReconnect If the socket is connection is a reconnect attempt
    */
-  #createSocket(isReconnect?: boolean) {
+  async #createSocket(isReconnect?: boolean) {
     if (this.socket) {
       return
     }
-
+    
     let opened = false
     let existingSession = window.name
     if (existingSession) {
       existingSession = '?clientId=' + existingSession
     }
     console.log('Creating websocket')
-    const ws = import.meta.env.VITE_DEV_SERVER_COMFYUI_URL
+    const ws = await this.apiURL('')
     const socketHost = ws.replace('https://', '').replace('http://', '')
     const protocol = ws.startsWith('https://') ? 'wss' : 'ws'
+    console.log(`${protocol}://${socketHost}/ws${existingSession}`)
     this.socket = new WebSocket(
       `${protocol}://${socketHost}/ws${existingSession}`
     )
@@ -425,6 +449,7 @@ export class ComfyApi extends EventTarget {
 
     this.socket.addEventListener('message', (event) => {
       try {
+        console.log('WEBSOCKET EVENT', event)
         if (event.data instanceof ArrayBuffer) {
           const view = new DataView(event.data)
           const eventType = view.getUint32(0)
@@ -443,6 +468,7 @@ export class ComfyApi extends EventTarget {
             case 1:
               const imageType = view.getUint32(4)
               const imageData = event.data.slice(8)
+              console.log({imageType, imageData})
               switch (imageType) {
                 case 2:
                   imageMime = 'image/png'
@@ -558,36 +584,63 @@ export class ComfyApi extends EventTarget {
    * Loads node object definitions for the graph
    * @returns The node definitions
    */
-  async getNodeDefs({ validate = false }: { validate?: boolean } = {}): Promise<
-    Record<string, ComfyNodeDef>
-  > {
-    if (!window.__COMFYAPP || !window.__COMFYAPP.serializedNodesDefinition)
-      return {}
-    const objectInfoUnsafe = JSON.parse(
-      window.__COMFYAPP.serializedNodesDefinition
-    )
+  // async getNodeDefs({ validate = false }: { validate?: boolean } = {}): Promise<
+  //   Record<string, ComfyNodeDef>
+  // > {
+  //   if (!window.__COMFYAPP || !window.__COMFYAPP.serializedNodesDefinition)
+  //     return {}
+  //   const objectInfoUnsafe = JSON.parse(
+  //     window.__COMFYAPP.serializedNodesDefinition
+  //   )
 
-    if (!validate) {
-      return objectInfoUnsafe
-    }
-    // Validate node definitions against zod schema. (slow)
-    const objectInfo: Record<string, ComfyNodeDef> = {}
-    for (const key in objectInfoUnsafe) {
-      const validatedDef = validateComfyNodeDef(
-        objectInfoUnsafe[key],
-        /* onError=*/ (errorMessage: string) => {
-          console.warn(
-            `Skipping invalid node definition: ${key}. See debug log for more information.`
-          )
-          console.debug(errorMessage)
-        }
-      )
-      if (validatedDef !== null) {
-        objectInfo[key] = validatedDef
-      }
-    }
-    return objectInfo
+  //   if (!validate) {
+  //     return objectInfoUnsafe
+  //   }
+  //   // Validate node definitions against zod schema. (slow)
+  //   const objectInfo: Record<string, ComfyNodeDef> = {}
+  //   for (const key in objectInfoUnsafe) {
+  //     const validatedDef = validateComfyNodeDef(
+  //       objectInfoUnsafe[key],
+  //       /* onError=*/ (errorMessage: string) => {
+  //         console.warn(
+  //           `Skipping invalid node definition: ${key}. See debug log for more information.`
+  //         )
+  //         console.debug(errorMessage)
+  //       }
+  //     )
+  //     if (validatedDef !== null) {
+  //       objectInfo[key] = validatedDef
+  //     }
+  //   }
+  //   return objectInfo
+  // }
+
+  async getNodeDefs({ validate = false }: { validate?: boolean } = {}): Promise<
+  Record<string, ComfyNodeDef>
+> {
+  const resp = await this.fetchApi('/object_info', { cache: 'no-store' })
+  const objectInfoUnsafe = await resp.json()
+  if (!validate) {
+    return objectInfoUnsafe
   }
+  // Validate node definitions against zod schema. (slow)
+  const objectInfo: Record<string, ComfyNodeDef> = {}
+  for (const key in objectInfoUnsafe) {
+    const validatedDef = validateComfyNodeDef(
+      objectInfoUnsafe[key],
+      /* onError=*/ (errorMessage: string) => {
+        console.warn(
+          `Skipping invalid node definition: ${key}. See debug log for more information.`
+        )
+        console.debug(errorMessage)
+      }
+    )
+    if (validatedDef !== null) {
+      objectInfo[key] = validatedDef
+    }
+  }
+  return objectInfo
+}
 
   /**
    * Queues a prompt to be executed
@@ -628,7 +681,7 @@ export class ComfyApi extends EventTarget {
         body: JSON.stringify(body)
       }
     )
-
+    console.log({config})
     if (res.status !== 200) {
       throw new PromptExecutionError(await res.json())
     }
