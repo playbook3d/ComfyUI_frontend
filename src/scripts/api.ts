@@ -635,7 +635,7 @@ export class ComfyApi extends EventTarget {
    * @returns The list of model folder keys
    */
   async getModelFolders(): Promise<{ name: string; folders: string[] }[]> {
-    const res = await this.fetchApi(`/experiment/models`)
+    const res = await this.fetchApi(`/experiment/models`, [])
     if (res.status === 404) {
       return []
     }
