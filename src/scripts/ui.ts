@@ -465,7 +465,7 @@ export class ComfyUI {
           $el('div.comfy-menu-actions', [
             $el('button.comfy-settings-btn', {
               textContent: '⚙️',
-              onclick: showSettingsDialog
+              onclick: ComfySettingsDialog
             }),
             $el('div.comfy-menu-actions', [
               $el('button.comfy-settings-btn', {
@@ -677,7 +677,7 @@ export class ComfyUI {
           }
         })
       ]
-    ) as HTMLDivElement
+    ) as HTMLDivElement])
     // Hide by default on construction so it does not interfere with other views.
     this.menuContainer.style.display = 'none'
 

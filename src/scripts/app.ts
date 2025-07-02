@@ -1832,7 +1832,7 @@ export class ComfyApp {
 
     await useExtensionService().invokeExtensionsAsync('init')
     await this.registerNodes()
-    initWidgets(this)
+    // initWidgets(this)
 
     // Playbook: Disabling this functionality to avoid cached workflow
     // data being loaded on graph load.
