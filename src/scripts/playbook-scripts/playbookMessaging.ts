@@ -68,7 +68,6 @@ export function sendNodeSelectionToPlaybookWrapper(
 
     return nodeData
   })
-
   // Serializing data to prevent errors messaging objects with callbacks.
   const messageData: WorkflowWindowMessageData = {
     message: 'SendSelectedNodesToPlaybookWrapper',
@@ -77,7 +76,11 @@ export function sendNodeSelectionToPlaybookWrapper(
 
 
   if (window.top) {
-    window.top.postMessage(messageData, wrapperOrigin)
+    try{
+      window.top.postMessage(messageData, wrapperOrigin)
+    }catch(e){
+      console.log({e})
+    }
   }
 }
 

@@ -568,7 +568,7 @@ export class ComfyApi extends EventTarget {
     )
 
     // const resp = await this.fetchApi('/object_info', { cache: 'no-store' })
-    const objectInfoUnsafe = nodes_definition
+    // const objectInfoUnsafe = nodes_definition
     // const objectInfoUnsafe = await resp.json()
     if (!validate) {
       return objectInfoUnsafe
@@ -765,7 +765,7 @@ export class ComfyApi extends EventTarget {
    * @returns System stats such as python version, OS, per device info
    */
   async getSystemStats(): Promise<SystemStats> {
-    const res = await this.fetchApi('/system_stats')
+    const res = await this.fetchApi('/system_stats', {})
     return await res.json()
   }
 

@@ -422,7 +422,7 @@ export class ComfyApp {
                 this.lastSelectedItems = new Set(this.canvas.selectedItems)
               }
             }
-          })
+          }
 
           api.addEventListener('graphChanged', (evt) => {
             const activeState = evt.detail
@@ -1911,7 +1911,7 @@ export class ComfyApp {
       },
       100
     )
-    await this.#invokeExtensionsAsync('setup')
+    this.#invokeExtensionsAsync('setup')
 
     this.waitForPlaybookWrapperOriginToSendSetupComplete()
   }
