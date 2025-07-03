@@ -827,6 +827,17 @@ export const CORE_SETTINGS: SettingParams[] = [
     versionAdded: '1.18.0'
   },
   {
+    id: 'Comfy.Canvas.BackgroundImage',
+    category: ['Appearance', 'Canvas', 'Background'],
+    name: 'Canvas background image',
+    type: 'backgroundImage',
+    tooltip:
+      'Image URL for the canvas background. You can right-click an image in the outputs panel and select "Set as Background" to use it, or upload your own image using the upload button.',
+    defaultValue: '',
+    versionAdded: '1.20.4',
+    versionModified: '1.20.5'
+  },
+  {
     id: 'LiteGraph.Pointer.TrackpadGestures',
     category: ['LiteGraph', 'Pointer', 'Trackpad Gestures'],
     experimental: true,
@@ -836,5 +847,24 @@ export const CORE_SETTINGS: SettingParams[] = [
     type: 'boolean',
     defaultValue: false,
     versionAdded: '1.19.1'
+  },
+  // Release data stored in settings
+  {
+    id: 'Comfy.Release.Version',
+    name: 'Last seen release version',
+    type: 'hidden',
+    defaultValue: ''
+  },
+  {
+    id: 'Comfy.Release.Status',
+    name: 'Release status',
+    type: 'hidden',
+    defaultValue: 'skipped'
+  },
+  {
+    id: 'Comfy.Release.Timestamp',
+    name: 'Release seen timestamp',
+    type: 'hidden',
+    defaultValue: 0
   }
 ]

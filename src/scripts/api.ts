@@ -42,6 +42,11 @@ import {
 
 import { WorkflowTemplates } from '@/types/workflowTemplateTypes'
 
+import axios from 'axios'
+import defaultWorkflow from './default_workflow.json'
+import nodes_definition from './nodes_definition.json'
+import config from '@/config'
+
 interface QueuePromptRequestBody {
   client_id: string
   prompt: ComfyApiWorkflow
@@ -240,6 +245,7 @@ export class ComfyApi extends EventTarget {
   user: string
   socket: WebSocket | null = null
 
+  is_offline: boolean = false
   reportedUnknownMessageTypes = new Set<string>()
 
   /**
@@ -561,6 +567,9 @@ export class ComfyApi extends EventTarget {
       window.__COMFYAPP.serializedNodesDefinition
     )
 
+    // const resp = await this.fetchApi('/object_info', { cache: 'no-store' })
+    // const objectInfoUnsafe = nodes_definition
+    // const objectInfoUnsafe = await resp.json()
     if (!validate) {
       return objectInfoUnsafe
     }
@@ -709,7 +718,6 @@ export class ComfyApi extends EventTarget {
     Pending: PendingTaskItem[]
   }> {
     try {
-      // Playbook edits to mock API calls - empty data objects.
       const res = await this.fetchApi('/queue', {queue_running: [], queue_pending: []})
       const data = await res.json()
       return {
@@ -738,7 +746,6 @@ export class ComfyApi extends EventTarget {
     max_items: number = 200
   ): Promise<{ History: HistoryTaskItem[] }> {
     try {
-      // Playbook edits to mock API calls - empty data to return {}.
       const res = await this.fetchApi(`/history?max_items=${max_items}`, {})
       const json: Promise<HistoryTaskItem[]> = await res.json()
       return {
@@ -758,7 +765,7 @@ export class ComfyApi extends EventTarget {
    * @returns System stats such as python version, OS, per device info
    */
   async getSystemStats(): Promise<SystemStats> {
-    const res = await this.fetchApi('/system_stats')
+    const res = await this.fetchApi('/system_stats', {})
     return await res.json()
   }
 
@@ -845,7 +852,6 @@ export class ComfyApi extends EventTarget {
    * @returns { Promise<string, unknown> } A dictionary of id -> value
    */
   async getSettings(): Promise<Settings> {
-    // Playbook Edits to mock API calls - empty data to return {}.
     const resp = await this.fetchApi('/settings', {})
 
     if (resp.status == 401) {
@@ -913,7 +919,8 @@ export class ComfyApi extends EventTarget {
     }
   ): Promise<Response> {
     const resp = await this.fetchApi(
-      `/userdata/${encodeURIComponent(file)}?overwrite=${options.overwrite}&full_info=${options.full_info}`,
+      `/userdata/${encodeURIComponent(file)}?overwrite=${options.overwrite}`,
+      {},
       {
         method: 'POST',
         body: options?.stringify ? JSON.stringify(data) : data,
@@ -1003,7 +1010,6 @@ export class ComfyApi extends EventTarget {
    * @returns The custom nodes i18n data
    */
   async getCustomNodesI18n(): Promise<Record<string, any>> {
-    // Playbook Edits to mock API calls.
     return await this.fetchApi('/i18n', {})
     // return (await axios.get(this.apiURL('/i18n'))).data
   }

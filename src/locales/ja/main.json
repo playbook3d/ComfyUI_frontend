@@ -138,13 +138,21 @@
     "Unpin": "ピンを解除"
   },
   "credits": {
+    "accountInitialized": "アカウントが初期化されました",
+    "activity": "アクティビティ",
+    "added": "追加済み",
+    "additionalInfo": "追加情報",
     "apiPricing": "API料金",
     "credits": "クレジット",
+    "details": "詳細",
+    "eventType": "イベントタイプ",
     "faqs": "よくある質問",
     "invoiceHistory": "請求履歴",
     "lastUpdated": "最終更新",
     "messageSupport": "サポートにメッセージ",
+    "model": "モデル",
     "purchaseCredits": "クレジットを購入",
+    "time": "時間",
     "topUp": {
       "buyNow": "今すぐ購入",
       "insufficientMessage": "このワークフローを実行するのに十分なクレジットがありません。",
@@ -248,11 +256,13 @@
     "all": "すべて",
     "amount": "量",
     "apply": "適用する",
+    "audioFailedToLoad": "オーディオの読み込みに失敗しました",
     "back": "戻る",
     "cancel": "キャンセル",
     "capture": "キャプチャ",
     "category": "カテゴリ",
     "choose_file_to_upload": "アップロードするファイルを選択",
+    "clear": "クリア",
     "close": "閉じる",
     "color": "色",
     "comingSoon": "近日公開",
@@ -266,7 +276,9 @@
     "control_before_generate": "生成前の制御",
     "copy": "コピー",
     "copyToClipboard": "クリップボードにコピー",
+    "copyURL": "URLをコピー",
     "currentUser": "現在のユーザー",
+    "customBackground": "カスタム背景",
     "customize": "カスタマイズ",
     "customizeFolder": "フォルダーをカスタマイズ",
     "delete": "削除",
@@ -290,8 +302,10 @@
     "findIssues": "問題を見つける",
     "firstTimeUIMessage": "新しいUIを初めて使用しています。「メニュー > 新しいメニューを使用 > 無効」を選択することで古いUIに戻すことが可能です。",
     "goToNode": "ノードに移動",
+    "help": "ヘルプ",
     "icon": "アイコン",
     "imageFailedToLoad": "画像の読み込みに失敗しました",
+    "imageUrl": "画像URL",
     "import": "インポート",
     "inProgress": "進行中",
     "insert": "挿入",
@@ -342,6 +356,7 @@
     "searchNodes": "ノードを検索",
     "searchSettings": "設定を検索",
     "searchWorkflows": "ワークフローを検索",
+    "setAsBackground": "背景として設定",
     "settings": "設定",
     "showReport": "レポートを表示",
     "sort": "並び替え",
@@ -373,6 +388,20 @@
   "groupNode": {
     "create": "グループノードを作成",
     "enterName": "名前を入力"
+  },
+  "helpCenter": {
+    "clickToLearnMore": "詳しくはこちらをクリック →",
+    "desktopUserGuide": "デスクトップユーザーガイド",
+    "docs": "ドキュメント",
+    "github": "Github",
+    "helpFeedback": "ヘルプとフィードバック",
+    "loadingReleases": "リリースを読み込み中...",
+    "more": "もっと見る...",
+    "noRecentReleases": "最近のリリースはありません",
+    "openDevTools": "開発者ツールを開く",
+    "reinstall": "再インストール",
+    "updateAvailable": "アップデート",
+    "whatsNew": "新着情報"
   },
   "icon": {
     "bookmark": "ブックマーク",
@@ -544,6 +573,11 @@
     "uploadBackgroundImage": "背景画像をアップロード",
     "uploadTexture": "テクスチャをアップロード"
   },
+  "loadWorkflowWarning": {
+    "coreNodesFromVersion": "ComfyUI {version} が必要です：",
+    "outdatedVersion": "一部のノードはより新しいバージョンのComfyUIが必要です（現在のバージョン：{version}）。すべてのノードを使用するにはアップデートしてください。",
+    "outdatedVersionGeneric": "一部のノードはより新しいバージョンのComfyUIが必要です。すべてのノードを使用するにはアップデートしてください。"
+  },
   "maintenance": {
     "None": "なし",
     "OK": "OK",
@@ -579,6 +613,7 @@
     },
     "inWorkflow": "ワークフロー内",
     "infoPanelEmpty": "アイテムをクリックして情報を表示します",
+    "installAllMissingNodes": "すべての不足しているノードをインストール",
     "installSelected": "選択したものをインストール",
     "installationQueue": "インストールキュー",
     "lastUpdated": "最終更新日",
@@ -671,6 +706,7 @@
   },
   "menuLabels": {
     "About ComfyUI": "ComfyUIについて",
+    "Add Edit Model Step": "モデル編集ステップを追加",
     "Browse Templates": "テンプレートを参照",
     "Bypass/Unbypass Selected Nodes": "選択したノードのバイパス/バイパス解除",
     "Canvas Toggle Link Visibility": "キャンバスのリンク表示を切り替え",
@@ -686,8 +722,8 @@
     "ComfyUI Forum": "ComfyUI フォーラム",
     "ComfyUI Issues": "ComfyUIの問題",
     "Contact Support": "サポートに連絡",
+    "Convert Selection to Subgraph": "選択範囲をサブグラフに変換",
     "Convert selected nodes to group node": "選択したノードをグループノードに変換",
-    "Custom Nodes Manager": "カスタムノードマネージャ",
     "Delete Selected Items": "選択したアイテムを削除",
     "Desktop User Guide": "デスクトップユーザーガイド",
     "Duplicate Current Workflow": "現在のワークフローを複製",
@@ -702,6 +738,10 @@
     "Interrupt": "中断",
     "Load Default Workflow": "デフォルトワークフローを読み込む",
     "Manage group nodes": "グループノードを管理",
+    "Move Selected Nodes Down": "選択したノードを下へ移動",
+    "Move Selected Nodes Left": "選択したノードを左へ移動",
+    "Move Selected Nodes Right": "選択したノードを右へ移動",
+    "Move Selected Nodes Up": "選択したノードを上へ移動",
     "Mute/Unmute Selected Nodes": "選択したノードのミュート/ミュート解除",
     "New": "新規",
     "Next Opened Workflow": "次に開いたワークフロー",
@@ -737,12 +777,13 @@
     "Toggle Logs Bottom Panel": "ログパネル下部を切り替え",
     "Toggle Model Library Sidebar": "モデルライブラリサイドバーを切り替え",
     "Toggle Node Library Sidebar": "ノードライブラリサイドバーを切り替え",
-    "Toggle Progress Dialog": "進行状況ダイアログの切り替え",
     "Toggle Queue Sidebar": "キューサイドバーを切り替え",
     "Toggle Search Box": "検索ボックスの切り替え",
     "Toggle Terminal Bottom Panel": "ターミナルパネル下部を切り替え",
     "Toggle Theme (Dark/Light)": "テーマを切り替え（ダーク/ライト）",
     "Toggle Workflows Sidebar": "ワークフローサイドバーを切り替え",
+    "Toggle the Custom Nodes Manager": "カスタムノードマネージャーを切り替え",
+    "Toggle the Custom Nodes Manager Progress Bar": "カスタムノードマネージャーの進行状況バーを切り替え",
     "Undo": "元に戻す",
     "Ungroup selected group nodes": "選択したグループノードのグループ解除",
     "Workflow": "ワークフロー",
@@ -830,6 +871,14 @@
     "video": "ビデオ",
     "video_models": "ビデオモデル"
   },
+  "nodeHelpPage": {
+    "documentationPage": "ドキュメントページ",
+    "inputs": "入力",
+    "loadError": "ヘルプの読み込みに失敗しました: {error}",
+    "moreHelp": "さらに詳しい情報は、",
+    "outputs": "出力",
+    "type": "タイプ"
+  },
   "nodeTemplates": {
     "enterName": "名前を入力",
     "saveAsTemplate": "テンプレートとして保存"
@@ -845,6 +894,12 @@
       "windows": "Windows (CUDA対応のNvidia GPU)"
     },
     "title": "お使いのデバイスはサポートされていません"
+  },
+  "releaseToast": {
+    "newVersionAvailable": "新しいバージョンが利用可能です！",
+    "skip": "スキップ",
+    "update": "アップデート",
+    "whatsNew": "新機能"
   },
   "selectionToolbox": {
     "executeButton": {
@@ -1054,12 +1109,29 @@
   "sideToolbar": {
     "browseTemplates": "サンプルテンプレートを表示",
     "downloads": "ダウンロード",
+    "helpCenter": "ヘルプセンター",
     "logout": "ログアウト",
     "modelLibrary": "モデルライブラリ",
     "newBlankWorkflow": "新しい空のワークフローを作成",
     "nodeLibrary": "ノードライブラリ",
     "nodeLibraryTab": {
-      "sortOrder": "並び順"
+      "groupBy": "グループ化",
+      "groupStrategies": {
+        "category": "カテゴリ",
+        "categoryDesc": "ノードカテゴリでグループ化",
+        "module": "モジュール",
+        "moduleDesc": "モジュールソースでグループ化",
+        "source": "ソース",
+        "sourceDesc": "ソースタイプ（Core、Custom、API）でグループ化"
+      },
+      "resetView": "ビューをデフォルトにリセット",
+      "sortBy": {
+        "alphabetical": "アルファベット順",
+        "alphabeticalDesc": "グループ内でアルファベット順に並び替え",
+        "original": "元の順序",
+        "originalDesc": "元の順序を維持"
+      },
+      "sortMode": "並び替えモード"
     },
     "openWorkflow": "ローカルでワークフローを開く",
     "queue": "キュー",
@@ -1107,6 +1179,7 @@
   "templateWorkflows": {
     "category": {
       "3D": "3D",
+      "All": "すべてのテンプレート",
       "Area Composition": "エリア構成",
       "Audio": "オーディオ",
       "Basics": "基本",
@@ -1325,6 +1398,7 @@
     "title": "テンプレートを利用して開始"
   },
   "toastMessages": {
+    "cannotCreateSubgraph": "サブグラフを作成できません",
     "couldNotDetermineFileType": "ファイルタイプを判断できませんでした",
     "dropFileError": "ドロップされたアイテムを処理できません: {error}",
     "emptyCanvas": "キャンバスが空です",
@@ -1333,6 +1407,7 @@
     "errorSaveSetting": "設定{id}の保存エラー: {err}",
     "failedToAccessBillingPortal": "請求ポータルへのアクセスに失敗しました: {error}",
     "failedToApplyTexture": "テクスチャの適用に失敗しました",
+    "failedToConvertToSubgraph": "アイテムをサブグラフに変換できませんでした",
     "failedToCreateCustomer": "顧客の作成に失敗しました: {error}",
     "failedToDownloadFile": "ファイルのダウンロードに失敗しました",
     "failedToExportModel": "{format}としてモデルのエクスポートに失敗しました",
@@ -1396,6 +1471,9 @@
   "welcome": {
     "getStarted": "はじめる",
     "title": "ComfyUIへようこそ"
+  },
+  "whatsNewPopup": {
+    "learnMore": "詳細はこちら"
   },
   "workflowService": {
     "enterFilename": "ファイル名を入力",

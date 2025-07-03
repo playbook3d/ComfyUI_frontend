@@ -39,14 +39,15 @@ import { getSvgMetadata } from '@/scripts/metadata/svg'
 import { useDialogService } from '@/services/dialogService'
 import { useExtensionService } from '@/services/extensionService'
 import { useLitegraphService } from '@/services/litegraphService'
+import { useSubgraphService } from '@/services/subgraphService'
 import { useWorkflowService } from '@/services/workflowService'
 import { useApiKeyAuthStore } from '@/stores/apiKeyAuthStore'
+import { useDomWidgetStore } from '@/stores/domWidgetStore'
 import { useExecutionStore } from '@/stores/executionStore'
 import { useExtensionStore } from '@/stores/extensionStore'
 import { useFirebaseAuthStore } from '@/stores/firebaseAuthStore'
 import { KeyComboImpl, useKeybindingStore } from '@/stores/keybindingStore'
 import { useCommandStore } from '@/stores/commandStore'
-import { ComfyWorkflowNodeData, WorkflowWindowMessageData } from './playbook-scripts/playbookTypes'
 import { useModelStore } from '@/stores/modelStore'
 import { SYSTEM_NODE_DEFS, useNodeDefStore } from '@/stores/nodeDefStore'
 import { useSettingStore } from '@/stores/settingStore'
@@ -68,11 +69,11 @@ import {
   findLegacyRerouteNodes,
   noNativeReroutes
 } from '@/utils/migration/migrateReroute'
+import { getSelectedModelsMetadata } from '@/utils/modelMetadataUtil'
 import { deserialiseAndCreate } from '@/utils/vintageClipboard'
 
 import { type ComfyApi, PromptExecutionError, api } from './api'
 import { defaultGraph } from './defaultGraph'
-import { pruneWidgets } from './domWidget'
 import {
   getFlacMetadata,
   getLatentMetadata,
@@ -84,6 +85,15 @@ import { $el, ComfyUI } from './ui'
 import { ComfyAppMenu } from './ui/menu/index'
 import { clone } from './utils'
 import { type ComfyWidgetConstructor } from './widgets'
+
+import { areSelectedItemsEqual, restructureSelectedNodesForPlaybookWrapper } from './playbook-scripts/playbookHelpers'
+
+import { IWidget } from '@comfyorg/litegraph'
+import { shallowReactive } from 'vue'
+import {
+  ComfyWorkflowNodeData,
+  WorkflowWindowMessageData
+} from './playbook-scripts/playbookTypes'
 import {
   notifyPlaybookWrapperNewWorkflowLoaded,
   notifyWrapperOriginSetOnComfyInstance,
@@ -285,6 +295,37 @@ export class ComfyApp {
     this.bypassBgColor = '#FF00FF'
 
     /*
+     *  Subscribe listener to receive messaging from iFrame wrapper layer.
+     */
+    window.addEventListener('message', async (event) => {
+      console.log('Comfy Window Received: ', event)
+
+      const eventMessageData: WorkflowWindowMessageData = event.data
+
+      if (eventMessageData.message === 'SendWrapperOriginToComfyWindow') {
+        console.log(
+          'Comfy Window Received: SendWrapperOriginToComfyWindow',
+          event.origin
+        )
+        this.playbookWrapperOrigin = event.origin
+      }
+
+      if (eventMessageData.message === 'SendWorkflowDataToComfyWindow') {
+        console.log(
+          'Comfy Window Received: SendWorkflowDataToComfyWindow',
+          eventMessageData
+        )
+        this.loadGraphData(eventMessageData.data as ComfyWorkflowJSON)
+      }
+    })
+
+    /*
+     *  enables functionality - I'M NOT SURE THIS ISUSED OR RELEVANT
+     */
+    console.log('LOADING APP IN WINDOW', this)
+    window.__COMFYAPP = this
+
+    /*
      *  Subscribe listener to receive messaging from Playbook wrapper.
      */
     window.addEventListener('message', async (event) => {
@@ -370,6 +411,60 @@ export class ComfyApp {
             }
           }
           
+          this.loadGraphData(eventMessageData.data as ComfyWorkflowJSON, true)
+          // Once graph is loaded, subscribe a selection change listener.
+          // This listener will broadcast selection changes to Playbook wrapper.
+          this.canvas.onSelectionChange = (nodes) => {
+            if (this.playbookWrapperOrigin) {
+              if (!areSelectedItemsEqual(this.lastSelectedItems, this.canvas.selectedItems)) {
+                const selectedItems = Array.from(this.canvas.selectedItems)
+                sendNodeSelectionToPlaybookWrapper(selectedItems, this.playbookWrapperOrigin)
+                this.lastSelectedItems = new Set(this.canvas.selectedItems)
+              }
+            }
+          }
+
+          api.addEventListener('graphChanged', (evt) => {
+            const activeState = evt.detail
+            if (this.playbookWrapperOrigin) {
+
+              const selectedItems = Array.from(this.canvas.selectedItems)
+
+              if (selectedItems.length === 0) return
+              
+              const selectedNodesActiveState = selectedItems.map(item => {
+                const matchingNode = activeState.nodes.find(node => node.id === item.id)
+                if (matchingNode) {
+                  return matchingNode
+                }
+              })
+
+              const selectedNodes = restructureSelectedNodesForPlaybookWrapper(selectedItems)
+
+              // As is, there is an issue where widget values reverts during cloning.
+              const selectedNodesClone = JSON.parse(JSON.stringify(selectedNodes))
+
+              // So we clone and then reset widget_values with active state. 
+              selectedNodesClone.forEach((node: ComfyWorkflowNodeData) => {
+                const widgetValues = selectedNodesActiveState.find(_node => _node?.id === node.id)?.widgets_values as string[] 
+                node.widgets_values = widgetValues
+              })
+
+              sendNodeSelectionToPlaybookWrapper(selectedNodesClone, this.playbookWrapperOrigin)
+              this.lastSelectedItems = new Set(this.canvas.selectedItems)
+            }
+          })
+          
+          // This listener handles deselection via hotkey deletion.
+          this.canvas.onNodeDeselected = () => {
+            if (this.playbookWrapperOrigin) {
+              const selectedItems = Array.from(this.canvas.selectedItems)
+              const selectedNodes = restructureSelectedNodesForPlaybookWrapper(selectedItems)
+              sendNodeSelectionToPlaybookWrapper(selectedNodes, this.playbookWrapperOrigin)
+              this.lastSelectedItems = new Set(this.canvas.selectedItems)
+            }
+          }
+          
           break
 
         case 'RequestWorkflowDataFromComfyWindow':
@@ -398,6 +493,16 @@ export class ComfyApp {
             'Comfy Window Received: ExportWorkflowJSONFromComfyWindow'
           )
           useCommandStore().execute('Comfy.ExportWorkflow')
+        case 'SendModalAppIDToComfyWindow':
+          break
+
+        case 'SendNodesDefinitionToComfyWindow':
+          console.log(
+            'Comfy Window Received: SendNodesDefinitionToComfyWindow',
+            eventMessageData
+          )
+          this.serializedNodesDefinition = eventMessageData.data
+          await this.registerNodes()
           break
 
         case 'SendNodesDefinitionToComfyWindow':
@@ -596,6 +701,736 @@ export class ComfyApp {
     }
   }
 
+  get enabledExtensions() {
+    if (!this.vueAppReady) {
+      return this.extensions
+    }
+    return useExtensionStore().enabledExtensions
+  }
+
+  /**
+   * Send message with workflow data to wrapping iFrame layer.
+   */
+  public async sendWorkflowDataToPlaybookWrapper() {
+    // const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+    const graphData = await this.graphToPrompt()
+
+    const messageData: WorkflowWindowMessageData = {
+      message: 'SendWorkflowDataToPlaybookWrapper',
+      data: graphData.workflow
+    }
+
+    console.log(
+      'Comfy Window Sending: SendWorkflowDataToPlaybookWrapper: ',
+      messageData
+    )
+
+    window.top.postMessage(messageData, this.playbookWrapperOrigin)
+  }
+
+  /**
+   * Send message with workflow data to wrapping iFrame layer.
+   */
+  async notifyPlaybookWrapperGraphInitialized() {
+    console.log('Comfy Window Sending: ComfyWindowInitialized')
+
+    // const wrapperOrigin = import.meta.env.VITE_CONNECT_TO
+    console.log(
+      'Comfy Window Sending: WrapperOriginSetOnComfyInstance: target origin: ',
+      this.playbookWrapperOrigin
+    )
+
+    const messageData: WorkflowWindowMessageData = {
+      message: 'WrapperOriginSetOnComfyInstance'
+    }
+
+    window.top.postMessage(messageData, this.playbookWrapperOrigin)
+  }
+
+  /**
+   * Send message with selected nodes data to Playbook wrapper.
+   */
+  async sendNodeSelectionToPlaybookWrapper(selectedNodes) {
+    console.log(
+      'Comfy Window Sending: sendNodeSelectionToPlaybookWrapper: target origin: ',
+      selectedNodes
+    )
+
+    const selectedNodesArray = Object.values(selectedNodes)
+
+    // Reduce node data to structure expected by Playbook wrapper.
+    const restructuredNodesData = selectedNodesArray.map((node: any) => {
+      const nodeData: ComfyWorkflowNodeData = {
+        id: node.id,
+        type: node.type,
+        widgets_values: node.widgets_values,
+        widgets: node.widgets,
+        title: node.title,
+        inputs: node.inputs,
+        outputs: node.outputs,
+        properties: node.properties,
+        pos: node.pos,
+        size: node.size,
+        flags: node.flags
+      }
+
+      return nodeData
+    })
+
+    // Serializing data to prevent errors messaging objects with callbacks.
+    const messageData: WorkflowWindowMessageData = {
+      message: 'SendSelectedNodesToPlaybookWrapper',
+      data: JSON.stringify(restructuredNodesData)
+    }
+
+    window.top.postMessage(messageData, this.playbookWrapperOrigin)
+  }
+
+  /**
+   * Invoke an extension callback
+   * @param {keyof ComfyExtension} method The extension callback to execute
+   * @param  {any[]} args Any arguments to pass to the callback
+   * @returns
+   */
+  #invokeExtensions(method, ...args) {
+    let results = []
+    for (const ext of this.enabledExtensions) {
+      if (method in ext) {
+        try {
+          results.push(ext[method](...args, this))
+        } catch (error) {
+          console.error(
+            `Error calling extension '${ext.name}' method '${method}'`,
+            { error },
+            { extension: ext },
+            { args }
+          )
+        }
+      }
+    }
+    return results
+  }
+
+  /**
+   * Invoke an async extension callback
+   * Each callback will be invoked concurrently
+   * @param {string} method The extension callback to execute
+   * @param  {...any} args Any arguments to pass to the callback
+   * @returns
+   */
+  async #invokeExtensionsAsync(method, ...args) {
+    return await Promise.all(
+      this.enabledExtensions.map(async (ext) => {
+        if (method in ext) {
+          try {
+            return await ext[method](...args, this)
+          } catch (error) {
+            console.error(
+              `Error calling extension '${ext.name}' method '${method}'`,
+              { error },
+              { extension: ext },
+              { args }
+            )
+          }
+        }
+      })
+    )
+  }
+
+  #addRestoreWorkflowView() {
+    const serialize = LGraph.prototype.serialize
+    const self = this
+    LGraph.prototype.serialize = function () {
+      const workflow = serialize.apply(this, arguments)
+
+      // Store the drag & scale info in the serialized workflow if the setting is enabled
+      if (self.enableWorkflowViewRestore.value) {
+        if (!workflow.extra) {
+          workflow.extra = {}
+        }
+        workflow.extra.ds = {
+          scale: self.canvas.ds.scale,
+          offset: self.canvas.ds.offset
+        }
+      } else if (workflow.extra?.ds) {
+        // Clear any old view data
+        delete workflow.extra.ds
+      }
+
+      return workflow
+    }
+    this.enableWorkflowViewRestore = this.ui.settings.addSetting({
+      id: 'Comfy.EnableWorkflowViewRestore',
+      category: ['Comfy', 'Workflow', 'EnableWorkflowViewRestore'],
+      name: 'Save and restore canvas position and zoom level in workflows',
+      type: 'boolean',
+      defaultValue: true
+    })
+  }
+
+  /**
+   * Adds special context menu handling for nodes
+   * e.g. this adds Open Image functionality for nodes that show images
+   * @param {*} node The node to add the menu handler
+   */
+  #addNodeContextMenuHandler(node) {
+    function getCopyImageOption(img) {
+      if (typeof window.ClipboardItem === 'undefined') return []
+      return [
+        {
+          content: 'Copy Image',
+          callback: async () => {
+            const url = new URL(img.src)
+            url.searchParams.delete('preview')
+
+            const writeImage = async (blob) => {
+              await navigator.clipboard.write([
+                new ClipboardItem({
+                  [blob.type]: blob
+                })
+              ])
+            }
+
+            try {
+              const data = await fetch(url)
+              const blob = await data.blob()
+              try {
+                await writeImage(blob)
+              } catch (error) {
+                // Chrome seems to only support PNG on write, convert and try again
+                if (blob.type !== 'image/png') {
+                  const canvas = $el('canvas', {
+                    width: img.naturalWidth,
+                    height: img.naturalHeight
+                  }) as HTMLCanvasElement
+                  const ctx = canvas.getContext('2d')
+                  let image
+                  if (typeof window.createImageBitmap === 'undefined') {
+                    image = new Image()
+                    const p = new Promise((resolve, reject) => {
+                      image.onload = resolve
+                      image.onerror = reject
+                    }).finally(() => {
+                      URL.revokeObjectURL(image.src)
+                    })
+                    image.src = URL.createObjectURL(blob)
+                    await p
+                  } else {
+                    image = await createImageBitmap(blob)
+                  }
+                  try {
+                    ctx.drawImage(image, 0, 0)
+                    canvas.toBlob(writeImage, 'image/png')
+                  } finally {
+                    if (typeof image.close === 'function') {
+                      image.close()
+                    }
+                  }
+
+                  return
+                }
+                throw error
+              }
+            } catch (error) {
+              useToastStore().addAlert(
+                'Error copying image: ' + (error.message ?? error)
+              )
+            }
+          }
+        }
+      ]
+    }
+
+    node.prototype.getExtraMenuOptions = function (_, options) {
+      if (this.imgs) {
+        // If this node has images then we add an open in new tab item
+        let img
+        if (this.imageIndex != null) {
+          // An image is selected so select that
+          img = this.imgs[this.imageIndex]
+        } else if (this.overIndex != null) {
+          // No image is selected but one is hovered
+          img = this.imgs[this.overIndex]
+        }
+        if (img) {
+          options.unshift(
+            {
+              content: 'Open Image',
+              callback: () => {
+                let url = new URL(img.src)
+                url.searchParams.delete('preview')
+                window.open(url, '_blank')
+              }
+            },
+            ...getCopyImageOption(img),
+            {
+              content: 'Save Image',
+              callback: () => {
+                const a = document.createElement('a')
+                let url = new URL(img.src)
+                url.searchParams.delete('preview')
+                a.href = url.toString()
+                a.setAttribute(
+                  'download',
+                  new URLSearchParams(url.search).get('filename')
+                )
+                document.body.append(a)
+                a.click()
+                requestAnimationFrame(() => a.remove())
+              }
+            }
+          )
+        }
+      }
+
+      options.push({
+        content: 'Bypass',
+        callback: (obj) => {
+          if (this.mode === 4) this.mode = 0
+          else this.mode = 4
+          this.graph.change()
+        }
+      })
+
+      // prevent conflict of clipspace content
+      if (!ComfyApp.clipspace_return_node) {
+        options.push({
+          content: 'Copy (Clipspace)',
+          callback: (obj) => {
+            ComfyApp.copyToClipspace(this)
+          }
+        })
+
+        if (ComfyApp.clipspace != null) {
+          options.push({
+            content: 'Paste (Clipspace)',
+            callback: () => {
+              ComfyApp.pasteFromClipspace(this)
+            }
+          })
+        }
+
+        if (ComfyApp.isImageNode(this)) {
+          options.push({
+            content: 'Open in MaskEditor',
+            callback: (obj) => {
+              ComfyApp.copyToClipspace(this)
+              ComfyApp.clipspace_return_node = this
+              ComfyApp.open_maskeditor()
+            }
+          })
+        }
+      }
+    }
+  }
+
+  #addNodeKeyHandler(node) {
+    const app = this
+    const origNodeOnKeyDown = node.prototype.onKeyDown
+
+    node.prototype.onKeyDown = function (e) {
+      if (origNodeOnKeyDown && origNodeOnKeyDown.apply(this, e) === false) {
+        return false
+      }
+
+      if (this.flags.collapsed || !this.imgs || this.imageIndex === null) {
+        return
+      }
+
+      let handled = false
+
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        if (e.key === 'ArrowLeft') {
+          this.imageIndex -= 1
+        } else if (e.key === 'ArrowRight') {
+          this.imageIndex += 1
+        }
+        this.imageIndex %= this.imgs.length
+
+        if (this.imageIndex < 0) {
+          this.imageIndex = this.imgs.length + this.imageIndex
+        }
+        handled = true
+      } else if (e.key === 'Escape') {
+        this.imageIndex = null
+        handled = true
+      }
+
+      if (handled === true) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        return false
+      }
+    }
+  }
+
+  /**
+   * Adds Custom drawing logic for nodes
+   * e.g. Draws images and handles thumbnail navigation on nodes that output images
+   * @param {*} node The node to add the draw handler
+   */
+  #addDrawBackgroundHandler(node) {
+    const app = this
+
+    function getImageTop(node) {
+      let shiftY
+      if (node.imageOffset != null) {
+        shiftY = node.imageOffset
+      } else {
+        if (node.widgets?.length) {
+          const w = node.widgets[node.widgets.length - 1]
+          shiftY = w.last_y
+          if (w.computeSize) {
+            shiftY += w.computeSize()[1] + 4
+          } else if (w.computedHeight) {
+            shiftY += w.computedHeight
+          } else {
+            shiftY += LiteGraph.NODE_WIDGET_HEIGHT + 4
+          }
+        } else {
+          shiftY = node.computeSize()[1]
+        }
+      }
+      return shiftY
+    }
+
+    node.prototype.setSizeForImage = function (force) {
+      if (!force && this.animatedImages) return
+
+      if (this.inputHeight || this.freeWidgetSpace > 210) {
+        this.setSize(this.size)
+        return
+      }
+      const minHeight = getImageTop(this) + 220
+      if (this.size[1] < minHeight) {
+        this.setSize([this.size[0], minHeight])
+      }
+    }
+
+    function unsafeDrawBackground(ctx) {
+      if (!this.flags.collapsed) {
+        let imgURLs = []
+        let imagesChanged = false
+
+        const output = app.nodeOutputs[this.id + '']
+        if (output?.images) {
+          this.animatedImages = output?.animated?.find(Boolean)
+          if (this.images !== output.images) {
+            this.images = output.images
+            imagesChanged = true
+            imgURLs = imgURLs.concat(
+              output.images.map((params) => {
+                return api.apiURL(
+                  '/view?' +
+                    new URLSearchParams(params).toString() +
+                    (this.animatedImages ? '' : app.getPreviewFormatParam()) +
+                    app.getRandParam()
+                )
+              })
+            )
+          }
+        }
+
+        const preview = app.nodePreviewImages[this.id + '']
+        if (this.preview !== preview) {
+          this.preview = preview
+          imagesChanged = true
+          if (preview != null) {
+            imgURLs.push(preview)
+          }
+        }
+
+        if (imagesChanged) {
+          this.imageIndex = null
+          if (imgURLs.length > 0) {
+            Promise.all(
+              imgURLs.map((src) => {
+                return new Promise((r) => {
+                  const img = new Image()
+                  img.onload = () => r(img)
+                  img.onerror = () => r(null)
+                  img.src = src
+                })
+              })
+            ).then((imgs) => {
+              if (
+                (!output || this.images === output.images) &&
+                (!preview || this.preview === preview)
+              ) {
+                this.imgs = imgs.filter(Boolean)
+                this.setSizeForImage?.()
+                app.graph.setDirtyCanvas(true)
+              }
+            })
+          } else {
+            this.imgs = null
+          }
+        }
+
+        const is_all_same_aspect_ratio = (imgs) => {
+          // assume: imgs.length >= 2
+          let ratio = imgs[0].naturalWidth / imgs[0].naturalHeight
+
+          for (let i = 1; i < imgs.length; i++) {
+            let this_ratio = imgs[i].naturalWidth / imgs[i].naturalHeight
+            if (ratio != this_ratio) return false
+          }
+
+          return true
+        }
+
+        if (this.imgs?.length) {
+          const widgetIdx = this.widgets?.findIndex(
+            (w) => w.name === ANIM_PREVIEW_WIDGET
+          )
+
+          if (this.animatedImages) {
+            // Instead of using the canvas we'll use a IMG
+            if (widgetIdx > -1) {
+              // Replace content
+              const widget = this.widgets[widgetIdx]
+              widget.options.host.updateImages(this.imgs)
+            } else {
+              const host = createImageHost(this)
+              this.setSizeForImage(true)
+              const widget = this.addDOMWidget(
+                ANIM_PREVIEW_WIDGET,
+                'img',
+                host.el,
+                {
+                  host,
+                  getHeight: host.getHeight,
+                  onDraw: host.onDraw,
+                  hideOnZoom: false
+                }
+              )
+              widget.serializeValue = () => undefined
+              widget.options.host.updateImages(this.imgs)
+            }
+            return
+          }
+
+          if (widgetIdx > -1) {
+            this.widgets[widgetIdx].onRemove?.()
+            this.widgets.splice(widgetIdx, 1)
+          }
+
+          const canvas = app.graph.list_of_graphcanvas[0]
+          const mouse = canvas.graph_mouse
+          if (!canvas.pointer_is_down && this.pointerDown) {
+            if (
+              mouse[0] === this.pointerDown.pos[0] &&
+              mouse[1] === this.pointerDown.pos[1]
+            ) {
+              this.imageIndex = this.pointerDown.index
+            }
+            this.pointerDown = null
+          }
+
+          let imageIndex = this.imageIndex
+          const numImages = this.imgs.length
+          if (numImages === 1 && !imageIndex) {
+            this.imageIndex = imageIndex = 0
+          }
+
+          const top = getImageTop(this)
+          var shiftY = top
+
+          let dw = this.size[0]
+          let dh = this.size[1]
+          dh -= shiftY
+
+          if (imageIndex == null) {
+            var cellWidth, cellHeight, shiftX, cell_padding, cols
+
+            const compact_mode = is_all_same_aspect_ratio(this.imgs)
+            if (!compact_mode) {
+              // use rectangle cell style and border line
+              cell_padding = 2
+              // Prevent infinite canvas2d scale-up
+              const largestDimension = this.imgs.reduce(
+                (acc, current) =>
+                  Math.max(acc, current.naturalWidth, current.naturalHeight),
+                0
+              )
+              const fakeImgs = []
+              fakeImgs.length = this.imgs.length
+              fakeImgs[0] = {
+                naturalWidth: largestDimension,
+                naturalHeight: largestDimension
+              }
+              ;({ cellWidth, cellHeight, cols, shiftX } = calculateImageGrid(
+                fakeImgs,
+                dw,
+                dh
+              ))
+            } else {
+              cell_padding = 0
+              ;({ cellWidth, cellHeight, cols, shiftX } = calculateImageGrid(
+                this.imgs,
+                dw,
+                dh
+              ))
+            }
+
+            let anyHovered = false
+            this.imageRects = []
+            for (let i = 0; i < numImages; i++) {
+              const img = this.imgs[i]
+              const row = Math.floor(i / cols)
+              const col = i % cols
+              const x = col * cellWidth + shiftX
+              const y = row * cellHeight + shiftY
+              if (!anyHovered) {
+                anyHovered = LiteGraph.isInsideRectangle(
+                  mouse[0],
+                  mouse[1],
+                  x + this.pos[0],
+                  y + this.pos[1],
+                  cellWidth,
+                  cellHeight
+                )
+                if (anyHovered) {
+                  this.overIndex = i
+                  let value = 110
+                  if (canvas.pointer_is_down) {
+                    if (!this.pointerDown || this.pointerDown.index !== i) {
+                      this.pointerDown = { index: i, pos: [...mouse] }
+                    }
+                    value = 125
+                  }
+                  ctx.filter = `contrast(${value}%) brightness(${value}%)`
+                  canvas.canvas.style.cursor = 'pointer'
+                }
+              }
+              this.imageRects.push([x, y, cellWidth, cellHeight])
+
+              let wratio = cellWidth / img.width
+              let hratio = cellHeight / img.height
+              var ratio = Math.min(wratio, hratio)
+
+              let imgHeight = ratio * img.height
+              let imgY =
+                row * cellHeight + shiftY + (cellHeight - imgHeight) / 2
+              let imgWidth = ratio * img.width
+              let imgX = col * cellWidth + shiftX + (cellWidth - imgWidth) / 2
+
+              ctx.drawImage(
+                img,
+                imgX + cell_padding,
+                imgY + cell_padding,
+                imgWidth - cell_padding * 2,
+                imgHeight - cell_padding * 2
+              )
+              if (!compact_mode) {
+                // rectangle cell and border line style
+                ctx.strokeStyle = '#8F8F8F'
+                ctx.lineWidth = 1
+                ctx.strokeRect(
+                  x + cell_padding,
+                  y + cell_padding,
+                  cellWidth - cell_padding * 2,
+                  cellHeight - cell_padding * 2
+                )
+              }
+
+              ctx.filter = 'none'
+            }
+
+            if (!anyHovered) {
+              this.pointerDown = null
+              this.overIndex = null
+            }
+          } else {
+            // Draw individual
+            let w = this.imgs[imageIndex].naturalWidth
+            let h = this.imgs[imageIndex].naturalHeight
+
+            const scaleX = dw / w
+            const scaleY = dh / h
+            const scale = Math.min(scaleX, scaleY, 1)
+
+            w *= scale
+            h *= scale
+
+            let x = (dw - w) / 2
+            let y = (dh - h) / 2 + shiftY
+            ctx.drawImage(this.imgs[imageIndex], x, y, w, h)
+
+            const drawButton = (x, y, sz, text) => {
+              const hovered = LiteGraph.isInsideRectangle(
+                mouse[0],
+                mouse[1],
+                x + this.pos[0],
+                y + this.pos[1],
+                sz,
+                sz
+              )
+              let fill = '#333'
+              let textFill = '#fff'
+              let isClicking = false
+              if (hovered) {
+                canvas.canvas.style.cursor = 'pointer'
+                if (canvas.pointer_is_down) {
+                  fill = '#1e90ff'
+                  isClicking = true
+                } else {
+                  fill = '#eee'
+                  textFill = '#000'
+                }
+              } else {
+                this.pointerWasDown = null
+              }
+
+              ctx.fillStyle = fill
+              ctx.beginPath()
+              ctx.roundRect(x, y, sz, sz, [4])
+              ctx.fill()
+              ctx.fillStyle = textFill
+              ctx.font = '12px Arial'
+              ctx.textAlign = 'center'
+              ctx.fillText(text, x + 15, y + 20)
+
+              return isClicking
+            }
+
+            if (numImages > 1) {
+              if (
+                drawButton(
+                  dw - 40,
+                  dh + top - 40,
+                  30,
+                  `${this.imageIndex + 1}/${numImages}`
+                )
+              ) {
+                let i =
+                  this.imageIndex + 1 >= numImages ? 0 : this.imageIndex + 1
+                if (!this.pointerDown || !this.pointerDown.index === i) {
+                  this.pointerDown = { index: i, pos: [...mouse] }
+                }
+              }
+
+              if (drawButton(dw - 40, top + 10, 30, `x`)) {
+                if (!this.pointerDown || !this.pointerDown.index === null) {
+                  this.pointerDown = { index: null, pos: [...mouse] }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    node.prototype.onDrawBackground = function (ctx) {
+      try {
+        unsafeDrawBackground.call(this, ctx)
+      } catch (error) {
+        console.error('Error drawing node background', error)
+      }
+    }
+  }
+
+  /**
   /*
    * Adds a handler allowing drag+drop of files onto the window to load workflows
    */
@@ -653,6 +1488,20 @@ export class ComfyApp {
     this.canvasEl.addEventListener(
       'dragover',
       (e) => {
+        // Disable dropEffect (green plus icon) for JSON files.
+        const items = e.dataTransfer.items
+        if (items) {
+          for (let i = 0; i < items.length; i++) {
+            if (
+              items[i].kind === 'file' &&
+              items[i].type === 'application/json'
+            ) {
+              console.log(`File type: ${items[i].type}`)
+              e.dataTransfer.dropEffect = 'none'
+            }
+          }
+        }
+
         this.canvas.adjustMouseEvent(e)
         const node = this.graph.getNodeOnPos(e.canvasX, e.canvasY)
         if (node) {
@@ -816,13 +1665,15 @@ export class ComfyApp {
     api.addEventListener('execution_error', ({ detail }) => {
       // Check if this is an auth-related error or credits-related error
       if (
-        detail.exception_message ===
-        'Unauthorized: Please login first to use this node.'
+        detail.exception_message?.includes(
+          'Unauthorized: Please login first to use this node.'
+        )
       ) {
         useDialogService().showApiNodesSignInDialog([detail.node_type])
       } else if (
-        detail.exception_message ===
-        'Payment Required: Please add credits to your account to use this node.'
+        detail.exception_message?.includes(
+          'Payment Required: Please add credits to your account to use this node.'
+        )
       ) {
         useDialogService().showTopUpCreditsDialog({
           isInsufficientCredits: true
@@ -862,24 +1713,22 @@ export class ComfyApp {
   }
 
   #addAfterConfigureHandler() {
-    const app = this
-    const onConfigure = app.graph.onConfigure
-    app.graph.onConfigure = function (this: LGraph, ...args) {
+    const { graph } = this
+    const { onConfigure } = graph
+    graph.onConfigure = function (...args) {
       fixLinkInputSlots(this)
 
       // Fire callbacks before the onConfigure, this is used by widget inputs to setup the config
-      for (const node of app.graph.nodes) {
+      for (const node of graph.nodes) {
         node.onGraphConfigured?.()
       }
 
       const r = onConfigure?.apply(this, args)
 
       // Fire after onConfigure, used by primitives to generate widget using input nodes config
-      for (const node of app.graph.nodes) {
+      for (const node of graph.nodes) {
         node.onAfterGraphConfigured?.()
       }
-
-      pruneWidgets(this.nodes)
 
       return r
     }
@@ -917,6 +1766,22 @@ export class ComfyApp {
       console.log('ComfyUI: new LGraph created in setup')
     }
 
+    // Register the subgraph - adds type wrapper for Litegraph's `createNode` factory
+    this.graph.events.addEventListener('subgraph-created', (e) => {
+      try {
+        const { subgraph, data } = e.detail
+        useSubgraphService().registerNewSubgraph(subgraph, data)
+      } catch (err) {
+        console.error('Failed to register subgraph', err)
+        useToastStore().add({
+          severity: 'error',
+          summary: 'Failed to register subgraph',
+          detail: err instanceof Error ? err.message : String(err)
+        })
+      }
+    })
+
+
     this.#addAfterConfigureHandler()
 
     this.canvas = new LGraphCanvas(canvasEl, this.graph)
@@ -928,6 +1793,30 @@ export class ComfyApp {
 
     LiteGraph.alt_drag_do_clone_nodes = true
     LiteGraph.macGesturesRequireMac = false
+
+    this.canvas.canvas.addEventListener<'litegraph:set-graph'>(
+      'litegraph:set-graph',
+      (e) => {
+        // Assertion: Not yet defined in litegraph.
+        const { newGraph } = e.detail
+
+        const nodeSet = new Set(newGraph.nodes)
+        const widgetStore = useDomWidgetStore()
+
+        // Assertions: UnwrapRef
+        for (const { widget } of widgetStore.activeWidgetStates) {
+          if (!nodeSet.has(widget.node)) {
+            widgetStore.deactivateWidget(widget.id)
+          }
+        }
+
+        for (const { widget } of widgetStore.inactiveWidgetStates) {
+          if (nodeSet.has(widget.node)) {
+            widgetStore.activateWidget(widget.id)
+          }
+        }
+      }
+    )
 
     this.graph.start()
 
@@ -943,6 +1832,46 @@ export class ComfyApp {
 
     await useExtensionService().invokeExtensionsAsync('init')
     await this.registerNodes()
+    // initWidgets(this)
+
+    // Playbook: Disabling this functionality to avoid cached workflow
+    // data being loaded on graph load.
+    // Load previous workflow
+    // let restored = false
+    // try {
+    //   const loadWorkflow = async (json) => {
+    //     if (json) {
+    //       const workflow = JSON.parse(json)
+    //       const workflowName = getStorageValue('Comfy.PreviousWorkflow')
+    //       await this.loadGraphData(workflow, true, true, workflowName)
+    //       return true
+    //     }
+    //   }
+    //   const clientId = api.initialClientId ?? api.clientId
+    //   restored =
+    //     (clientId &&
+    //       (await loadWorkflow(
+    //         sessionStorage.getItem(`workflow:${clientId}`)
+    //       ))) ||
+    //     (await loadWorkflow(localStorage.getItem('workflow')))
+    // } catch (err) {
+    //   console.error('Error loading previous workflow', err)
+    // }
+
+    // // We failed to restore a workflow so load the default
+    // if (!restored) {
+    //   await this.loadGraphData()
+    // }
+
+    // Save current workflow automatically
+    setInterval(() => {
+      const sortNodes = useSettingStore().get('Comfy.Workflow.SortNodeIdOnSave')
+      const workflow = JSON.stringify(this.graph.serialize({ sortNodes }))
+      localStorage.setItem('workflow', workflow)
+      if (api.clientId) {
+        sessionStorage.setItem(`workflow:${api.clientId}`, workflow)
+      }
+    }, 1000)
 
     this.#addDrawNodeHandler()
     this.#addDropHandler()
@@ -974,6 +1903,34 @@ export class ComfyApp {
           if (window.top && this.playbookWrapperOrigin) {
             window.top.postMessage(messageData, this.playbookWrapperOrigin)
           }
+
+          clearInterval(
+            this.waitForPlaybookWrapperOriginToSendSetupCompleteInterval
+          )
+        }
+      },
+      100
+    )
+    this.#invokeExtensionsAsync('setup')
+
+    this.waitForPlaybookWrapperOriginToSendSetupComplete()
+  }
+
+  waitForPlaybookWrapperOriginToSendSetupCompleteInterval = null
+  waitForPlaybookWrapperOriginToSendSetupComplete() {
+    this.waitForPlaybookWrapperOriginToSendSetupCompleteInterval = setInterval(
+      () => {
+        console.log(
+          'ComfyUI: setup complete: sending ComfyGraphSetupComplete to ',
+          this.playbookWrapperOrigin
+        )
+
+        if (this.playbookWrapperOrigin) {
+          const messageData: WorkflowWindowMessageData = {
+            message: 'ComfyGraphSetupComplete'
+          }
+
+          window.top.postMessage(messageData, this.playbookWrapperOrigin)
 
           clearInterval(
             this.waitForPlaybookWrapperOriginToSendSetupCompleteInterval
@@ -1195,6 +2152,7 @@ export class ComfyApp {
       })
     }
     useWorkflowService().beforeLoadNewGraph()
+    useSubgraphService().loadSubgraphs(graphData)
 
     const missingNodeTypes: MissingNodeType[] = []
     const missingModels: ModelFile[] = []
@@ -1220,8 +2178,10 @@ export class ComfyApp {
       }
 
       // Collect models metadata from node
-      if (n.properties?.models?.length)
-        embeddedModels.push(...n.properties.models)
+      const selectedModels = getSelectedModelsMetadata(n)
+      if (selectedModels?.length) {
+        embeddedModels.push(...selectedModels)
+      }
     }
 
     // Merge models from the workflow's root-level 'models' field
@@ -1257,11 +2217,11 @@ export class ComfyApp {
     try {
       // @ts-expect-error Discrepancies between zod and litegraph - in progress
       this.graph.configure(graphData)
-      if (restore_view) {
-        if (
-          useSettingStore().get('Comfy.EnableWorkflowViewRestore') &&
-          graphData.extra?.ds
-        ) {
+      if (
+        restore_view &&
+        useSettingStore().get('Comfy.EnableWorkflowViewRestore')
+      ) {
+        if (graphData.extra?.ds) {
           this.canvas.ds.offset = graphData.extra.ds.offset
           this.canvas.ds.scale = graphData.extra.ds.scale
         } else {
@@ -1355,6 +2315,7 @@ export class ComfyApp {
     if (window.__COMFYAPP && this.playbookWrapperOrigin) {
       sendWorkflowDataToPlaybookWrapper(this.playbookWrapperOrigin)
     }
+    if (window.__COMFYAPP) window.__COMFYAPP.sendWorkflowDataToPlaybookWrapper()
   }
 
   async graphToPrompt(
@@ -1367,12 +2328,35 @@ export class ComfyApp {
     })
   }
 
-  async queuePrompt(
-    number: number,
-    batchCount: number = 1,
-    queueNodeIds?: NodeId[]
-  ): Promise<boolean> {
-    this.#queueItems.push({ number, batchCount, queueNodeIds })
+  #formatPromptError(error) {
+    if (error == null) {
+      return '(unknown error)'
+    } else if (typeof error === 'string') {
+      return error
+    } else if (error.stack && error.message) {
+      return error.toString()
+    } else if (error.response) {
+      let message = error.response.error.message
+      if (error.response.error.details)
+        message += ': ' + error.response.error.details
+      for (const [nodeID, nodeError] of Object.entries(
+        error.response.node_errors
+      )) {
+        // @ts-expect-error
+        message += '\n' + nodeError.class_type + ':'
+        // @ts-expect-error
+        for (const errorReason of nodeError.errors) {
+          message +=
+            '\n    - ' + errorReason.message + ': ' + errorReason.details
+        }
+      }
+      return message
+    }
+    return '(unknown error)'
+  }
+
+  async queuePrompt(number, batchCount = 1) {
+    this.#queueItems.push({ number, batchCount })
 
     // Only have one action process the items so each one gets a unique seed correctly
     if (this.#processingQueue) {
@@ -1395,6 +2379,9 @@ export class ComfyApp {
           // Allow widgets to run callbacks before a prompt has been queued
           // e.g. random seed before every gen
           executeWidgetsCallback(this.graph.nodes, 'beforeQueued')
+          for (const subgraph of this.graph.subgraphs.values()) {
+            executeWidgetsCallback(subgraph.nodes, 'beforeQueued')
+          }
 
           const p = await this.graphToPrompt(this.graph, { queueNodeIds })
           try {
@@ -1437,9 +2424,13 @@ export class ComfyApp {
           executeWidgetsCallback(
             p.workflow.nodes
               .map((n) => this.graph.getNodeById(n.id))
-              .filter((n) => !!n) as LGraphNode[],
+              .filter((n) => !!n),
             'afterQueued'
           )
+          for (const subgraph of this.graph.subgraphs.values()) {
+            executeWidgetsCallback(subgraph.nodes, 'afterQueued')
+          }
+
           this.canvas.draw(true, true)
           await this.ui.queue.update()
         }
@@ -1600,9 +2591,7 @@ export class ComfyApp {
             true,
             fileName
           )
-          if (this.playbookWrapperOrigin) {
-            notifyPlaybookWrapperNewWorkflowLoaded(this.playbookWrapperOrigin)
-          }
+          notifyPlaybookWrapperNewWorkflowLoaded(this.playbookWrapperOrigin)
         }
       }
       reader.readAsText(file)
@@ -1745,7 +2734,6 @@ export class ComfyApp {
   /**
    * Registers a Comfy web extension with the app
    * @param {ComfyExtension} extension
-   * @deprecated Use useExtensionService().registerExtension instead
    */
   registerExtension(extension: ComfyExtension) {
     useExtensionService().registerExtension(extension)
@@ -1841,6 +2829,8 @@ export class ComfyApp {
     const executionStore = useExecutionStore()
     executionStore.lastNodeErrors = null
     executionStore.lastExecutionError = null
+
+    useDomWidgetStore().clear()
   }
 
   clientPosToCanvasPos(pos: Vector2): Vector2 {

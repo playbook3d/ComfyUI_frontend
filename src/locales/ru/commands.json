@@ -38,11 +38,26 @@
   "Comfy_BrowseTemplates": {
     "label": "Просмотр шаблонов"
   },
+  "Comfy_Canvas_AddEditModelStep": {
+    "label": "Добавить или изменить шаг модели"
+  },
   "Comfy_Canvas_DeleteSelectedItems": {
     "label": "Удалить выбранные элементы"
   },
   "Comfy_Canvas_FitView": {
     "label": "Подогнать вид к выбранным нодам"
+  },
+  "Comfy_Canvas_MoveSelectedNodes_Down": {
+    "label": "Переместить выбранные узлы вниз"
+  },
+  "Comfy_Canvas_MoveSelectedNodes_Left": {
+    "label": "Переместить выбранные узлы влево"
+  },
+  "Comfy_Canvas_MoveSelectedNodes_Right": {
+    "label": "Переместить выбранные узлы вправо"
+  },
+  "Comfy_Canvas_MoveSelectedNodes_Up": {
+    "label": "Переместить выбранные узлы вверх"
   },
   "Comfy_Canvas_ResetView": {
     "label": "Сбросить вид"
@@ -97,6 +112,9 @@
   },
   "Comfy_Feedback": {
     "label": "Обратная связь"
+  },
+  "Comfy_Graph_ConvertToSubgraph": {
+    "label": "Преобразовать выделенное в подграф"
   },
   "Comfy_Graph_FitGroupToContents": {
     "label": "Подогнать группу к содержимому"

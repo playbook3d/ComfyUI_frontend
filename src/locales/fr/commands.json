@@ -38,11 +38,26 @@
   "Comfy_BrowseTemplates": {
     "label": "Parcourir les modèles"
   },
+  "Comfy_Canvas_AddEditModelStep": {
+    "label": "Ajouter/Modifier une étape de modèle"
+  },
   "Comfy_Canvas_DeleteSelectedItems": {
     "label": "Supprimer les éléments sélectionnés"
   },
   "Comfy_Canvas_FitView": {
     "label": "Ajuster la vue aux nœuds sélectionnés"
+  },
+  "Comfy_Canvas_MoveSelectedNodes_Down": {
+    "label": "Déplacer les nœuds sélectionnés vers le bas"
+  },
+  "Comfy_Canvas_MoveSelectedNodes_Left": {
+    "label": "Déplacer les nœuds sélectionnés vers la gauche"
+  },
+  "Comfy_Canvas_MoveSelectedNodes_Right": {
+    "label": "Déplacer les nœuds sélectionnés vers la droite"
+  },
+  "Comfy_Canvas_MoveSelectedNodes_Up": {
+    "label": "Déplacer les nœuds sélectionnés vers le haut"
   },
   "Comfy_Canvas_ResetView": {
     "label": "Réinitialiser la vue"
@@ -97,6 +112,9 @@
   },
   "Comfy_Feedback": {
     "label": "Retour d'information"
+  },
+  "Comfy_Graph_ConvertToSubgraph": {
+    "label": "Convertir la sélection en sous-graphe"
   },
   "Comfy_Graph_FitGroupToContents": {
     "label": "Ajuster le groupe au contenu"

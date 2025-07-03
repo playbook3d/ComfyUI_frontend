@@ -21,7 +21,6 @@ import TemplateWorkflowsDialogHeader from '@/components/templates/TemplateWorkfl
 import { t } from '@/i18n'
 import type { ExecutionErrorWsMessage } from '@/schemas/apiSchema'
 import { type ShowDialogOptions, useDialogStore } from '@/stores/dialogStore'
-import { ManagerTab } from '@/types/comfyManagerTypes'
 
 export type ConfirmationDialogType =
   | 'default'
@@ -129,19 +128,26 @@ export const useDialogService = () => {
   }
 
   function showManagerDialog(
-    props: InstanceType<typeof ManagerDialogContent>['$props'] = {
-      initialTab: ManagerTab.All
-    }
+    props: InstanceType<typeof ManagerDialogContent>['$props'] = {}
   ) {
     dialogStore.showDialog({
       key: 'global-manager',
       component: ManagerDialogContent,
       headerComponent: ManagerHeader,
       dialogComponentProps: {
-        closable: false,
+        closable: true,
         pt: {
-          header: { class: '!p-0 !m-0' },
-          content: { class: '!px-0 h-[83vh] w-[90vw] overflow-y-hidden' }
+          pcCloseButton: {
+            root: {
+              class:
+                'bg-gray-500 dark-theme:bg-neutral-700 w-9 h-9 p-1.5 rounded-full text-white'
+            }
+          },
+          header: { class: '!py-0 px-6 !m-0 h-[68px]' },
+          content: {
+            class: '!p-0 h-full w-[90vw] max-w-full flex-1 overflow-hidden'
+          },
+          root: { class: 'manager-dialog' }
         }
       },
       props
@@ -157,6 +163,7 @@ export const useDialogService = () => {
       headerComponent: ManagerProgressHeader,
       footerComponent: ManagerProgressFooter,
       props: options?.props,
+      priority: 2,
       dialogComponentProps: {
         closable: false,
         modal: false,
@@ -379,6 +386,44 @@ export const useDialogService = () => {
     })
   }
 
+  /**
+   * Shows a dialog from a third party extension.
+   * @param options - The dialog options.
+   * @param options.key - The dialog key.
+   * @param options.title - The dialog title.
+   * @param options.headerComponent - The dialog header component.
+   * @param options.footerComponent - The dialog footer component.
+   * @param options.component - The dialog component.
+   * @param options.props - The dialog props.
+   * @returns The dialog instance and a function to close the dialog.
+   */
+  function showExtensionDialog(options: ShowDialogOptions & { key: string }) {
+    return {
+      dialog: dialogStore.showExtensionDialog(options),
+      closeDialog: () => dialogStore.closeDialog({ key: options.key })
+    }
+  }
+
+  function toggleManagerDialog(
+    props?: InstanceType<typeof ManagerDialogContent>['$props']
+  ) {
+    if (dialogStore.isDialogOpen('global-manager')) {
+      dialogStore.closeDialog({ key: 'global-manager' })
+    } else {
+      showManagerDialog(props)
+    }
+  }
+
+  function toggleManagerProgressDialog(
+    props?: InstanceType<typeof ManagerProgressDialogContent>['$props']
+  ) {
+    if (dialogStore.isDialogOpen('global-manager-progress-dialog')) {
+      dialogStore.closeDialog({ key: 'global-manager-progress-dialog' })
+    } else {
+      showManagerProgressDialog({ props })
+    }
+  }
+
   return {
     showLoadWorkflowWarning,
     showMissingModelsWarning,
@@ -394,7 +439,10 @@ export const useDialogService = () => {
     showSignInDialog,
     showTopUpCreditsDialog,
     showUpdatePasswordDialog,
+    showExtensionDialog,
     prompt,
-    confirm
+    confirm,
+    toggleManagerDialog,
+    toggleManagerProgressDialog
   }
 }

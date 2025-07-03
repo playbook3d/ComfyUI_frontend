@@ -1,6 +1,5 @@
 import { VueWrapper, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
-import Button from 'primevue/button'
 import PrimeVue from 'primevue/config'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
@@ -33,6 +32,12 @@ vi.mock('@/stores/comfyManagerStore', () => ({
   }))
 }))
 
+vi.mock('@/composables/nodePack/usePackUpdateStatus', () => ({
+  usePackUpdateStatus: vi.fn(() => ({
+    isUpdateAvailable: false
+  }))
+}))
+
 const mockToggle = vi.fn()
 const mockHide = vi.fn()
 const PopoverStub = {
@@ -62,6 +67,7 @@ describe('PackVersionBadge', () => {
     return mount(PackVersionBadge, {
       props: {
         nodePack: mockNodePack,
+        isSelected: false,
         ...props
       },
       global: {
@@ -77,9 +83,9 @@ describe('PackVersionBadge', () => {
   it('renders with installed version from store', () => {
     const wrapper = mountComponent()
 
-    const button = wrapper.findComponent(Button)
-    expect(button.exists()).toBe(true)
-    expect(button.props('label')).toBe('1.5.0') // From mockInstalledPacks
+    const badge = wrapper.find('[role="button"]')
+    expect(badge.exists()).toBe(true)
+    expect(badge.find('span').text()).toBe('1.5.0') // From mockInstalledPacks
   })
 
   it('falls back to latest_version when not installed', () => {
@@ -96,9 +102,9 @@ describe('PackVersionBadge', () => {
       props: { nodePack: uninstalledPack }
     })
 
-    const button = wrapper.findComponent(Button)
-    expect(button.exists()).toBe(true)
-    expect(button.props('label')).toBe('3.0.0') // From latest_version
+    const badge = wrapper.find('[role="button"]')
+    expect(badge.exists()).toBe(true)
+    expect(badge.find('span').text()).toBe('3.0.0') // From latest_version
   })
 
   it('falls back to NIGHTLY when no latest_version and not installed', () => {
@@ -112,9 +118,9 @@ describe('PackVersionBadge', () => {
       props: { nodePack: noVersionPack }
     })
 
-    const button = wrapper.findComponent(Button)
-    expect(button.exists()).toBe(true)
-    expect(button.props('label')).toBe(SelectedVersion.NIGHTLY)
+    const badge = wrapper.find('[role="button"]')
+    expect(badge.exists()).toBe(true)
+    expect(badge.find('span').text()).toBe(SelectedVersion.NIGHTLY)
   })
 
   it('falls back to NIGHTLY when nodePack.id is missing', () => {
@@ -126,16 +132,16 @@ describe('PackVersionBadge', () => {
       props: { nodePack: invalidPack }
     })
 
-    const button = wrapper.findComponent(Button)
-    expect(button.exists()).toBe(true)
-    expect(button.props('label')).toBe(SelectedVersion.NIGHTLY)
+    const badge = wrapper.find('[role="button"]')
+    expect(badge.exists()).toBe(true)
+    expect(badge.find('span').text()).toBe(SelectedVersion.NIGHTLY)
   })
 
   it('toggles the popover when button is clicked', async () => {
     const wrapper = mountComponent()
 
-    // Click the button
-    await wrapper.findComponent(Button).trigger('click')
+    // Click the badge
+    await wrapper.find('[role="button"]').trigger('click')
 
     // Verify that the toggle method was called
     expect(mockToggle).toHaveBeenCalled()
@@ -161,5 +167,59 @@ describe('PackVersionBadge', () => {
 
     // Verify that the hide method was called
     expect(mockHide).toHaveBeenCalled()
+  })
+
+  describe('selection state changes', () => {
+    it('closes the popover when card is deselected', async () => {
+      const wrapper = mountComponent({
+        props: { isSelected: true }
+      })
+
+      // Change isSelected from true to false
+      await wrapper.setProps({ isSelected: false })
+      await nextTick()
+
+      // Verify that the hide method was called
+      expect(mockHide).toHaveBeenCalled()
+    })
+
+    it('does not close the popover when card is selected', async () => {
+      const wrapper = mountComponent({
+        props: { isSelected: false }
+      })
+
+      // Change isSelected from false to true
+      await wrapper.setProps({ isSelected: true })
+      await nextTick()
+
+      // Verify that the hide method was NOT called
+      expect(mockHide).not.toHaveBeenCalled()
+    })
+
+    it('does not close the popover when isSelected remains false', async () => {
+      const wrapper = mountComponent({
+        props: { isSelected: false }
+      })
+
+      // Change isSelected from false to false (no change)
+      await wrapper.setProps({ isSelected: false })
+      await nextTick()
+
+      // Verify that the hide method was NOT called
+      expect(mockHide).not.toHaveBeenCalled()
+    })
+
+    it('does not close the popover when isSelected remains true', async () => {
+      const wrapper = mountComponent({
+        props: { isSelected: true }
+      })
+
+      // Change isSelected from true to true (no change)
+      await wrapper.setProps({ isSelected: true })
+      await nextTick()
+
+      // Verify that the hide method was NOT called
+      expect(mockHide).not.toHaveBeenCalled()
+    })
   })
 })

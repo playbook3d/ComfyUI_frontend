@@ -6,6 +6,7 @@ import log from 'loglevel'
 import type { ExecutedWsMessage } from '@/schemas/apiSchema'
 import type { ComfyWorkflowJSON } from '@/schemas/comfyWorkflowSchema'
 import { useExecutionStore } from '@/stores/executionStore'
+import { useSubgraphNavigationStore } from '@/stores/subgraphNavigationStore'
 import { ComfyWorkflow, useWorkflowStore } from '@/stores/workflowStore'
 
 import { api } from './api'
@@ -33,10 +34,14 @@ export class ChangeTracker {
   /**
    * Whether the redo/undo restoring is in progress.
    */
-  private restoringState: boolean = false
+  _restoringState: boolean = false
 
   ds?: { scale: number; offset: [number, number] }
   nodeOutputs?: Record<string, any>
+
+  private subgraphState?: {
+    navigation: string[]
+  }
 
   constructor(
     /**
@@ -56,7 +61,7 @@ export class ChangeTracker {
    */
   reset(state?: ComfyWorkflowJSON) {
     // Do not reset the state if we are restoring.
-    if (this.restoringState) return
+    if (this._restoringState) return
 
     logger.debug('Reset State')
     if (state) this.activeState = clone(state)
@@ -68,6 +73,8 @@ export class ChangeTracker {
       scale: app.canvas.ds.scale,
       offset: [app.canvas.ds.offset[0], app.canvas.ds.offset[1]]
     }
+    const navigation = useSubgraphNavigationStore().exportState()
+    this.subgraphState = navigation.length ? { navigation } : undefined
   }
 
   restore() {
@@ -77,6 +84,16 @@ export class ChangeTracker {
     }
     if (this.nodeOutputs) {
       app.nodeOutputs = this.nodeOutputs
+    }
+    if (this.subgraphState) {
+      const { navigation } = this.subgraphState
+      useSubgraphNavigationStore().restoreState(navigation)
+
+      const activeId = navigation.at(-1)
+      if (activeId) {
+        const subgraph = app.graph.subgraphs.get(activeId)
+        if (subgraph) app.canvas.setGraph(subgraph)
+      }
     }
   }
 
@@ -124,6 +141,14 @@ export class ChangeTracker {
       this.redoQueue.length = 0
 
       this.updateModified()
+      this.workflow.unsaved = true
+      api.dispatchEvent(
+        new CustomEvent('graphChanged', { detail: this.activeState })
+      )
+
+      // Send updated workflow data to Playbook wrapper if graph changed.
+      if (window.__COMFYAPP)
+        window.__COMFYAPP.sendWorkflowDataToPlaybookWrapper()
     }
   }
 
@@ -131,7 +156,7 @@ export class ChangeTracker {
     const prevState = source.pop()
     if (prevState) {
       target.push(this.activeState)
-      this.restoringState = true
+      this._restoringState = true
       try {
         await app.loadGraphData(prevState, false, false, this.workflow, {
           showMissingModelsDialog: false,
@@ -141,7 +166,7 @@ export class ChangeTracker {
         this.activeState = prevState
         this.updateModified()
       } finally {
-        this.restoringState = false
+        this._restoringState = false
       }
     }
   }
@@ -383,7 +408,14 @@ export class ChangeTracker {
         return false
 
       // Compare other properties normally
-      for (const key of ['links', 'floatingLinks', 'reroutes', 'groups']) {
+      for (const key of [
+        'links',
+        'floatingLinks',
+        'reroutes',
+        'groups',
+        'definitions',
+        'subgraphs'
+      ]) {
         if (!_.isEqual(a[key], b[key])) {
           return false
         }
@@ -399,7 +431,12 @@ export class ChangeTracker {
     function sortGraphNodes(graph: ComfyWorkflowJSON) {
       return {
         links: graph.links,
+        floatingLinks: graph.floatingLinks,
+        reroutes: graph.reroutes,
         groups: graph.groups,
+        extra: graph.extra,
+        definitions: graph.definitions,
+        subgraphs: graph.subgraphs,
         nodes: graph.nodes.sort((a, b) => {
           if (typeof a.id === 'number' && typeof b.id === 'number') {
             return a.id - b.id

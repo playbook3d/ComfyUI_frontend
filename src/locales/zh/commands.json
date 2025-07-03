@@ -38,11 +38,26 @@
   "Comfy_BrowseTemplates": {
     "label": "浏览模板"
   },
+  "Comfy_Canvas_AddEditModelStep": {
+    "label": "添加编辑模型步骤"
+  },
   "Comfy_Canvas_DeleteSelectedItems": {
     "label": "删除选定的项目"
   },
   "Comfy_Canvas_FitView": {
     "label": "适应视图到选中节点"
+  },
+  "Comfy_Canvas_MoveSelectedNodes_Down": {
+    "label": "下移选中的节点"
+  },
+  "Comfy_Canvas_MoveSelectedNodes_Left": {
+    "label": "向左移动选中节点"
+  },
+  "Comfy_Canvas_MoveSelectedNodes_Right": {
+    "label": "向右移动选中节点"
+  },
+  "Comfy_Canvas_MoveSelectedNodes_Up": {
+    "label": "上移选中的节点"
   },
   "Comfy_Canvas_ResetView": {
     "label": "重置视图"
@@ -97,6 +112,9 @@
   },
   "Comfy_Feedback": {
     "label": "反馈"
+  },
+  "Comfy_Graph_ConvertToSubgraph": {
+    "label": "将选区转换为子图"
   },
   "Comfy_Graph_FitGroupToContents": {
     "label": "适应节点框到内容"

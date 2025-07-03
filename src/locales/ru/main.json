@@ -138,13 +138,21 @@
     "Unpin": "Открепить"
   },
   "credits": {
+    "accountInitialized": "Аккаунт инициализирован",
+    "activity": "Активность",
+    "added": "Добавлено",
+    "additionalInfo": "Дополнительная информация",
     "apiPricing": "Цены на API",
     "credits": "Кредиты",
+    "details": "Детали",
+    "eventType": "Тип события",
     "faqs": "Часто задаваемые вопросы",
     "invoiceHistory": "История счетов",
     "lastUpdated": "Последнее обновление",
     "messageSupport": "Связаться с поддержкой",
+    "model": "Модель",
     "purchaseCredits": "Купить кредиты",
+    "time": "Время",
     "topUp": {
       "buyNow": "Купить сейчас",
       "insufficientMessage": "У вас недостаточно кредитов для запуска этого рабочего процесса.",
@@ -248,11 +256,13 @@
     "all": "Все",
     "amount": "Количество",
     "apply": "Применить",
+    "audioFailedToLoad": "Не удалось загрузить аудио",
     "back": "Назад",
     "cancel": "Отмена",
     "capture": "захват",
     "category": "Категория",
     "choose_file_to_upload": "выберите файл для загрузки",
+    "clear": "Очистить",
     "close": "Закрыть",
     "color": "Цвет",
     "comingSoon": "Скоро будет",
@@ -266,7 +276,9 @@
     "control_before_generate": "управление до генерации",
     "copy": "Копировать",
     "copyToClipboard": "Скопировать в буфер обмена",
+    "copyURL": "Скопировать URL",
     "currentUser": "Текущий пользователь",
+    "customBackground": "Пользовательский фон",
     "customize": "Настроить",
     "customizeFolder": "Настроить папку",
     "delete": "Удалить",
@@ -290,8 +302,10 @@
     "findIssues": "Найти проблемы",
     "firstTimeUIMessage": "Вы впервые используете новый интерфейс. Выберите \"Меню > Использовать новое меню > Отключено\", чтобы восстановить старый интерфейс.",
     "goToNode": "Перейти к ноде",
+    "help": "Помощь",
     "icon": "Иконка",
     "imageFailedToLoad": "Не удалось загрузить изображение",
+    "imageUrl": "URL изображения",
     "import": "Импорт",
     "inProgress": "В процессе",
     "insert": "Вставить",
@@ -342,6 +356,7 @@
     "searchNodes": "Поиск нод",
     "searchSettings": "Поиск настроек",
     "searchWorkflows": "Поиск рабочих процессов",
+    "setAsBackground": "Установить как фон",
     "settings": "Настройки",
     "showReport": "Показать отчёт",
     "sort": "Сортировать",
@@ -373,6 +388,20 @@
   "groupNode": {
     "create": "Создать ноду группы",
     "enterName": "Введите название"
+  },
+  "helpCenter": {
+    "clickToLearnMore": "Нажмите, чтобы узнать больше →",
+    "desktopUserGuide": "Руководство пользователя для Desktop",
+    "docs": "Документация",
+    "github": "Github",
+    "helpFeedback": "Помощь и обратная связь",
+    "loadingReleases": "Загрузка релизов...",
+    "more": "Ещё...",
+    "noRecentReleases": "Нет недавних релизов",
+    "openDevTools": "Открыть инструменты разработчика",
+    "reinstall": "Переустановить",
+    "updateAvailable": "Обновить",
+    "whatsNew": "Что нового?"
   },
   "icon": {
     "bookmark": "Закладка",
@@ -544,6 +573,11 @@
     "uploadBackgroundImage": "Загрузить фоновое изображение",
     "uploadTexture": "Загрузить текстуру"
   },
+  "loadWorkflowWarning": {
+    "coreNodesFromVersion": "Требуется ComfyUI {version}:",
+    "outdatedVersion": "Некоторые узлы требуют более новой версии ComfyUI (текущая: {version}). Пожалуйста, обновите, чтобы использовать все узлы.",
+    "outdatedVersionGeneric": "Некоторые узлы требуют более новой версии ComfyUI. Пожалуйста, обновите, чтобы использовать все узлы."
+  },
   "maintenance": {
     "None": "Нет",
     "OK": "OK",
@@ -579,6 +613,7 @@
     },
     "inWorkflow": "В рабочем процессе",
     "infoPanelEmpty": "Нажмите на элемент, чтобы увидеть информацию",
+    "installAllMissingNodes": "Установить все отсутствующие узлы",
     "installSelected": "Установить выбранное",
     "installationQueue": "Очередь установки",
     "lastUpdated": "Последнее обновление",
@@ -671,6 +706,7 @@
   },
   "menuLabels": {
     "About ComfyUI": "О ComfyUI",
+    "Add Edit Model Step": "Добавить или изменить шаг модели",
     "Browse Templates": "Просмотреть шаблоны",
     "Bypass/Unbypass Selected Nodes": "Обойти/восстановить выбранные ноды",
     "Canvas Toggle Link Visibility": "Переключение видимости ссылки на холст",
@@ -686,8 +722,8 @@
     "ComfyUI Forum": "Форум ComfyUI",
     "ComfyUI Issues": "Проблемы ComfyUI",
     "Contact Support": "Связаться с поддержкой",
+    "Convert Selection to Subgraph": "Преобразовать выделенное в подграф",
     "Convert selected nodes to group node": "Преобразовать выбранные ноды в групповую ноду",
-    "Custom Nodes Manager": "Менеджер Пользовательских Узлов",
     "Delete Selected Items": "Удалить выбранные элементы",
     "Desktop User Guide": "Руководство пользователя для настольных ПК",
     "Duplicate Current Workflow": "Дублировать текущий рабочий процесс",
@@ -702,6 +738,10 @@
     "Interrupt": "Прервать",
     "Load Default Workflow": "Загрузить стандартный рабочий процесс",
     "Manage group nodes": "Управление групповыми нодами",
+    "Move Selected Nodes Down": "Переместить выбранные узлы вниз",
+    "Move Selected Nodes Left": "Переместить выбранные узлы влево",
+    "Move Selected Nodes Right": "Переместить выбранные узлы вправо",
+    "Move Selected Nodes Up": "Переместить выбранные узлы вверх",
     "Mute/Unmute Selected Nodes": "Отключить/включить звук для выбранных нод",
     "New": "Новый",
     "Next Opened Workflow": "Следующий открытый рабочий процесс",
@@ -737,12 +777,13 @@
     "Toggle Logs Bottom Panel": "Переключение нижней панели журналов",
     "Toggle Model Library Sidebar": "Переключение боковой панели библиотеки моделей",
     "Toggle Node Library Sidebar": "Переключение боковой панели библиотеки нод",
-    "Toggle Progress Dialog": "Переключить диалоговое окно прогресса",
     "Toggle Queue Sidebar": "Переключение боковой панели очереди",
     "Toggle Search Box": "Переключить поисковую панель",
     "Toggle Terminal Bottom Panel": "Переключение нижней панели терминала",
     "Toggle Theme (Dark/Light)": "Переключение темы (Тёмная/Светлая)",
     "Toggle Workflows Sidebar": "Переключение боковой панели рабочих процессов",
+    "Toggle the Custom Nodes Manager": "Переключить менеджер пользовательских узлов",
+    "Toggle the Custom Nodes Manager Progress Bar": "Переключить индикатор выполнения менеджера пользовательских узлов",
     "Undo": "Отменить",
     "Ungroup selected group nodes": "Разгруппировать выбранные групповые ноды",
     "Workflow": "Рабочий процесс",
@@ -830,6 +871,14 @@
     "video": "видео",
     "video_models": "видеомодели"
   },
+  "nodeHelpPage": {
+    "documentationPage": "страницу документации",
+    "inputs": "Входы",
+    "loadError": "Не удалось загрузить справку: {error}",
+    "moreHelp": "Для получения дополнительной помощи посетите",
+    "outputs": "Выходы",
+    "type": "Тип"
+  },
   "nodeTemplates": {
     "enterName": "Введите название",
     "saveAsTemplate": "Сохранить как шаблон"
@@ -845,6 +894,12 @@
       "windows": "Windows (Nvidia GPU с поддержкой CUDA)"
     },
     "title": "Ваше устройство не поддерживается"
+  },
+  "releaseToast": {
+    "newVersionAvailable": "Доступна новая версия!",
+    "skip": "Пропустить",
+    "update": "Обновить",
+    "whatsNew": "Что нового?"
   },
   "selectionToolbox": {
     "executeButton": {
@@ -1054,12 +1109,29 @@
   "sideToolbar": {
     "browseTemplates": "Просмотреть примеры шаблонов",
     "downloads": "Загрузки",
+    "helpCenter": "Центр поддержки",
     "logout": "Выйти",
     "modelLibrary": "Библиотека моделей",
     "newBlankWorkflow": "Создайте новый пустой рабочий процесс",
     "nodeLibrary": "Библиотека нод",
     "nodeLibraryTab": {
-      "sortOrder": "Порядок сортировки"
+      "groupBy": "Группировать по",
+      "groupStrategies": {
+        "category": "Категория",
+        "categoryDesc": "Группировать по категории узла",
+        "module": "Модуль",
+        "moduleDesc": "Группировать по источнику модуля",
+        "source": "Источник",
+        "sourceDesc": "Группировать по типу источника (Core, Custom, API)"
+      },
+      "resetView": "Сбросить вид по умолчанию",
+      "sortBy": {
+        "alphabetical": "По алфавиту",
+        "alphabeticalDesc": "Сортировать по алфавиту внутри групп",
+        "original": "Оригинальный порядок",
+        "originalDesc": "Сохранять исходный порядок"
+      },
+      "sortMode": "Режим сортировки"
     },
     "openWorkflow": "Открыть рабочий процесс в локальной файловой системе",
     "queue": "Очередь",
@@ -1107,6 +1179,7 @@
   "templateWorkflows": {
     "category": {
       "3D": "3D",
+      "All": "Все шаблоны",
       "Area Composition": "Композиция области",
       "Audio": "Аудио",
       "Basics": "Основы",
@@ -1325,6 +1398,7 @@
     "title": "Начните с шаблона"
   },
   "toastMessages": {
+    "cannotCreateSubgraph": "Невозможно создать подграф",
     "couldNotDetermineFileType": "Не удалось определить тип файла",
     "dropFileError": "Не удалось обработать перетаскиваемый элемент: {error}",
     "emptyCanvas": "Пустой холст",
@@ -1333,6 +1407,7 @@
     "errorSaveSetting": "Ошибка сохранения настройки {id}: {err}",
     "failedToAccessBillingPortal": "Не удалось получить доступ к биллинговому порталу: {error}",
     "failedToApplyTexture": "Не удалось применить текстуру",
+    "failedToConvertToSubgraph": "Не удалось преобразовать элементы в подграф",
     "failedToCreateCustomer": "Не удалось создать клиента: {error}",
     "failedToDownloadFile": "Не удалось скачать файл",
     "failedToExportModel": "Не удалось экспортировать модель как {format}",
@@ -1396,6 +1471,9 @@
   "welcome": {
     "getStarted": "Начать",
     "title": "Добро пожаловать в ComfyUI"
+  },
+  "whatsNewPopup": {
+    "learnMore": "Узнать больше"
   },
   "workflowService": {
     "enterFilename": "Введите название файла",

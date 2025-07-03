@@ -138,13 +138,21 @@
     "Unpin": "取消固定"
   },
   "credits": {
+    "accountInitialized": "账户已初始化",
+    "activity": "活动",
+    "added": "已添加",
+    "additionalInfo": "附加信息",
     "apiPricing": "API 价格",
     "credits": "积分",
+    "details": "详情",
+    "eventType": "事件类型",
     "faqs": "常见问题",
     "invoiceHistory": "发票历史",
     "lastUpdated": "最近更新",
     "messageSupport": "联系客服",
+    "model": "模型",
     "purchaseCredits": "购买积分",
+    "time": "时间",
     "topUp": {
       "buyNow": "立即购买",
       "insufficientMessage": "您的积分不足，无法运行此工作流。",
@@ -248,11 +256,13 @@
     "all": "全部",
     "amount": "数量",
     "apply": "应用",
+    "audioFailedToLoad": "音频加载失败",
     "back": "返回",
     "cancel": "取消",
     "capture": "捕获",
     "category": "类别",
     "choose_file_to_upload": "选择要上传的文件",
+    "clear": "清除",
     "close": "关闭",
     "color": "颜色",
     "comingSoon": "即将推出",
@@ -266,7 +276,9 @@
     "control_before_generate": "生成前控制",
     "copy": "复制",
     "copyToClipboard": "复制到剪贴板",
+    "copyURL": "复制链接",
     "currentUser": "当前用户",
+    "customBackground": "自定义背景",
     "customize": "自定义",
     "customizeFolder": "自定义文件夹",
     "delete": "删除",
@@ -290,8 +302,10 @@
     "findIssues": "查找问题",
     "firstTimeUIMessage": "这是您第一次使用新界面。选择 \"菜单 > 使用新菜单 > 禁用\" 来恢复旧界面。",
     "goToNode": "转到节点",
+    "help": "帮助",
     "icon": "图标",
     "imageFailedToLoad": "图像加载失败",
+    "imageUrl": "图片网址",
     "import": "导入",
     "inProgress": "进行中",
     "insert": "插入",
@@ -342,6 +356,7 @@
     "searchNodes": "搜索节点",
     "searchSettings": "搜索设置",
     "searchWorkflows": "搜索工作流",
+    "setAsBackground": "设为背景",
     "settings": "设置",
     "showReport": "显示报告",
     "sort": "排序",
@@ -373,6 +388,20 @@
   "groupNode": {
     "create": "创建组节点",
     "enterName": "输入名称"
+  },
+  "helpCenter": {
+    "clickToLearnMore": "点击了解更多 →",
+    "desktopUserGuide": "桌面端用户指南",
+    "docs": "文档",
+    "github": "Github",
+    "helpFeedback": "帮助与反馈",
+    "loadingReleases": "加载发布信息...",
+    "more": "更多...",
+    "noRecentReleases": "没有最近的发布",
+    "openDevTools": "打开开发者工具",
+    "reinstall": "重新安装",
+    "updateAvailable": "更新",
+    "whatsNew": "新功能?"
   },
   "icon": {
     "bookmark": "书签",
@@ -544,6 +573,11 @@
     "uploadBackgroundImage": "上传背景图片",
     "uploadTexture": "上传纹理"
   },
+  "loadWorkflowWarning": {
+    "coreNodesFromVersion": "需要 ComfyUI {version}：",
+    "outdatedVersion": "某些节点需要更高版本的 ComfyUI（当前版本：{version}）。请更新以使用所有节点。",
+    "outdatedVersionGeneric": "某些节点需要更高版本的 ComfyUI。请更新以使用所有节点。"
+  },
   "maintenance": {
     "None": "无",
     "OK": "确定",
@@ -579,6 +613,7 @@
     },
     "inWorkflow": "在工作流中",
     "infoPanelEmpty": "点击一个项目查看信息",
+    "installAllMissingNodes": "安装所有缺失节点",
     "installSelected": "安装选定",
     "installationQueue": "安装队列",
     "lastUpdated": "最后更新",
@@ -671,6 +706,7 @@
   },
   "menuLabels": {
     "About ComfyUI": "关于ComfyUI",
+    "Add Edit Model Step": "添加编辑模型步骤",
     "Browse Templates": "浏览模板",
     "Bypass/Unbypass Selected Nodes": "忽略/取消忽略选定节点",
     "Canvas Toggle Link Visibility": "切换连线可见性",
@@ -686,8 +722,8 @@
     "ComfyUI Forum": "ComfyUI 论坛",
     "ComfyUI Issues": "ComfyUI 问题",
     "Contact Support": "联系支持",
+    "Convert Selection to Subgraph": "将选中内容转换为子图",
     "Convert selected nodes to group node": "将选中节点转换为组节点",
-    "Custom Nodes Manager": "自定义节点管理器",
     "Delete Selected Items": "删除选定的项目",
     "Desktop User Guide": "桌面端用户指南",
     "Duplicate Current Workflow": "复制当前工作流",
@@ -702,6 +738,10 @@
     "Interrupt": "中断",
     "Load Default Workflow": "加载默认工作流",
     "Manage group nodes": "管理组节点",
+    "Move Selected Nodes Down": "下移所选节点",
+    "Move Selected Nodes Left": "左移所选节点",
+    "Move Selected Nodes Right": "右移所选节点",
+    "Move Selected Nodes Up": "上移所选节点",
     "Mute/Unmute Selected Nodes": "静音/取消静音选定节点",
     "New": "新建",
     "Next Opened Workflow": "下一个打开的工作流",
@@ -737,12 +777,13 @@
     "Toggle Logs Bottom Panel": "切换日志底部面板",
     "Toggle Model Library Sidebar": "切换模型库侧边栏",
     "Toggle Node Library Sidebar": "切换节点库侧边栏",
-    "Toggle Progress Dialog": "切换进度对话框",
     "Toggle Queue Sidebar": "切换队列侧边栏",
     "Toggle Search Box": "切换搜索框",
     "Toggle Terminal Bottom Panel": "切换终端底部面板",
     "Toggle Theme (Dark/Light)": "切换主题（暗/亮）",
     "Toggle Workflows Sidebar": "切换工作流侧边栏",
+    "Toggle the Custom Nodes Manager": "切换自定义节点管理器",
+    "Toggle the Custom Nodes Manager Progress Bar": "切换自定义节点管理器进度条",
     "Undo": "撤销",
     "Ungroup selected group nodes": "解散选中组节点",
     "Workflow": "工作流",
@@ -830,6 +871,14 @@
     "video": "视频",
     "video_models": "视频模型"
   },
+  "nodeHelpPage": {
+    "documentationPage": "文档页面",
+    "inputs": "输入",
+    "loadError": "加载帮助失败：{error}",
+    "moreHelp": "如需更多帮助，请访问",
+    "outputs": "输出",
+    "type": "类型"
+  },
   "nodeTemplates": {
     "enterName": "输入名称",
     "saveAsTemplate": "另存为模板"
@@ -845,6 +894,12 @@
       "windows": "Windows (支持 CUDA 的 Nvidia GPU)"
     },
     "title": "您的设备不受支持"
+  },
+  "releaseToast": {
+    "newVersionAvailable": "新版本可用！",
+    "skip": "跳过",
+    "update": "更新",
+    "whatsNew": "新功能?"
   },
   "selectionToolbox": {
     "executeButton": {
@@ -1018,9 +1073,9 @@
     "Extension": "扩展",
     "General": "常规",
     "Graph": "画面",
-    "Group": "组节点",
+    "Group": "组",
     "Keybinding": "快捷键",
-    "Light": "浅色",
+    "Light": "光照",
     "Link": "连线",
     "LinkRelease": "释放链接",
     "LiteGraph": "画面",
@@ -1054,12 +1109,29 @@
   "sideToolbar": {
     "browseTemplates": "浏览示例模板",
     "downloads": "下载",
+    "helpCenter": "帮助中心",
     "logout": "登出",
     "modelLibrary": "模型库",
     "newBlankWorkflow": "创建空白工作流",
     "nodeLibrary": "节点库",
     "nodeLibraryTab": {
-      "sortOrder": "排序顺序"
+      "groupBy": "分组方式",
+      "groupStrategies": {
+        "category": "类别",
+        "categoryDesc": "按节点类别分组",
+        "module": "模块",
+        "moduleDesc": "按模块来源分组",
+        "source": "来源",
+        "sourceDesc": "按来源类型分组（核心，自定义，API）"
+      },
+      "resetView": "重置视图为默认",
+      "sortBy": {
+        "alphabetical": "字母顺序",
+        "alphabeticalDesc": "在分组内按字母顺序排序",
+        "original": "原始顺序",
+        "originalDesc": "保持原始顺序"
+      },
+      "sortMode": "排序模式"
     },
     "openWorkflow": "在本地文件系统中打开工作流",
     "queue": "队列",
@@ -1107,6 +1179,7 @@
   "templateWorkflows": {
     "category": {
       "3D": "3D",
+      "All": "所有模板",
       "Area Composition": "区域组成",
       "Audio": "音频",
       "Basics": "基础",
@@ -1325,6 +1398,7 @@
     "title": "从模板开始"
   },
   "toastMessages": {
+    "cannotCreateSubgraph": "无法创建子图",
     "couldNotDetermineFileType": "无法确定文件类型",
     "dropFileError": "无法处理掉落的项目：{error}",
     "emptyCanvas": "画布为空",
@@ -1333,6 +1407,7 @@
     "errorSaveSetting": "保存设置 {id} 出错：{err}",
     "failedToAccessBillingPortal": "访问账单门户失败：{error}",
     "failedToApplyTexture": "应用纹理失败",
+    "failedToConvertToSubgraph": "无法将项目转换为子图",
     "failedToCreateCustomer": "创建客户失败：{error}",
     "failedToDownloadFile": "文件下载失败",
     "failedToExportModel": "无法将模型导出为 {format}",
@@ -1396,6 +1471,9 @@
   "welcome": {
     "getStarted": "开始使用",
     "title": "欢迎使用 ComfyUI"
+  },
+  "whatsNewPopup": {
+    "learnMore": "了解更多"
   },
   "workflowService": {
     "enterFilename": "输入文件名",

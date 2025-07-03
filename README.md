@@ -609,6 +609,68 @@ This project includes `.vscode/launch.json.default` and `.vscode/settings.json.d
 
 We've also included a list of recommended extensions in `.vscode/extensions.json`. Your editor should detect this file and show a human friendly list in the Extensions panel, linking each entry to its marketplace page.
 
+### Recommended MCP Integrations
+
+#### Playwright Browser Automation
+
+The Playwright MCP server enables LLM coding assistants (like Copilot, Claude Code, etc.) to control and inspect web browsers programmatically. This allows assistants to navigate websites, take screenshots, and interact with web pages on your behalf.
+
+For ComfyUI_frontend development, you can ask coding assistants to use Playwright screenshots to continuously verify that your code changes produce the expected visual results.
+
+##### Setup for Claude Code
+
+After installing dependencies with `npm i`, the Playwright MCP server will be automatically available when you start Claude Code locally.
+
+Here's how Claude Code can use the Playwright MCP server to inspect the interface of the local development server (assuming you're running the dev server at `localhost:5173`):
+
+
+```
+> navigate to localhost:5173 and take a screenshot.
+   tell me the items in the menubar
+
+● I'll navigate to localhost:5173 and take a
+  screenshot to see the menubar items.
+
+● playwright:playwright_navigate (MCP)(url:       …
+                                      "http://local
+                                      host:5173")
+  ⎿  Navigated to http://localhost:5173
+
+● playwright:playwright_screenshot (MCP)(name: "lo…
+                                        alhost_5173
+                                        _menubar")
+
+  ⎿ Screenshot saved to: ../../../Downloads/localho
+    st_5173_menubar-2025-05-30T17-23-00-942Z.png
+  ⎿  Screenshot also stored in memory with name:
+     'localhost_5173_menubar'
+
+● Read(../../../Downloads/localhost_5173_menubar-2…
+      25-05-30T17-23-00-942Z.png)
+  ⎿  Read image (94.3KB)
+
+● Based on the screenshot, I can see the menubar at
+   the top of the ComfyUI interface contains the
+  following items:
+
+  Main Menubar Items:
+  - Workflow - Menu for workflow-related actions
+  - Edit - Menu for editing operations
+  - Help - Menu for help and documentation
+
+  Additional UI Elements:
+  - ComfyUI Logo - On the far left
+  - Workflow Tab - Shows "Unsaved Workflow" with a
+  dropdown and close button
+  - Layout Controls - On the far right (grid view
+  and hamburger menu icons)
+
+  The interface shows a typical ComfyUI workflow
+  graph with nodes like "Load Checkpoint", "CLIP
+  Text Encode (Prompt)", "KSampler", and "Empty
+  Latent Image" connected with colored cables.
+```
+
 ### Unit Test
 
 - `npm i` to install all dependencies
@@ -641,100 +703,8 @@ See [locales/README.md](src/locales/README.md) for details.
 
 ## Troubleshooting
 
-> **Note**: For comprehensive troubleshooting and how-to guides, please refer to our [official documentation](https://docs.comfy.org/). This section covers only the most common issues related to frontend development.
+For comprehensive troubleshooting and technical support, please refer to our official documentation:
 
-> **Desktop Users**: For issues specific to the desktop application, please refer to the [ComfyUI desktop repository](https://github.com/Comfy-Org/desktop).
-
-### Debugging Custom Node (Extension) Issues
-
-If you're experiencing crashes, errors, or unexpected behavior with ComfyUI, it's often caused by custom nodes (extensions). Follow these steps to identify and resolve the issues:
-
-#### Step 1: Verify if custom nodes are causing the problem
-
-Run ComfyUI with the `--disable-all-custom-nodes` flag:
-
-```bash
-python main.py --disable-all-custom-nodes
-```
-
-If the issue disappears, a custom node is the culprit. Proceed to the next step.
-
-#### Step 2: Identify the problematic custom node using binary search
-
-Rather than disabling nodes one by one, use this more efficient approach:
-
-1. Temporarily move half of your custom nodes out of the `custom_nodes` directory
-   ```bash
-   # Create a temporary directory
-   # Linux/Mac
-   mkdir ~/custom_nodes_disabled
-   
-   # Windows
-   mkdir %USERPROFILE%\custom_nodes_disabled
-   
-   # Move half of your custom nodes (assuming you have node1 through node8)
-   # Linux/Mac
-   mv custom_nodes/node1 custom_nodes/node2 custom_nodes/node3 custom_nodes/node4 ~/custom_nodes_disabled/
-   
-   # Windows
-   move custom_nodes\node1 custom_nodes\node2 custom_nodes\node3 custom_nodes\node4 %USERPROFILE%\custom_nodes_disabled\
-   ```
-
-2. Run ComfyUI again
-   - If the issue persists: The problem is in nodes 5-8 (the remaining half)
-   - If the issue disappears: The problem is in nodes 1-4 (the moved half)
-
-3. Let's assume the issue disappeared, so the problem is in nodes 1-4. Move half of these for the next test:
-   ```bash
-   # Move nodes 3-4 back to custom_nodes
-   # Linux/Mac
-   mv ~/custom_nodes_disabled/node3 ~/custom_nodes_disabled/node4 custom_nodes/
-   
-   # Windows
-   move %USERPROFILE%\custom_nodes_disabled\node3 %USERPROFILE%\custom_nodes_disabled\node4 custom_nodes\
-   ```
-
-4. Run ComfyUI again
-   - If the issue reappears: The problem is in nodes 3-4
-   - If issue still gone: The problem is in nodes 1-2
-
-5. Let's assume the issue reappeared, so the problem is in nodes 3-4. Test each one:
-   ```bash
-   # Move node 3 back to disabled
-   # Linux/Mac
-   mv custom_nodes/node3 ~/custom_nodes_disabled/
-   
-   # Windows
-   move custom_nodes\node3 %USERPROFILE%\custom_nodes_disabled\
-   ```
-
-6. Run ComfyUI again
-   - If the issue disappears: node3 is the problem
-   - If issue persists: node4 is the problem
-
-7. Repeat until you identify the specific problematic node
-
-#### Step 3: Update or replace the problematic node
-
-Once identified:
-1. Check for updates to the problematic custom node
-2. Consider alternatives with similar functionality
-3. Report the issue to the custom node developer with specific details
-
-### Common Issues and Solutions
-
-- **"Module not found" errors**: Usually indicates missing Python dependencies. Check the custom node's `requirements.txt` file for required packages and install them:
-  ```bash
-  pip install -r custom_nodes/problematic_node/requirements.txt
-  ```
-
-- **Frontend or Templates Package Not Updated**: After updating ComfyUI via Git, ensure you update the frontend dependencies:
-  ```bash
-  pip install -r requirements.txt
-  ```
-
-- **Can't Find Custom Node**: Make sure to disable node validation in ComfyUI settings.
-
-- **Error Toast About Workflow Failing Validation**: Report the issue to the ComfyUI team. As a temporary workaround, disable workflow validation in settings.
-
-- **Login Issues When Not on Localhost**: Normal login is only available when accessing from localhost. If you're running ComfyUI via LAN, another domain, or headless, you can use our API key feature to authenticate. The API key lets you log in normally through the UI. Generate an API key at [platform.comfy.org/login](https://platform.comfy.org/login) and use it in the API Key field in the login dialog or with the `--api-key` command line argument. Refer to our [API Key Integration Guide](https://docs.comfy.org/essentials/comfyui-server/api-key-integration#integration-of-api-key-to-use-comfyui-api-nodes) for complete setup instructions.
+- **[General Troubleshooting Guide](https://docs.comfy.org/troubleshooting/overview)** - Common issues, performance optimization, and reporting bugs
+- **[Custom Node Issues](https://docs.comfy.org/troubleshooting/custom-node-issues)** - Debugging custom node problems and conflicts
+- **[Desktop Installation Guide](https://docs.comfy.org/installation/desktop/windows)** - Desktop-specific installation and troubleshooting

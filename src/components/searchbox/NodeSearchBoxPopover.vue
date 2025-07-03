@@ -95,12 +95,14 @@ const addNode = (nodeDef: ComfyNodeDefImpl) => {
     return
   }
 
-  disconnectOnReset = false
   const node = litegraphService.addNodeOnGraph(nodeDef, {
     pos: getNewNodeLocation()
   })
 
-  canvasStore.getCanvas().linkConnector.connectToNode(node, triggerEvent)
+  if (disconnectOnReset) {
+    canvasStore.getCanvas().linkConnector.connectToNode(node, triggerEvent)
+  }
+  disconnectOnReset = false
 
   // Notify changeTracker - new step should be added
   useWorkflowStore().activeWorkflow?.changeTracker?.checkState()
@@ -166,10 +168,11 @@ const showContextMenu = (e: CanvasPointerEvent) => {
       showSearchBox(e)
     }
   }
+  const afterRerouteId = firstLink.fromReroute?.id
   const connectionOptions =
     toType === 'input'
-      ? { nodeFrom: node, slotFrom: fromSlot }
-      : { nodeTo: node, slotTo: fromSlot }
+      ? { nodeFrom: node, slotFrom: fromSlot, afterRerouteId }
+      : { nodeTo: node, slotTo: fromSlot, afterRerouteId }
 
   const canvas = canvasStore.getCanvas()
   const menu = canvas.showConnectionMenu({

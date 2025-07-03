@@ -138,13 +138,21 @@
     "Unpin": "Désépingler"
   },
   "credits": {
+    "accountInitialized": "Compte initialisé",
+    "activity": "Activité",
+    "added": "Ajouté",
+    "additionalInfo": "Informations supplémentaires",
     "apiPricing": "Tarification de l’API",
     "credits": "Crédits",
+    "details": "Détails",
+    "eventType": "Type d'événement",
     "faqs": "FAQ",
     "invoiceHistory": "Historique des factures",
     "lastUpdated": "Dernière mise à jour",
     "messageSupport": "Contacter le support",
+    "model": "Modèle",
     "purchaseCredits": "Acheter des crédits",
+    "time": "Heure",
     "topUp": {
       "buyNow": "Acheter maintenant",
       "insufficientMessage": "Vous n'avez pas assez de crédits pour exécuter ce workflow.",
@@ -248,11 +256,13 @@
     "all": "Tout",
     "amount": "Quantité",
     "apply": "Appliquer",
+    "audioFailedToLoad": "Échec du chargement de l'audio",
     "back": "Retour",
     "cancel": "Annuler",
     "capture": "capture",
     "category": "Catégorie",
     "choose_file_to_upload": "choisissez le fichier à télécharger",
+    "clear": "Effacer",
     "close": "Fermer",
     "color": "Couleur",
     "comingSoon": "Bientôt disponible",
@@ -266,7 +276,9 @@
     "control_before_generate": "contrôle avant génération",
     "copy": "Copier",
     "copyToClipboard": "Copier dans le presse-papiers",
+    "copyURL": "Copier l’URL",
     "currentUser": "Utilisateur actuel",
+    "customBackground": "Arrière-plan personnalisé",
     "customize": "Personnaliser",
     "customizeFolder": "Personnaliser le dossier",
     "delete": "Supprimer",
@@ -290,8 +302,10 @@
     "findIssues": "Trouver des problèmes",
     "firstTimeUIMessage": "C'est la première fois que vous utilisez la nouvelle interface utilisateur. Choisissez \"Menu > Utiliser le nouveau menu > Désactivé\" pour restaurer l'ancienne interface utilisateur.",
     "goToNode": "Aller au nœud",
+    "help": "Aide",
     "icon": "Icône",
     "imageFailedToLoad": "Échec du chargement de l'image",
+    "imageUrl": "URL de l'image",
     "import": "Importer",
     "inProgress": "En cours",
     "insert": "Insérer",
@@ -342,6 +356,7 @@
     "searchNodes": "Rechercher des nœuds",
     "searchSettings": "Rechercher des paramètres",
     "searchWorkflows": "Rechercher des flux de travail",
+    "setAsBackground": "Définir comme arrière-plan",
     "settings": "Paramètres",
     "showReport": "Afficher le rapport",
     "sort": "Trier",
@@ -373,6 +388,20 @@
   "groupNode": {
     "create": "Créer un nœud de groupe",
     "enterName": "Entrer le nom"
+  },
+  "helpCenter": {
+    "clickToLearnMore": "Cliquez pour en savoir plus →",
+    "desktopUserGuide": "Guide utilisateur de bureau",
+    "docs": "Docs",
+    "github": "Github",
+    "helpFeedback": "Aide & Retour",
+    "loadingReleases": "Chargement des versions...",
+    "more": "Plus...",
+    "noRecentReleases": "Aucune version récente",
+    "openDevTools": "Ouvrir les outils de développement",
+    "reinstall": "Réinstaller",
+    "updateAvailable": "Mise à jour",
+    "whatsNew": "Quoi de neuf ?"
   },
   "icon": {
     "bookmark": "Favori",
@@ -544,6 +573,11 @@
     "uploadBackgroundImage": "Télécharger l'image de fond",
     "uploadTexture": "Télécharger Texture"
   },
+  "loadWorkflowWarning": {
+    "coreNodesFromVersion": "Nécessite ComfyUI {version} :",
+    "outdatedVersion": "Certains nœuds nécessitent une version plus récente de ComfyUI (actuelle : {version}). Veuillez mettre à jour pour utiliser tous les nœuds.",
+    "outdatedVersionGeneric": "Certains nœuds nécessitent une version plus récente de ComfyUI. Veuillez mettre à jour pour utiliser tous les nœuds."
+  },
   "maintenance": {
     "None": "Aucun",
     "OK": "OK",
@@ -579,6 +613,7 @@
     },
     "inWorkflow": "Dans le flux de travail",
     "infoPanelEmpty": "Cliquez sur un élément pour voir les informations",
+    "installAllMissingNodes": "Installer tous les nœuds manquants",
     "installSelected": "Installer sélectionné",
     "installationQueue": "File d'attente d'installation",
     "lastUpdated": "Dernière mise à jour",
@@ -671,6 +706,7 @@
   },
   "menuLabels": {
     "About ComfyUI": "À propos de ComfyUI",
+    "Add Edit Model Step": "Ajouter une étape d’édition de modèle",
     "Browse Templates": "Parcourir les modèles",
     "Bypass/Unbypass Selected Nodes": "Contourner/Ne pas contourner les nœuds sélectionnés",
     "Canvas Toggle Link Visibility": "Basculer la visibilité du lien de la toile",
@@ -686,8 +722,8 @@
     "ComfyUI Forum": "Forum ComfyUI",
     "ComfyUI Issues": "Problèmes de ComfyUI",
     "Contact Support": "Contacter le support",
+    "Convert Selection to Subgraph": "Convertir la sélection en sous-graphe",
     "Convert selected nodes to group node": "Convertir les nœuds sélectionnés en nœud de groupe",
-    "Custom Nodes Manager": "Gestionnaire de Nœuds Personnalisés",
     "Delete Selected Items": "Supprimer les éléments sélectionnés",
     "Desktop User Guide": "Guide de l'utilisateur de bureau",
     "Duplicate Current Workflow": "Dupliquer le flux de travail actuel",
@@ -702,6 +738,10 @@
     "Interrupt": "Interrompre",
     "Load Default Workflow": "Charger le flux de travail par défaut",
     "Manage group nodes": "Gérer les nœuds de groupe",
+    "Move Selected Nodes Down": "Déplacer les nœuds sélectionnés vers le bas",
+    "Move Selected Nodes Left": "Déplacer les nœuds sélectionnés vers la gauche",
+    "Move Selected Nodes Right": "Déplacer les nœuds sélectionnés vers la droite",
+    "Move Selected Nodes Up": "Déplacer les nœuds sélectionnés vers le haut",
     "Mute/Unmute Selected Nodes": "Mettre en sourdine/Activer le son des nœuds sélectionnés",
     "New": "Nouveau",
     "Next Opened Workflow": "Prochain flux de travail ouvert",
@@ -737,12 +777,13 @@
     "Toggle Logs Bottom Panel": "Basculer le panneau inférieur des journaux",
     "Toggle Model Library Sidebar": "Basculer la barre latérale de la bibliothèque de modèles",
     "Toggle Node Library Sidebar": "Basculer la barre latérale de la bibliothèque de nœuds",
-    "Toggle Progress Dialog": "Basculer la boîte de dialogue de progression",
     "Toggle Queue Sidebar": "Basculer la barre latérale de la file d'attente",
     "Toggle Search Box": "Basculer la boîte de recherche",
     "Toggle Terminal Bottom Panel": "Basculer le panneau inférieur du terminal",
     "Toggle Theme (Dark/Light)": "Basculer le thème (Sombre/Clair)",
     "Toggle Workflows Sidebar": "Basculer la barre latérale des flux de travail",
+    "Toggle the Custom Nodes Manager": "Basculer le gestionnaire de nœuds personnalisés",
+    "Toggle the Custom Nodes Manager Progress Bar": "Basculer la barre de progression du gestionnaire de nœuds personnalisés",
     "Undo": "Annuler",
     "Ungroup selected group nodes": "Dégrouper les nœuds de groupe sélectionnés",
     "Workflow": "Flux de travail",
@@ -830,6 +871,14 @@
     "video": "vidéo",
     "video_models": "modèles_vidéo"
   },
+  "nodeHelpPage": {
+    "documentationPage": "page de documentation",
+    "inputs": "Entrées",
+    "loadError": "Échec du chargement de l’aide : {error}",
+    "moreHelp": "Pour plus d'aide, visitez la",
+    "outputs": "Sorties",
+    "type": "Type"
+  },
   "nodeTemplates": {
     "enterName": "Entrez le nom",
     "saveAsTemplate": "Enregistrer comme modèle"
@@ -845,6 +894,12 @@
       "windows": "Windows (GPU Nvidia avec support CUDA)"
     },
     "title": "Votre appareil n'est pas pris en charge"
+  },
+  "releaseToast": {
+    "newVersionAvailable": "Nouvelle version disponible !",
+    "skip": "Ignorer",
+    "update": "Mettre à jour",
+    "whatsNew": "Quoi de neuf ?"
   },
   "selectionToolbox": {
     "executeButton": {
@@ -1054,12 +1109,29 @@
   "sideToolbar": {
     "browseTemplates": "Parcourir les modèles d'exemple",
     "downloads": "Téléchargements",
+    "helpCenter": "Centre d'aide",
     "logout": "Déconnexion",
     "modelLibrary": "Bibliothèque de modèles",
     "newBlankWorkflow": "Créer un nouveau flux de travail vierge",
     "nodeLibrary": "Bibliothèque de nœuds",
     "nodeLibraryTab": {
-      "sortOrder": "Ordre de tri"
+      "groupBy": "Grouper par",
+      "groupStrategies": {
+        "category": "Catégorie",
+        "categoryDesc": "Grouper par catégorie de nœud",
+        "module": "Module",
+        "moduleDesc": "Grouper par source du module",
+        "source": "Source",
+        "sourceDesc": "Grouper par type de source (Core, Custom, API)"
+      },
+      "resetView": "Réinitialiser la vue par défaut",
+      "sortBy": {
+        "alphabetical": "Alphabétique",
+        "alphabeticalDesc": "Trier alphabétiquement dans les groupes",
+        "original": "Original",
+        "originalDesc": "Conserver l'ordre d'origine"
+      },
+      "sortMode": "Mode de tri"
     },
     "openWorkflow": "Ouvrir le flux de travail dans le système de fichiers local",
     "queue": "File d'attente",
@@ -1107,6 +1179,7 @@
   "templateWorkflows": {
     "category": {
       "3D": "3D",
+      "All": "Tous les modèles",
       "Area Composition": "Composition de zone",
       "Audio": "Audio",
       "Basics": "Basiques",
@@ -1325,6 +1398,7 @@
     "title": "Commencez avec un modèle"
   },
   "toastMessages": {
+    "cannotCreateSubgraph": "Impossible de créer le sous-graphe",
     "couldNotDetermineFileType": "Impossible de déterminer le type de fichier",
     "dropFileError": "Impossible de traiter l'élément déposé : {error}",
     "emptyCanvas": "Toile vide",
@@ -1333,6 +1407,7 @@
     "errorSaveSetting": "Erreur lors de l'enregistrement du paramètre {id}: {err}",
     "failedToAccessBillingPortal": "Échec de l'accès au portail de facturation : {error}",
     "failedToApplyTexture": "Échec de l'application de la texture",
+    "failedToConvertToSubgraph": "Échec de la conversion des éléments en sous-graphe",
     "failedToCreateCustomer": "Échec de la création du client : {error}",
     "failedToDownloadFile": "Échec du téléchargement du fichier",
     "failedToExportModel": "Échec de l'exportation du modèle en {format}",
@@ -1396,6 +1471,9 @@
   "welcome": {
     "getStarted": "Commencer",
     "title": "Bienvenue sur ComfyUI"
+  },
+  "whatsNewPopup": {
+    "learnMore": "En savoir plus"
   },
   "workflowService": {
     "enterFilename": "Entrez le nom du fichier",

@@ -13,6 +13,7 @@ import { createApp } from 'vue'
 import { VueFire, VueFireAuth } from 'vuefire'
 
 // import { mapSlimComfyNodes, mapSlimExtensions } from './helper/comfyuiNodes'
+import { mapSlimComfyNodes, mapSlimExtensions } from './helper/comfyuiNodes'
 
 import '@comfyorg/litegraph/style.css'
 import '@/assets/css/style.css'
@@ -25,6 +26,7 @@ import { i18n } from './i18n'
 declare global {
   interface Window {
     __COMFYAPP: any
+    __WORKSPACEAPP: any
   }
 }
 

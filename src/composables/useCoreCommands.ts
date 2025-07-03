@@ -4,6 +4,7 @@ import {
   LGraphNode,
   LiteGraph
 } from '@comfyorg/litegraph'
+import { Point } from '@comfyorg/litegraph'
 
 import { useFirebaseAuthActions } from '@/composables/auth/useFirebaseAuthActions'
 import {
@@ -13,11 +14,12 @@ import {
 import { t } from '@/i18n'
 import { api } from '@/scripts/api'
 import { app } from '@/scripts/app'
+import { addFluxKontextGroupNode } from '@/scripts/fluxKontextEditNode'
 import { useDialogService } from '@/services/dialogService'
 import { useLitegraphService } from '@/services/litegraphService'
 import { useWorkflowService } from '@/services/workflowService'
 import type { ComfyCommand } from '@/stores/commandStore'
-import { useTitleEditorStore } from '@/stores/graphStore'
+import { useCanvasStore, useTitleEditorStore } from '@/stores/graphStore'
 import { useQueueSettingsStore, useQueueStore } from '@/stores/queueStore'
 import { useSettingStore } from '@/stores/settingStore'
 import { useToastStore } from '@/stores/toastStore'
@@ -27,6 +29,8 @@ import { useColorPaletteStore } from '@/stores/workspace/colorPaletteStore'
 import { useSearchBoxStore } from '@/stores/workspace/searchBoxStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 
+const moveSelectedNodesVersionAdded = '1.22.2'
+
 export function useCoreCommands(): ComfyCommand[] {
   const workflowService = useWorkflowService()
   const workflowStore = useWorkflowStore()
@@ -34,6 +38,7 @@ export function useCoreCommands(): ComfyCommand[] {
   const colorPaletteStore = useColorPaletteStore()
   const firebaseAuthActions = useFirebaseAuthActions()
   const toastStore = useToastStore()
+  const canvasStore = useCanvasStore()
   const getTracker = () => workflowStore.activeWorkflow?.changeTracker
 
   const getSelectedNodes = (): LGraphNode[] => {
@@ -56,6 +61,20 @@ export function useCoreCommands(): ComfyCommand[] {
         node.mode = mode
       }
     })
+  }
+
+  const moveSelectedNodes = (
+    positionUpdater: (pos: Point, gridSize: number) => Point
+  ) => {
+    const selectedNodes = getSelectedNodes()
+    if (selectedNodes.length === 0) return
+
+    const gridSize = useSettingStore().get('Comfy.SnapToGrid.GridSize')
+    selectedNodes.forEach((node) => {
+      node.pos = positionUpdater(node.pos, gridSize)
+    })
+    app.canvas.state.selectionChanged = true
+    app.canvas.setDirty(true, true)
   }
 
   const commands = [
@@ -641,19 +660,19 @@ export function useCoreCommands(): ComfyCommand[] {
     {
       id: 'Comfy.Manager.CustomNodesManager',
       icon: 'pi pi-puzzle',
-      label: 'Custom Nodes Manager',
+      label: 'Toggle the Custom Nodes Manager',
       versionAdded: '1.12.10',
       function: () => {
-        dialogService.showManagerDialog()
+        dialogService.toggleManagerDialog()
       }
     },
     {
       id: 'Comfy.Manager.ToggleManagerProgressDialog',
       icon: 'pi pi-spinner',
-      label: 'Toggle Progress Dialog',
+      label: 'Toggle the Custom Nodes Manager Progress Bar',
       versionAdded: '1.13.9',
       function: () => {
-        dialogService.showManagerProgressDialog()
+        dialogService.toggleManagerProgressDialog()
       }
     },
     {
@@ -672,6 +691,69 @@ export function useCoreCommands(): ComfyCommand[] {
       versionAdded: '1.18.1',
       function: async () => {
         await firebaseAuthActions.logout()
+      }
+    },
+    {
+      id: 'Comfy.Canvas.MoveSelectedNodes.Up',
+      icon: 'pi pi-arrow-up',
+      label: 'Move Selected Nodes Up',
+      versionAdded: moveSelectedNodesVersionAdded,
+      function: () => moveSelectedNodes(([x, y], gridSize) => [x, y - gridSize])
+    },
+    {
+      id: 'Comfy.Canvas.MoveSelectedNodes.Down',
+      icon: 'pi pi-arrow-down',
+      label: 'Move Selected Nodes Down',
+      versionAdded: moveSelectedNodesVersionAdded,
+      function: () => moveSelectedNodes(([x, y], gridSize) => [x, y + gridSize])
+    },
+    {
+      id: 'Comfy.Canvas.MoveSelectedNodes.Left',
+      icon: 'pi pi-arrow-left',
+      label: 'Move Selected Nodes Left',
+      versionAdded: moveSelectedNodesVersionAdded,
+      function: () => moveSelectedNodes(([x, y], gridSize) => [x - gridSize, y])
+    },
+    {
+      id: 'Comfy.Canvas.MoveSelectedNodes.Right',
+      icon: 'pi pi-arrow-right',
+      label: 'Move Selected Nodes Right',
+      versionAdded: moveSelectedNodesVersionAdded,
+      function: () => moveSelectedNodes(([x, y], gridSize) => [x + gridSize, y])
+    },
+    {
+      id: 'Comfy.Canvas.AddEditModelStep',
+      icon: 'pi pi-pen-to-square',
+      label: 'Add Edit Model Step',
+      versionAdded: '1.23.3',
+      function: async () => {
+        const node = app.canvas.selectedItems.values().next().value
+        if (!(node instanceof LGraphNode)) return
+        await addFluxKontextGroupNode(node)
+      }
+    },
+    {
+      id: 'Comfy.Graph.ConvertToSubgraph',
+      icon: 'pi pi-sitemap',
+      label: 'Convert Selection to Subgraph',
+      versionAdded: '1.20.1',
+      function: () => {
+        const canvas = canvasStore.getCanvas()
+        const graph = canvas.subgraph ?? canvas.graph
+        if (!graph) throw new TypeError('Canvas has no graph or subgraph set.')
+
+        const res = graph.convertToSubgraph(canvas.selectedItems)
+        if (!res) {
+          toastStore.add({
+            severity: 'error',
+            summary: t('toastMessages.cannotCreateSubgraph'),
+            detail: t('toastMessages.failedToConvertToSubgraph'),
+            life: 3000
+          })
+          return
+        }
+        const { node } = res
+        canvas.select(node)
       }
     }
   ]

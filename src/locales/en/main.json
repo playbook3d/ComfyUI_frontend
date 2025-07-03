@@ -13,6 +13,7 @@
     "terminal": "Terminal",
     "logs": "Logs",
     "videoFailedToLoad": "Video failed to load",
+    "audioFailedToLoad": "Audio failed to load",
     "extensionName": "Extension Name",
     "reloadToApplyChanges": "Reload to apply changes",
     "insert": "Insert",
@@ -29,6 +30,7 @@
     "icon": "Icon",
     "color": "Color",
     "error": "Error",
+    "help": "Help",
     "loading": "Loading",
     "findIssues": "Find Issues",
     "reportIssue": "Send Report",
@@ -57,6 +59,8 @@
     "deprecated": "DEPR",
     "loadWorkflow": "Load Workflow",
     "goToNode": "Go to Node",
+    "setAsBackground": "Set as Background",
+    "customBackground": "Custom Background",
     "settings": "Settings",
     "searchWorkflows": "Search Workflows",
     "searchSettings": "Search Settings",
@@ -116,7 +120,10 @@
     "unknownError": "Unknown error",
     "title": "Title",
     "edit": "Edit",
-    "copy": "Copy"
+    "copy": "Copy",
+    "imageUrl": "Image URL",
+    "clear": "Clear",
+    "copyURL": "Copy URL"
   },
   "manager": {
     "title": "Custom Nodes Manager",
@@ -154,6 +161,7 @@
     "lastUpdated": "Last Updated",
     "noDescription": "No description available",
     "installSelected": "Install Selected",
+    "installAllMissingNodes": "Install All Missing Nodes",
     "packsSelected": "Packs Selected",
     "status": {
       "active": "Active",
@@ -402,6 +410,7 @@
   },
   "sideToolbar": {
     "themeToggle": "Toggle Theme",
+    "helpCenter": "Help Center",
     "logout": "Logout",
     "queue": "Queue",
     "nodeLibrary": "Node Library",
@@ -410,7 +419,23 @@
     "openWorkflow": "Open workflow in local file system",
     "newBlankWorkflow": "Create a new blank workflow",
     "nodeLibraryTab": {
-      "sortOrder": "Sort Order"
+      "groupBy": "Group By",
+      "sortMode": "Sort Mode",
+      "resetView": "Reset View to Default",
+      "groupStrategies": {
+        "category": "Category",
+        "categoryDesc": "Group by node category",
+        "module": "Module",
+        "moduleDesc": "Group by module source",
+        "source": "Source",
+        "sourceDesc": "Group by source type (Core, Custom, API)"
+      },
+      "sortBy": {
+        "original": "Original",
+        "originalDesc": "Keep original order",
+        "alphabetical": "Alphabetical",
+        "alphabeticalDesc": "Sort alphabetically within groups"
+      }
     },
     "modelLibrary": "Model Library",
     "downloads": "Downloads",
@@ -443,6 +468,26 @@
         "open": "Open"
       }
     }
+  },
+  "helpCenter": {
+    "docs": "Docs",
+    "github": "Github",
+    "helpFeedback": "Help & Feedback",
+    "more": "More...",
+    "whatsNew": "What's New?",
+    "clickToLearnMore": "Click to learn more →",
+    "loadingReleases": "Loading releases...",
+    "noRecentReleases": "No recent releases",
+    "updateAvailable": "Update",
+    "desktopUserGuide": "Desktop User Guide",
+    "openDevTools": "Open Dev Tools",
+    "reinstall": "Re-Install"
+  },
+  "releaseToast": {
+    "newVersionAvailable": "New Version Available!",
+    "whatsNew": "What's New?",
+    "skip": "Skip",
+    "update": "Update"
   },
   "menu": {
     "hideMenu": "Hide Menu",
@@ -491,7 +536,8 @@
       "3D": "3D",
       "Audio": "Audio",
       "Image API": "Image API",
-      "Video API": "Video API"
+      "Video API": "Video API",
+      "All": "All Templates"
     },
     "templateDescription": {
       "Basics": {
@@ -768,8 +814,13 @@
     "Reinstall": "Reinstall",
     "Restart": "Restart",
     "Browse Templates": "Browse Templates",
+    "Add Edit Model Step": "Add Edit Model Step",
     "Delete Selected Items": "Delete Selected Items",
     "Fit view to selected nodes": "Fit view to selected nodes",
+    "Move Selected Nodes Down": "Move Selected Nodes Down",
+    "Move Selected Nodes Left": "Move Selected Nodes Left",
+    "Move Selected Nodes Right": "Move Selected Nodes Right",
+    "Move Selected Nodes Up": "Move Selected Nodes Up",
     "Reset View": "Reset View",
     "Resize Selected Nodes": "Resize Selected Nodes",
     "Canvas Toggle Link Visibility": "Canvas Toggle Link Visibility",
@@ -788,6 +839,7 @@
     "Export": "Export",
     "Export (API)": "Export (API)",
     "Give Feedback": "Give Feedback",
+    "Convert Selection to Subgraph": "Convert Selection to Subgraph",
     "Fit Group To Contents": "Fit Group To Contents",
     "Group Selected Nodes": "Group Selected Nodes",
     "Convert selected nodes to group node": "Convert selected nodes to group node",
@@ -800,8 +852,8 @@
     "ComfyUI Issues": "ComfyUI Issues",
     "Interrupt": "Interrupt",
     "Load Default Workflow": "Load Default Workflow",
-    "Custom Nodes Manager": "Custom Nodes Manager",
-    "Toggle Progress Dialog": "Toggle Progress Dialog",
+    "Toggle the Custom Nodes Manager": "Toggle the Custom Nodes Manager",
+    "Toggle the Custom Nodes Manager Progress Bar": "Toggle the Custom Nodes Manager Progress Bar",
     "Open Mask Editor for Selected Node": "Open Mask Editor for Selected Node",
     "New": "New",
     "Clipspace": "Clipspace",
@@ -1166,6 +1218,11 @@
     "missingModels": "Missing Models",
     "missingModelsMessage": "When loading the graph, the following models were not found"
   },
+  "loadWorkflowWarning": {
+    "outdatedVersion": "Some nodes require a newer version of ComfyUI (current: {version}). Please update to use all nodes.",
+    "outdatedVersionGeneric": "Some nodes require a newer version of ComfyUI. Please update to use all nodes.",
+    "coreNodesFromVersion": "Requires ComfyUI {version}:"
+  },
   "errorDialog": {
     "defaultTitle": "An error occurred",
     "loadWorkflowTitle": "Loading aborted due to error reloading workflow data",
@@ -1268,7 +1325,9 @@
     "failedToPurchaseCredits": "Failed to purchase credits: {error}",
     "unauthorizedDomain": "Your domain {domain} is not authorized to use this service. Please contact {email} to add your domain to the whitelist.",
     "useApiKeyTip": "Tip: Can't access normal login? Use the Comfy API Key option.",
-    "nothingSelected": "Nothing selected"
+    "nothingSelected": "Nothing selected",
+    "cannotCreateSubgraph": "Cannot create subgraph",
+    "failedToConvertToSubgraph": "Failed to convert items to subgraph"
   },
   "auth": {
     "apiKey": {
@@ -1363,6 +1422,7 @@
     "personalDataConsentRequired": "You must agree to the processing of your personal data."
   },
   "credits": {
+    "activity": "Activity",
     "credits": "Credits",
     "yourCreditBalance": "Your credit balance",
     "purchaseCredits": "Purchase Credits",
@@ -1379,7 +1439,14 @@
       "buyNow": "Buy now",
       "seeDetails": "See details",
       "topUp": "Top Up"
-    }
+    },
+    "eventType": "Event Type",
+    "details": "Details",
+    "time": "Time",
+    "additionalInfo": "Additional Info",
+    "model": "Model",
+    "added": "Added",
+    "accountInitialized": "Account initialized"
   },
   "userSettings": {
     "title": "User Settings",
@@ -1401,5 +1468,16 @@
     "cancelEditTooltip": "Cancel edit",
     "copiedTooltip": "Copied",
     "copyTooltip": "Copy message to clipboard"
+  },
+  "nodeHelpPage": {
+    "inputs": "Inputs",
+    "outputs": "Outputs",
+    "type": "Type",
+    "moreHelp": "For more help, visit the",
+    "documentationPage": "documentation page",
+    "loadError": "Failed to load help: {error}"
+  },
+  "whatsNewPopup": {
+    "learnMore": "Learn more"
   }
 }

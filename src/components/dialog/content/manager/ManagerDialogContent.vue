@@ -1,14 +1,16 @@
 <template>
   <div
-    class="flex flex-col mx-auto overflow-hidden h-[83vh] relative"
+    class="h-full flex flex-col mx-auto overflow-hidden"
     :aria-label="$t('manager.title')"
   >
+    <ContentDivider :width="0.3" />
     <Button
       v-if="isSmallScreen"
       :icon="isSideNavOpen ? 'pi pi-chevron-left' : 'pi pi-chevron-right'"
-      text
+      severity="secondary"
+      filled
       class="absolute top-1/2 -translate-y-1/2 z-10"
-      :class="isSideNavOpen ? 'left-[19rem]' : 'left-2'"
+      :class="isSideNavOpen ? 'left-[12rem]' : 'left-2'"
       @click="toggleSideNav"
     />
     <div class="flex flex-1 relative overflow-hidden">
@@ -18,20 +20,20 @@
         :tabs="tabs"
       />
       <div
-        class="flex-1 overflow-auto pr-80"
+        class="flex-1 overflow-auto bg-gray-50 dark-theme:bg-neutral-900"
         :class="{
-          'transition-all duration-300': isSmallScreen,
-          'pl-80': isSideNavOpen || !isSmallScreen,
-          'pl-8': !isSideNavOpen && isSmallScreen
+          'transition-all duration-300': isSmallScreen
         }"
       >
-        <div class="px-6 pt-6 flex flex-col h-full">
+        <div class="px-6 flex flex-col h-full">
           <RegistrySearchBar
             v-model:searchQuery="searchQuery"
             v-model:searchMode="searchMode"
             v-model:sortField="sortField"
             :search-results="searchResults"
             :suggestions="suggestions"
+            :is-missing-tab="isMissingTab"
+            :sort-options="sortOptions"
           />
           <div class="flex-1 overflow-auto">
             <div
@@ -57,7 +59,7 @@
               <VirtualGrid
                 id="results-grid"
                 :items="resultsWithKeys"
-                :buffer-rows="3"
+                :buffer-rows="4"
                 :grid-style="GRID_STYLE"
                 @approach-end="onApproachEnd"
               >
@@ -75,9 +77,9 @@
           </div>
         </div>
       </div>
-      <div class="w-80 border-l-0 absolute right-0 top-0 bottom-0 flex z-20">
+      <div class="w-[clamp(250px,33%,306px)] border-l-0 flex z-20">
         <ContentDivider orientation="vertical" :width="0.2" />
-        <div class="flex-1 flex flex-col isolate">
+        <div class="w-full flex flex-col isolate">
           <InfoPanel
             v-if="!hasMultipleSelections && selectedNodePack"
             :node-pack="selectedNodePack"
@@ -93,7 +95,14 @@
 import { whenever } from '@vueuse/core'
 import { merge } from 'lodash'
 import Button from 'primevue/button'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch
+} from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import ContentDivider from '@/components/common/ContentDivider.vue'
@@ -106,6 +115,7 @@ import PackCard from '@/components/dialog/content/manager/packCard/PackCard.vue'
 import RegistrySearchBar from '@/components/dialog/content/manager/registrySearchBar/RegistrySearchBar.vue'
 import GridSkeleton from '@/components/dialog/content/manager/skeleton/GridSkeleton.vue'
 import { useResponsiveCollapse } from '@/composables/element/useResponsiveCollapse'
+import { useManagerStatePersistence } from '@/composables/manager/useManagerStatePersistence'
 import { useInstalledPacks } from '@/composables/nodePack/useInstalledPacks'
 import { usePackUpdateStatus } from '@/composables/nodePack/usePackUpdateStatus'
 import { useWorkflowPacks } from '@/composables/nodePack/useWorkflowPacks'
@@ -116,13 +126,15 @@ import type { TabItem } from '@/types/comfyManagerTypes'
 import { ManagerTab } from '@/types/comfyManagerTypes'
 import { components } from '@/types/comfyRegistryTypes'
 
-const { initialTab = ManagerTab.All } = defineProps<{
-  initialTab: ManagerTab
+const { initialTab } = defineProps<{
+  initialTab?: ManagerTab
 }>()
 
 const { t } = useI18n()
 const comfyManagerStore = useComfyManagerStore()
 const { getPackById } = useComfyRegistryStore()
+const persistedState = useManagerStatePersistence()
+const initialState = persistedState.loadStoredState()
 
 const GRID_STYLE = {
   display: 'grid',
@@ -156,8 +168,10 @@ const tabs = ref<TabItem[]>([
     icon: 'pi-sync'
   }
 ])
+
+const initialTabId = initialTab ?? initialState.selectedTabId
 const selectedTab = ref<TabItem>(
-  tabs.value.find((tab) => tab.id === initialTab) || tabs.value[0]
+  tabs.value.find((tab) => tab.id === initialTabId) || tabs.value[0]
 )
 
 const {
@@ -167,8 +181,13 @@ const {
   searchResults,
   searchMode,
   sortField,
-  suggestions
-} = useRegistrySearch()
+  suggestions,
+  sortOptions
+} = useRegistrySearch({
+  initialSortField: initialState.sortField,
+  initialSearchMode: initialState.searchMode,
+  initialSearchQuery: initialState.searchQuery
+})
 pageNumber.value = 0
 const onApproachEnd = () => {
   pageNumber.value++
@@ -200,10 +219,6 @@ const {
 const filterMissingPacks = (packs: components['schemas']['Node'][]) =>
   packs.filter((pack) => !comfyManagerStore.isPackInstalled(pack.id))
 
-whenever(selectedTab, () => {
-  pageNumber.value = 0
-})
-
 const isUpdateAvailableTab = computed(
   () => selectedTab.value?.id === ManagerTab.UpdateAvailable
 )
@@ -232,7 +247,11 @@ watch(
 
     if (!isEmptySearch.value) {
       displayPacks.value = filterOutdatedPacks(installedPacks.value)
-    } else if (!installedPacks.value.length) {
+    } else if (
+      !installedPacks.value.length &&
+      !installedPacksReady.value &&
+      !isLoadingInstalled.value
+    ) {
       await startFetchInstalled()
     } else {
       displayPacks.value = filterOutdatedPacks(installedPacks.value)
@@ -408,19 +427,36 @@ const handleGridContainerClick = (event: MouseEvent) => {
 
 const hasMultipleSelections = computed(() => selectedNodePacks.value.length > 1)
 
+// Track the last pack ID for which we've fetched full registry data
+const lastFetchedPackId = ref<string | null>(null)
+
+// Whenever a single pack is selected, fetch its full info once
 whenever(selectedNodePack, async () => {
   // Cancel any in-flight requests from previously selected node pack
   getPackById.cancel()
-
-  if (!selectedNodePack.value?.id) return
-
   // If only a single node pack is selected, fetch full node pack info from registry
+  const pack = selectedNodePack.value
+  if (!pack?.id) return
   if (hasMultipleSelections.value) return
-  const data = await getPackById.call(selectedNodePack.value.id)
-
-  if (data?.id === selectedNodePack.value?.id) {
-    // If selected node hasn't changed since request, merge registry & Algolia data
-    selectedNodePacks.value = [merge(selectedNodePack.value, data)]
+  // Only fetch if we haven't already for this pack
+  if (lastFetchedPackId.value === pack.id) return
+  const data = await getPackById.call(pack.id)
+  // If selected node hasn't changed since request, merge registry & Algolia data
+  if (data?.id === pack.id) {
+    lastFetchedPackId.value = pack.id
+    const mergedPack = merge({}, pack, data)
+    // Update the pack in current selection without changing selection state
+    const packIndex = selectedNodePacks.value.findIndex(
+      (p) => p.id === mergedPack.id
+    )
+    if (packIndex !== -1) {
+      selectedNodePacks.value.splice(packIndex, 1, mergedPack)
+    }
+    // Replace pack in displayPacks so that children receive a fresh prop reference
+    const idx = displayPacks.value.findIndex((p) => p.id === mergedPack.id)
+    if (idx !== -1) {
+      displayPacks.value.splice(idx, 1, mergedPack)
+    }
   }
 })
 
@@ -428,11 +464,21 @@ let gridContainer: HTMLElement | null = null
 onMounted(() => {
   gridContainer = document.getElementById('results-grid')
 })
-watch(searchQuery, () => {
+watch([searchQuery, selectedTab], () => {
   gridContainer ??= document.getElementById('results-grid')
   if (gridContainer) {
+    pageNumber.value = 0
     gridContainer.scrollTop = 0
   }
+})
+
+onBeforeUnmount(() => {
+  persistedState.persistState({
+    selectedTabId: selectedTab.value?.id,
+    searchQuery: searchQuery.value,
+    searchMode: searchMode.value,
+    sortField: sortField.value
+  })
 })
 
 onUnmounted(() => {

@@ -43,19 +43,44 @@ export function sendNodeSelectionToPlaybookWrapper(
   selectedNodes: ComfyWorkflowNodeData[],
   wrapperOrigin: string
 ) {
+  console.log(
+    'Comfy Window Sending: sendNodeSelectionToPlaybookWrapper: target origin: ',
+    selectedNodes
+  )
+
+  const selectedNodesArray = Object.values(selectedNodes)
+
+  // Reduce node data to structure expected by Playbook wrapper.
+  const restructuredNodesData = selectedNodesArray.map((node: any) => {
+    const nodeData: ComfyWorkflowNodeData = {
+      id: node.id,
+      type: node.type,
+      widgets_values: node.widgets_values,
+      widgets: node.widgets,
+      title: node.title,
+      inputs: node.inputs,
+      outputs: node.outputs,
+      properties: node.properties,
+      pos: node.pos,
+      size: node.size,
+      flags: node.flags
+    }
+
+    return nodeData
+  })
   // Serializing data to prevent errors messaging objects with callbacks.
   const messageData: WorkflowWindowMessageData = {
     message: 'SendSelectedNodesToPlaybookWrapper',
-    data: JSON.stringify(selectedNodes)
+    data: JSON.stringify(restructuredNodesData)
   }
 
-  console.log(
-    'Comfy Window Sending: SendNodeSelectionToPlaybookWrapper: ',
-    messageData
-  )
 
   if (window.top) {
-    window.top.postMessage(messageData, wrapperOrigin)
+    try{
+      window.top.postMessage(messageData, wrapperOrigin)
+    }catch(e){
+      console.log({e})
+    }
   }
 }
 
@@ -74,25 +99,5 @@ export async function sendWorkflowDataToPlaybookWrapper(wrapperOrigin: string) {
     messageData
   )
 
-  if (window.top) {
-    window.top.postMessage(messageData, wrapperOrigin)
-  }
-}
-
-/**
- * Send message on selected nodes deletion.
- */
-export async function sendNodesDeletedToPlaybookWrapper(wrapperOrigin: string) {
-  const messageData: WorkflowWindowMessageData = {
-    message: 'SendNodesDeletedToPlaybookWrapper',
-  }
-
-  console.log(
-    'Comfy Window Sending: SendNodesDeletedToPlaybookWrapper: ',
-    messageData
-  )
-
-  if (window.top) {
-    window.top.postMessage(messageData, wrapperOrigin)
-  }
+  window.top.postMessage(messageData, wrapperOrigin)
 }

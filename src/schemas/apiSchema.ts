@@ -11,10 +11,13 @@ import { LinkReleaseTriggerAction } from '@/types/searchBoxTypes'
 const zNodeType = z.string()
 const zQueueIndex = z.number()
 const zPromptId = z.string()
+export const resultItemType = z.enum(['input', 'output', 'temp'])
+export type ResultItemType = z.infer<typeof resultItemType>
+
 const zResultItem = z.object({
   filename: z.string().optional(),
   subfolder: z.string().optional(),
-  type: z.string().optional()
+  type: resultItemType.optional()
 })
 export type ResultItem = z.infer<typeof zResultItem>
 const zOutputs = z
@@ -350,6 +353,7 @@ const zNodeBadgeMode = z.enum(
 const zSettings = z.object({
   'Comfy.ColorPalette': z.string(),
   'Comfy.CustomColorPalettes': colorPalettesSchema,
+  'Comfy.Canvas.BackgroundImage': z.string().optional(),
   'Comfy.ConfirmClear': z.boolean(),
   'Comfy.DevMode': z.boolean(),
   'Comfy.Workflow.ShowMissingNodesWarning': z.boolean(),
@@ -468,6 +472,14 @@ const zSettings = z.object({
   'pysssss.SnapToGrid': z.boolean(),
   /** VHS setting is used for queue video preview support. */
   'VHS.AdvancedPreviews': z.string(),
+  /** Release data settings */
+  'Comfy.Release.Version': z.string(),
+  'Comfy.Release.Status': z.enum([
+    'skipped',
+    'changelog seen',
+    "what's new seen"
+  ]),
+  'Comfy.Release.Timestamp': z.number(),
   /** Settings used for testing */
   'test.setting': z.any(),
   'main.sub.setting.name': z.any(),

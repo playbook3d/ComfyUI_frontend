@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import { fromZodError } from 'zod-validation-error'
 
+import { resultItemType } from '@/schemas/apiSchema'
+
 const zComboOption = z.union([z.string(), z.number()])
 const zRemoteWidgetConfig = z.object({
   route: z.string().url().or(z.string().startsWith('/')),
@@ -72,7 +74,7 @@ export const zStringInputOptions = zBaseInputOptions.extend({
 export const zComboInputOptions = zBaseInputOptions.extend({
   control_after_generate: z.boolean().optional(),
   image_upload: z.boolean().optional(),
-  image_folder: z.enum(['input', 'output', 'temp']).optional(),
+  image_folder: resultItemType.optional(),
   allow_batch: z.boolean().optional(),
   video_upload: z.boolean().optional(),
   animated_image_upload: z.boolean().optional(),
@@ -219,6 +221,7 @@ export const zComfyNodeDef = z.object({
   name: z.string(),
   display_name: z.string(),
   description: z.string(),
+  help: z.string().optional(),
   category: z.string(),
   output_node: z.boolean(),
   python_module: z.string(),
@@ -227,7 +230,7 @@ export const zComfyNodeDef = z.object({
   /**
    * Whether the node is an API node. Running API nodes requires login to
    * Comfy Org account.
-   * https://www.comfy.org/faq
+   * https://docs.comfy.org/tutorials/api-nodes/overview
    */
   api_node: z.boolean().optional()
 })
