@@ -26,6 +26,7 @@ import { useBottomPanelStore } from '@/stores/workspace/bottomPanelStore'
 import { useColorPaletteStore } from '@/stores/workspace/colorPaletteStore'
 import { useSearchBoxStore } from '@/stores/workspace/searchBoxStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { addFluxKontextGroupNode } from '@/scripts/fluxKontextEditNode'
 
 export function useCoreCommands(): ComfyCommand[] {
   const workflowService = useWorkflowService()
@@ -91,6 +92,17 @@ export function useCoreCommands(): ComfyCommand[] {
         if (!workflow) return
 
         await workflowService.saveWorkflow(workflow)
+      }
+    },
+    {
+      id: 'Comfy.Canvas.AddEditModelStep',
+      icon: 'pi pi-pen-to-square',
+      label: 'Add Edit Model Step',
+      versionAdded: '1.23.3',
+      function: async () => {
+        const node = app.canvas.selectedItems.values().next().value
+        if (!(node instanceof LGraphNode)) return
+        await addFluxKontextGroupNode(node)
       }
     },
     {
