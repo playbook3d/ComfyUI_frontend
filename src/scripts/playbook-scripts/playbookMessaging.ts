@@ -71,7 +71,7 @@ export function sendNodeSelectionToPlaybookWrapper(
   // Serializing data to prevent errors messaging objects with callbacks.
   const messageData: WorkflowWindowMessageData = {
     message: 'SendSelectedNodesToPlaybookWrapper',
-    data: JSON.stringify(selectedNodes)
+    data: JSON.stringify(restructuredNodesData)
   }
 
 
