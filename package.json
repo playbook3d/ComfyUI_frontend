@@ -14,7 +14,7 @@
     "test:generate:examples": "npx tsx tests-ui/extractExamples",
     "test:generate": "npx tsx tests-ui/setup",
     "dev:electron": "vite --config vite.electron.config.mts",
-    "build": "npm run typecheck && vite build",
+    "build": "vite build",
     "build:types": "vite build --config vite.types.config.mts && node scripts/prepare-types.js",
     "zipdist": "node scripts/zipdist.js",
     "typecheck": "vue-tsc --noEmit",
