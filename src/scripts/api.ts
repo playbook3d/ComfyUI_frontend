@@ -994,7 +994,11 @@ export class ComfyApi extends EventTarget {
   }
 
   async getFolderPaths(): Promise<Record<string, string[]>> {
-    return (await axios.get(this.internalURL('/folder_paths'))).data
+    try{
+      return (await axios.get(this.internalURL('/folder_paths'))).data
+    }catch(e){
+      return {}
+    }
   }
 
   /**
