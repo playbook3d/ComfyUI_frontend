@@ -45,6 +45,7 @@ export const useDialogService = () => {
   function showMissingModelsWarning(
     props: InstanceType<typeof MissingModelsWarning>['$props']
   ) {
+    return
     dialogStore.showDialog({
       key: 'global-missing-models-warning',
       component: MissingModelsWarning,
