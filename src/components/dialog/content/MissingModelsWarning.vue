@@ -75,7 +75,7 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-const doNotAskAgain = ref(false)
+const doNotAskAgain = ref(true)
 
 const modelDownloads = ref<Record<string, ModelInfo>>({})
 const missingModels = computed(() => {
